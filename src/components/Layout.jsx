@@ -5,7 +5,7 @@ import { navigate, useRoute } from '../router.js';
 import { Logo, Avatar, asset } from './ui.jsx';
 import { parseTasks } from '../lib/nlp.js';
 import { guessMeta } from '../lib/nlp.js';
-import { TAGLINE } from '../config.js';
+import { TAGLINE, SURRA_URL } from '../config.js';
 
 export const NAV = [
   { id: 'home', label: 'الرئيسية', icon: House },
@@ -225,8 +225,9 @@ export function Footer() {
   );
 }
 
-export function SurraLink({ url, className = '', children }) {
+export function SurraLink({ url: custom, className = '', children }) {
   const toast = useStore((s) => s.toast);
+  const url = custom || SURRA_URL;
   if (url)
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className={className}>

@@ -4,7 +4,7 @@ export const TAGLINE = 'نحو يوم أفضل';
 
 // رابط موقع صُرّة لإدارة الأموال (يفتح في تبويب جديد)
 // ضع الرابط هنا — ويمكن للمستخدم أيضًا تعديله من الإعدادات
-export const SURRA_URL = '';
+export const SURRA_URL = 'https://misharym373-droid.github.io/sorra/';
 
 // مجالات الحياة
 export const AREAS = {

@@ -7,7 +7,7 @@ import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import { Switch, CardTitle, useConfirm } from '../components/ui.jsx';
 import { DragHandle } from '../components/TaskItem.jsx';
-import { ACCENTS, PERSONAS } from '../config.js';
+import { ACCENTS, PERSONAS, SURRA_URL } from '../config.js';
 import { WIDGETS } from '../lib/seed.js';
 import { say } from '../lib/assistant.js';
 import { deleteAccount } from '../lib/auth.js';
@@ -93,7 +93,7 @@ function Account() {
   const profile = useStore((s) => s.profile);
   const surra = useStore((s) => s.settings.surraUrl);
   const set = useSet();
-  const [url, setUrl] = useState(surra);
+  const [url, setUrl] = useState(surra || SURRA_URL);
   const confirm = useConfirm();
   const sid = session.get();
   return (
