@@ -1008,3 +1008,9 @@ html[data-theme='light'] .fx-card { background: #0f172a; }
   .next-card .row.wrap > .btn-primary { flex: 1 1 100%; }
   .next-card .pop-wrap > .btn { width: 100%; }
 }
+/* حالة المزامنة */
+.sync-badge { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 10px; font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
+.sync-saving { color: var(--muted); background: var(--glass-hi); }
+.sync-saving svg { animation: spin 1s linear infinite; }
+.sync-offline { color: var(--gold); background: rgba(251, 191, 36, 0.12); box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.3); }
+@media (max-width: 760px) { .sync-badge .sync-label { display: none; } .sync-badge { padding: 0 9px; } }

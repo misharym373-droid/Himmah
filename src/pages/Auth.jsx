@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Mail, KeyRound, Eye, EyeOff, User, Phone, ArrowLeft, Sparkles, Loader2, ShieldCheck } from 'lucide-react';
-import { signIn, signUp, validateEmail, passwordStrength } from '../lib/auth.js';
+import { Mail, KeyRound, Eye, EyeOff, User, Phone, ArrowLeft, Sparkles, Loader2, ShieldCheck, MailCheck, Info } from 'lucide-react';
+import { signIn, signUp, validateEmail, passwordStrength, sendPasswordReset, resendConfirmation } from '../lib/auth.js';
 import { asset, Modal } from '../components/ui.jsx';
 import { TAGLINE } from '../config.js';
 import { Glyph } from '../components/Glyph.jsx';
 
-export default function Auth({ onLogin }) {
-  const [mode, setMode] = useState('login'); // login | signup
+export default function Auth({ notice, onLoggedIn, onDemo }) {
+  const [mode, setMode] = useState('login'); // login | signup | confirm
+  const [pendingEmail, setPendingEmail] = useState('');
   return (
     <div className="auth">
       <section className="auth-art">
@@ -28,7 +29,9 @@ export default function Auth({ onLogin }) {
       </section>
       <section className="auth-form">
         <div className="auth-card card glow" key={mode} style={{ animation: 'modalIn .4s var(--spring) both' }}>
-          {mode === 'login' ? <Login onLogin={onLogin} toSignup={() => setMode('signup')} /> : <Signup onLogin={onLogin} toLogin={() => setMode('login')} />}
+          {mode === 'login' && <Login notice={notice} onLoggedIn={onLoggedIn} onDemo={onDemo} toSignup={() => setMode('signup')} />}
+          {mode === 'signup' && <Signup onLoggedIn={onLoggedIn} onNeedsConfirm={(email) => (setPendingEmail(email), setMode('confirm'))} toLogin={() => setMode('login')} />}
+          {mode === 'confirm' && <ConfirmEmail email={pendingEmail} toLogin={() => setMode('login')} />}
         </div>
       </section>
     </div>
@@ -48,7 +51,7 @@ function Password({ value, onChange, placeholder = 'كلمة المرور', auto
   );
 }
 
-function Login({ onLogin, toSignup }) {
+function Login({ notice, onLoggedIn, onDemo, toSignup }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
@@ -62,8 +65,8 @@ function Login({ onLogin, toSignup }) {
     if (!password) return setErr('اكتب كلمة المرور');
     setBusy(true);
     try {
-      const u = await signIn({ email, password });
-      onLogin(u, remember);
+      const u = await signIn({ email, password, remember });
+      onLoggedIn(u);
     } catch (x) {
       setErr(x.message);
     } finally {
@@ -76,6 +79,11 @@ function Login({ onLogin, toSignup }) {
         <h1>مرحبًا بعودتك</h1>
         <p className="muted mt-s">سجّل دخولك للعودة إلى هّمة</p>
       </div>
+      {notice && (
+        <div className="notice warn small" role="status">
+          <Info size={16} aria-hidden /> <span className="grow">{notice}</span>
+        </div>
+      )}
       <label className="field">
         <span>البريد الإلكتروني</span>
         <div className="input-icon">
@@ -101,9 +109,10 @@ function Login({ onLogin, toSignup }) {
         {busy ? <Loader2 style={{ animation: 'spin 1s linear infinite' }} /> : null} تسجيل الدخول
       </button>
       <div className="or">أو</div>
-      <button type="button" className="btn btn-block" onClick={() => onLogin({ id: 'demo', name: 'مشاري', email: 'demo@himmah.app', demo: true }, true)}>
-        <Sparkles /> جرّب هّمة بالحساب التجريبي
+      <button type="button" className="btn btn-block" onClick={onDemo}>
+        <Sparkles /> جرّب هّمة بدون حساب
       </button>
+      <p className="tiny dim" style={{ textAlign: 'center', marginTop: -8 }}>التجربة بدون حساب تحفظ البيانات على هذا الجهاز فقط</p>
       <p className="small muted" style={{ textAlign: 'center' }}>
         ما عندك حساب؟{' '}
         <button type="button" className="purple bold" onClick={toSignup}>
@@ -111,21 +120,12 @@ function Login({ onLogin, toSignup }) {
         </button>
       </p>
       <Privacy />
-      {forgot && (
-        <Modal title="استعادة كلمة المرور" onClose={() => setForgot(false)} footer={<button className="btn btn-primary" onClick={() => setForgot(false)}>فهمت</button>}>
-          <p className="muted">
-            حسابك في هذه النسخة محفوظ بشكل آمن <b>على هذا الجهاز فقط</b> (كلمة المرور مشفّرة ولا يمكن لأحد قراءتها)، لذلك لا يمكن إرسال رابط استعادة عبر البريد.
-          </p>
-          <p className="muted mt">
-            إن نسيت كلمة المرور يمكنك إنشاء حساب جديد، أو تجربة الحساب التجريبي. عند ربط هّمة بخادم لاحقًا ستعمل الاستعادة عبر البريد تلقائيًا.
-          </p>
-        </Modal>
-      )}
+      {forgot && <ForgotModal initial={email} onClose={() => setForgot(false)} />}
     </form>
   );
 }
 
-function Signup({ onLogin, toLogin }) {
+function Signup({ onLoggedIn, onNeedsConfirm, toLogin }) {
   const [f, setF] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -142,8 +142,9 @@ function Signup({ onLogin, toLogin }) {
     if (f.password !== f.confirm) return setErr('كلمتا المرور غير متطابقتين');
     setBusy(true);
     try {
-      const u = await signUp(f);
-      onLogin(u, true);
+      const { user, needsConfirm } = await signUp(f);
+      if (needsConfirm) onNeedsConfirm(f.email.trim().toLowerCase());
+      else onLoggedIn(user);
     } catch (x) {
       setErr(x.message);
     } finally {
@@ -210,7 +211,92 @@ function Signup({ onLogin, toLogin }) {
 function Privacy() {
   return (
     <p className="tiny dim row" style={{ justifyContent: 'center', textAlign: 'center' }}>
-      <ShieldCheck size={14} /> بياناتك محفوظة على جهازك وكلمة المرور مشفّرة (PBKDF2)
+      <ShieldCheck size={14} /> حسابك وبياناتك محمية في قاعدة بيانات آمنة — لا أحد غيرك يستطيع رؤيتها
     </p>
+  );
+}
+
+// بعد إنشاء الحساب: إذا كان تأكيد البريد مفعّلًا في Supabase
+function ConfirmEmail({ email, toLogin }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  async function resend() {
+    setBusy(true);
+    setMsg('');
+    try {
+      await resendConfirmation(email);
+      setMsg('أرسلنا رابط التأكيد مرة أخرى.');
+    } catch (e) {
+      setMsg(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="col" style={{ gap: 16, textAlign: 'center', alignItems: 'center' }}>
+      <span className="e-ico" style={{ width: 70, height: 70, borderRadius: 22, display: 'grid', placeItems: 'center', background: 'rgba(var(--primary-rgb),.14)', color: 'var(--primary-soft)' }}>
+        <MailCheck size={32} />
+      </span>
+      <h1 style={{ fontSize: '1.5rem' }}>تحقق من بريدك</h1>
+      <p className="muted">
+        أنشأنا حسابك وأرسلنا رابط تأكيد إلى <b dir="ltr">{email}</b>. افتح الرابط ثم سجّل دخولك.
+      </p>
+      {msg && <p className="small purple" role="status">{msg}</p>}
+      <button className="btn btn-primary btn-block" onClick={toLogin}>
+        تسجيل الدخول
+      </button>
+      <button className="btn btn-ghost btn-sm" onClick={resend} disabled={busy}>
+        {busy ? 'جاري الإرسال…' : 'إعادة إرسال رابط التأكيد'}
+      </button>
+    </div>
+  );
+}
+
+function ForgotModal({ initial, onClose }) {
+  const [email, setEmail] = useState(initial || '');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState('');
+  async function send() {
+    setErr('');
+    if (!validateEmail(email)) return setErr('اكتب بريدًا إلكترونيًا صحيحًا');
+    setBusy(true);
+    try {
+      await sendPasswordReset(email);
+      setSent(true);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal
+      title="استعادة كلمة المرور"
+      onClose={onClose}
+      footer={
+        sent ? (
+          <button className="btn btn-primary" onClick={onClose}>
+            تمام
+          </button>
+        ) : (
+          <button className="btn btn-primary" onClick={send} disabled={busy}>
+            {busy ? 'جاري الإرسال…' : 'إرسال رابط الاستعادة'}
+          </button>
+        )
+      }
+    >
+      {sent ? (
+        <p className="muted">إذا كان البريد مسجّلًا لدينا، ستصلك رسالة فيها رابط لتعيين كلمة مرور جديدة.</p>
+      ) : (
+        <>
+          <label className="field">
+            <span>البريد الإلكتروني</span>
+            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" style={{ textAlign: 'right' }} autoComplete="email" />
+          </label>
+          {err && <div className="err mt-s" role="alert">{err}</div>}
+        </>
+      )}
+    </Modal>
   );
 }

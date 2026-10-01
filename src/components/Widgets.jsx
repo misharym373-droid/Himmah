@@ -38,8 +38,9 @@ export function Collapsible({ id, title, icon, hint, defaultOpen = false, childr
     setOpen(!open);
     try {
       localStorage.setItem(key, open ? '0' : '1');
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+      console.warn('[himmah:widget-state]', e?.message || e);
     }
   };
   return (

@@ -2,7 +2,12 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useStore } from './store.js';
 import { useRoute, navigate } from './router.js';
 import { session } from './lib/storage.js';
-import { findById } from './lib/auth.js';
+import { supabase } from './lib/supabase.js';
+import { signOut, updatePassword } from './lib/auth.js';
+import { onLogoutRequest } from './lib/appSession.js';
+import { clearUserCache } from './lib/sync.js';
+import { Modal } from './components/ui.jsx';
+import { MigrationBanner } from './components/Migration.jsx';
 import { todayKey, toMin, nowMin } from './lib/date.js';
 import { isOverdue } from './lib/game.js';
 import { Scene, Rail, Header, BottomNav, Footer, QuickInput } from './components/Layout.jsx';
@@ -24,57 +29,190 @@ const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const PAGES = { tasks: Tasks, schedule: Schedule, goals: Goals, habits: Habits, stats: Stats, achievements: Achievements, rewards: Rewards, shared: Shared, profile: Profile, settings: Settings };
 
+const DEMO_USER = { id: 'demo', name: 'مشاري', email: 'demo@himmah.app', demo: true };
+const toUser = (u) => ({ id: u.id, email: u.email, name: u.user_metadata?.name || '', phone: u.user_metadata?.phone || '' });
+
 export default function App() {
-  const [user, setUser] = useState(() => {
-    const id = session.get();
-    return id ? findById(id) : null;
-  });
-  const ready = useStore((s) => s.ready);
+  // boot → auth | loading → ready | error
+  const [phase, setPhase] = useState('boot');
+  const [notice, setNotice] = useState('');
+  const [recovery, setRecovery] = useState(false);
+  const userRef = useRef(null);
+  const manualLogout = useRef(false);
   const onboarded = useStore((s) => s.onboarded);
   const settings = useStore((s) => s.settings);
+  const sessionExpired = useStore((s) => s.sessionExpired);
+
+  async function start(u) {
+    userRef.current = u;
+    setPhase('loading');
+    try {
+      await useStore.getState().openSession(u);
+      if (userRef.current?.id === u.id) setPhase('ready');
+    } catch {
+      if (userRef.current?.id === u.id) setPhase('error');
+    }
+  }
+  function endSession(message = '') {
+    useStore.getState().reset();
+    userRef.current = null;
+    setNotice(message);
+    setPhase('auth');
+    navigate('home');
+  }
+  async function logout() {
+    const u = userRef.current;
+    if (!u) return;
+    if (u.demo) {
+      session.clear();
+      return endSession();
+    }
+    manualLogout.current = true;
+    // نحاول رفع أي تغييرات معلقة قبل الخروج (التغييرات غير المرفوعة تبقى محفوظة لهذا الحساب)
+    const synced = await useStore.getState().waitForSync();
+    useStore.getState().closeSession();
+    if (synced) clearUserCache(u.id);
+    try {
+      await signOut();
+    } catch (e) {
+      useStore.getState().toast(e.message, { icon: 'clock' });
+    }
+    endSession();
+  }
 
   useEffect(() => {
     document.getElementById('boot')?.remove();
-  }, []);
+    let alive = true;
+    (async () => {
+      if (session.get() === 'demo') return start(DEMO_USER);
+      const { data, error } = await supabase.auth.getSession();
+      if (!alive) return;
+      if (data?.session?.user) start(toUser(data.session.user));
+      else {
+        if (error) setNotice('تعذر استعادة جلستك. سجّل دخولك مرة أخرى.');
+        setPhase('auth');
+      }
+    })();
+    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
+      // لا نستدعي Supabase مباشرة داخل هذا المستمع (توصية Supabase) — نؤجل التنفيذ
+      setTimeout(() => {
+        if (!alive) return;
+        if (event === 'PASSWORD_RECOVERY') setRecovery(true);
+        if (event === 'SIGNED_IN' && sess?.user && userRef.current?.id !== sess.user.id) start(toUser(sess.user));
+        if (event === 'SIGNED_OUT' && userRef.current && !userRef.current.demo) {
+          const expired = !manualLogout.current;
+          manualLogout.current = false;
+          endSession(expired ? 'انتهت جلستك. سجّل دخولك مرة أخرى للمتابعة.' : '');
+        }
+      }, 0);
+    });
+    const off = onLogoutRequest(logout);
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+      off();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // انتهاء الجلسة أثناء الحفظ (فشل تجديد التوكن)
   useEffect(() => {
-    if (user) useStore.getState().init(user);
-    else useStore.getState().reset();
-  }, [user]);
+    if (!sessionExpired) return;
+    useStore.getState().closeSession();
+    supabase.auth.signOut({ scope: 'local' }).finally(() => endSession('انتهت جلستك. سجّل دخولك مرة أخرى — تغييراتك غير المرفوعة محفوظة على هذا الجهاز.'));
+  }, [sessionExpired]);
 
   useApplySettings(settings);
 
-  function login(u, remember) {
-    session.set(u.id, remember);
-    setUser(u);
-    navigate('home');
-  }
-  function logout() {
-    session.clear();
-    setUser(null);
-  }
-  // يُستدعى من صفحة الملف الشخصي والإعدادات
-  useEffect(() => {
-    window.__himmahLogout = logout;
-  });
-
-  if (!user)
+  const recoveryModal = recovery && <RecoveryModal onClose={() => setRecovery(false)} />;
+  if (phase === 'boot' || phase === 'loading')
     return (
       <>
         <Scene />
-        <Auth onLogin={login} />
+        <FullLoader text={phase === 'loading' ? 'جاري تحميل بياناتك…' : ''} />
       </>
     );
-  if (!ready) return null;
+  if (phase === 'auth')
+    return (
+      <>
+        <Scene />
+        <Auth notice={notice} onLoggedIn={(u) => start(toUser(u))} onDemo={() => (session.set('demo', true), start(DEMO_USER))} />
+        {recoveryModal}
+      </>
+    );
+  if (phase === 'error')
+    return (
+      <>
+        <Scene />
+        <div className="onb">
+          <div className="card onb-card" style={{ textAlign: 'center' }}>
+            <h2>تعذر تحميل بياناتك</h2>
+            <p className="muted mt-s">تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى. بياناتك محفوظة في حسابك ولن تضيع.</p>
+            <div className="row mt" style={{ justifyContent: 'center' }}>
+              <button className="btn btn-primary" onClick={() => start(userRef.current)}>
+                حاول مرة أخرى
+              </button>
+              <button className="btn btn-ghost" onClick={logout}>
+                تسجيل الخروج
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
   if (!onboarded)
     return (
       <>
         <Scene />
         <Onboarding />
         <Toasts />
+        {recoveryModal}
       </>
     );
-  return <Shell />;
+  return (
+    <>
+      <Shell />
+      {recoveryModal}
+    </>
+  );
+}
+
+function FullLoader({ text }) {
+  return (
+    <div className="build-anim" style={{ minHeight: '100dvh', justifyContent: 'center', position: 'relative', zIndex: 1 }} role="status" aria-live="polite">
+      <div className="spinner" />
+      {text && <p className="muted">{text}</p>}
+    </div>
+  );
+}
+
+// تعيين كلمة مرور جديدة بعد فتح رابط الاستعادة من البريد
+function RecoveryModal({ onClose }) {
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  async function save() {
+    if (pw.length < 8) return setErr('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+    setBusy(true);
+    setErr('');
+    try {
+      await updatePassword(pw);
+      useStore.getState().toast('تم تغيير كلمة المرور بنجاح', { icon: 'check' });
+      onClose();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal title="تعيين كلمة مرور جديدة" onClose={onClose} footer={<button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? 'جاري الحفظ…' : 'حفظ كلمة المرور'}</button>}>
+      <label className="field">
+        <span>كلمة المرور الجديدة</span>
+        <input className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" dir="ltr" style={{ textAlign: 'right' }} />
+      </label>
+      {err && <div className="err mt-s" role="alert">{err}</div>}
+    </Modal>
+  );
 }
 
 function Shell() {
@@ -90,6 +228,7 @@ function Shell() {
         <div className="main">
           <Header />
           <main className="content" id="main">
+            <MigrationBanner />
             {name !== 'home' && <QuickInput className="mobile-quick" id="mobile-input" />}
             <div className="page" key={name}>
               {Page ? (

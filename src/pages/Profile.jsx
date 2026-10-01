@@ -216,7 +216,7 @@ export default function Profile() {
                   body: 'هل تريد تسجيل الخروج؟ بياناتك تبقى محفوظة على هذا الجهاز.',
                   confirmLabel: 'تسجيل الخروج',
                   danger: true,
-                  onConfirm: () => window.__himmahLogout?.(),
+                  onConfirm: () => requestLogout(),
                 })
               }
             >

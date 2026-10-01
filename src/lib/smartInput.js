@@ -22,8 +22,9 @@ export async function analyzeInput(text) {
   try {
     const tasks = await engine.analyze(text);
     if (Array.isArray(tasks)) return tasks;
-  } catch {
-    /* نرجع للتحليل المحلي */
+  } catch (e) {
+    // نرجع للتحليل المحلي
+    console.warn('[himmah:analyze]', e?.message || e);
   }
   return parseTasks(text);
 }

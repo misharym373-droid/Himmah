@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
-import { House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, X, Calendar, Clock, Timer, ImagePlus } from 'lucide-react';
+import { Loader2, CloudOff, House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, X, Calendar, Clock, Timer, ImagePlus } from 'lucide-react';
 import { useStore } from '../store.js';
 import { navigate, useRoute } from '../router.js';
 import { Logo, Avatar, asset } from './ui.jsx';
@@ -168,6 +168,7 @@ export function Header() {
       <Logo onClick={() => navigate('home')} />
       {name !== 'home' ? <QuickInput id="quick-input" /> : <div className="grow" />}
       <div className="header-actions">
+        <SyncBadge />
         <button className="icon-btn hide-m" onClick={() => setDrawer('command')} aria-label="بحث وأوامر" title="بحث (Ctrl+K)">
           <Search />
         </button>
@@ -187,6 +188,25 @@ export function Header() {
 }
 
 const BOTTOM = ['home', 'tasks', 'schedule'];
+
+// حالة الاتصال والمزامنة مع Supabase (تظهر فقط عندما تهم المستخدم)
+function SyncBadge() {
+  const { mode, status, pending } = useStore((s) => s.sync);
+  if (mode !== 'remote' || (status === 'synced' && !pending)) return null;
+  const map = {
+    saving: [Loader2, 'جاري الحفظ…', 'sync-saving'],
+    offline: [CloudOff, pending ? `غير متصل · ${pending} تغييرات بانتظار الرفع` : 'غير متصل', 'sync-offline'],
+    error: [CloudOff, 'تعذر الحفظ', 'sync-offline'],
+    synced: [Loader2, 'جاري الحفظ…', 'sync-saving'],
+  };
+  const [I, label, cls] = map[status] || map.saving;
+  return (
+    <span className={`sync-badge ${cls}`} role="status" aria-live="polite" title={label}>
+      <I size={14} aria-hidden />
+      <span className="sync-label">{label}</span>
+    </span>
+  );
+}
 
 export function BottomNav() {
   const { name } = useRoute();

@@ -104,8 +104,9 @@ export function VoiceModal() {
     () => () => {
       try {
         rec.current?.abort?.();
-      } catch {
-        /* ignore */
+      } catch (e) {
+        // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+        console.warn('[himmah:speech-recognition]', e?.message || e);
       }
     },
     []
@@ -162,8 +163,9 @@ export function VoiceModal() {
   function stop() {
     try {
       rec.current?.stop();
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+      console.warn('[himmah:speech-recognition]', e?.message || e);
     }
   }
   async function add() {

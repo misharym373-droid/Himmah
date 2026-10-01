@@ -11,7 +11,7 @@ import { ACCENTS, PERSONAS, SURRA_URL } from '../config.js';
 import { WIDGETS } from '../lib/seed.js';
 import { say } from '../lib/assistant.js';
 import { deleteAccount } from '../lib/auth.js';
-import { session } from '../lib/storage.js';
+import { requestLogout } from '../lib/appSession.js';
 import { todayKey } from '../lib/date.js';
 import { Glyph } from '../components/Glyph.jsx';
 
@@ -55,7 +55,7 @@ export default function Settings() {
           </button>
           <button
             className="red"
-            onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => window.__himmahLogout?.() })}
+            onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => requestLogout() })}
           >
             <LogOut /> تسجيل الخروج
           </button>
@@ -98,15 +98,28 @@ function Account() {
   const set = useSet();
   const [url, setUrl] = useState(surra || SURRA_URL);
   const confirm = useConfirm();
-  const sid = session.get();
+  const isDemo = useStore((s) => s.sync.mode) === 'local';
+  const [deleting, setDeleting] = useState(false);
+  const removeAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // الحساب حُذف: نوقف المزامنة بدون رفع أي شيء، ثم نخرج (الخروج يمسح النسخة المحلية)
+      useStore.getState().abandonSession();
+      requestLogout();
+    } catch (e) {
+      useStore.getState().toast(e.message || 'تعذر حذف الحساب، حاول مرة أخرى.', { icon: 'clock' });
+      setDeleting(false);
+    }
+  };
   return (
     <>
       <CardTitle icon={<User size={18} />}>الحساب</CardTitle>
       <Row t="الاسم" d={profile.name} />
       <Row t="البريد الإلكتروني" d={profile.email || '—'} />
-      <Row t="نوع الحساب" d={sid === 'demo' ? 'حساب تجريبي — البيانات قابلة للتعديل والحذف' : 'حساب محلي محمي بكلمة مرور مشفّرة على هذا الجهاز'} />
-      <Row t="تسجيل الخروج" d="بياناتك تبقى محفوظة على هذا الجهاز">
-        <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => window.__himmahLogout?.() })}>
+      <Row t="نوع الحساب" d={isDemo ? 'تجربة بدون حساب — البيانات محفوظة على هذا الجهاز فقط' : 'حساب هّمة — بياناتك محفوظة بأمان في السحابة ومتزامنة بين أجهزتك'} />
+      <Row t="تسجيل الخروج" d={isDemo ? 'بيانات التجربة تبقى على هذا الجهاز' : 'بياناتك تبقى محفوظة في حسابك'}>
+        <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => requestLogout() })}>
           <LogOut /> تسجيل الخروج
         </button>
       </Row>
@@ -124,17 +137,18 @@ function Account() {
           حفظ
         </button>
       </Row>
-      {sid !== 'demo' && (
-        <Row t="حذف الحساب" d="حذف الحساب وكل بياناته من هذا الجهاز نهائيًا">
+      {!isDemo && (
+        <Row t="حذف الحساب" d="حذف الحساب وكل بياناته نهائيًا">
           <button
             className="btn btn-sm btn-danger"
+            disabled={deleting}
             onClick={() =>
               confirm({
                 title: 'حذف الحساب نهائيًا',
-                body: 'سيتم حذف حسابك وكل مهامك وأهدافك وعاداتك من هذا الجهاز. لا يمكن التراجع.',
+                body: 'سيتم حذف حسابك وكل مهامك وأهدافك وعاداتك نهائيًا. لا يمكن التراجع.',
                 danger: true,
                 confirmLabel: 'حذف نهائي',
-                onConfirm: () => (deleteAccount(sid), window.__himmahLogout?.()),
+                onConfirm: removeAccount,
               })
             }
           >

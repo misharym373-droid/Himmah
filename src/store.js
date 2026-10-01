@@ -1,18 +1,42 @@
 // الحالة المركزية للتطبيق (Zustand) — كل الميزات مترابطة من هنا
 import { create } from 'zustand';
 import { storage } from './lib/storage.js';
+import { createSyncEngine, diffState, fetchRemote, loadCache, saveCache } from './lib/sync.js';
 import { todayKey, addDays, fromKey, toMin, fromMin, nowMin, roundUp5, uid } from './lib/date.js';
 import { levelInfo, taskXp, ACHIEVEMENTS, dayProgress } from './lib/game.js';
 import { emptyData, demoData, makeTask, WIDGETS, DEFAULT_SETTINGS } from './lib/seed.js';
 import { playSound, vibrate } from './lib/fx.js';
+import { remapIds } from './lib/migrate.js';
 
 const PERSIST_KEYS = [
   'version', 'onboarded', 'user', 'profile', 'settings', 'dashboard', 'tasks', 'goals', 'habits', 'challenges', 'rewards',
   'rewardHistory', 'achievements', 'notifications', 'projects', 'focusLog', 'energy', 'streak', 'flags', 'dismissedInsights',
 ];
 
-let saveTimer;
+// وضع الحفظ: 'remote' = حساب Supabase (المصدر الأساسي قاعدة البيانات)، 'local' = التجربة بدون حساب
+let mode = null;
 let currentUserId = null;
+let engine = null;
+let baseline = null; // آخر حالة تمت مقارنتها/رفعها
+let saveTimer;
+let lastFetch = 0;
+
+const pick = (s) => Object.fromEntries(PERSIST_KEYS.map((k) => [k, s[k]]));
+const EPHEMERAL = { fx: [], toasts: [], focus: null, modal: null, drawer: null };
+
+// توحيد شكل البيانات (إعدادات جديدة، بطاقات جديدة، معرفات ناقصة)
+function normalize(data) {
+  data.settings = { ...DEFAULT_SETTINGS, ...data.settings, notif: { ...DEFAULT_SETTINGS.notif, ...(data.settings?.notif || {}) } };
+  const ids = WIDGETS.map((w) => w.id);
+  const dash = data.dashboard && Array.isArray(data.dashboard.order) ? data.dashboard : { order: ids, hidden: [] };
+  data.dashboard = { hidden: dash.hidden || [], order: [...dash.order.filter((i) => ids.includes(i)), ...ids.filter((i) => !dash.order.includes(i))] };
+  data.focusLog = (data.focusLog || []).map((f) => (f.id ? f : { ...f, id: uid() }));
+  return data;
+}
+
+// معرف ثابت لنسخة المهمة المتكررة في يوم معين — يمنع التكرار بين الأجهزة
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const instanceId = (tplId, date) => (UUID_RE.test(tplId) ? tplId.slice(0, 24) + date.replace(/-/g, '') + '0000' : uid());
 
 export const useStore = create((set, get) => ({
   ready: false,
@@ -24,30 +48,117 @@ export const useStore = create((set, get) => ({
   modal: null, // { name, payload }
   drawer: null, // 'notifications' | 'assistant' | 'command'
 
+  sync: { mode: null, status: 'synced', pending: 0 },
+  sessionExpired: false,
+
   // ————— التهيئة —————
-  init(user) {
+  // يفتح جلسة المستخدم: Supabase للحسابات الحقيقية، وLocalStorage للتجربة بدون حساب فقط
+  async openSession(user) {
+    get().closeSession();
     currentUserId = user.id;
-    let data = storage.load('data:' + user.id);
-    const fresh = !data;
-    if (!data) data = user.demo ? demoData() : emptyData(user);
-    data.settings = { ...DEFAULT_SETTINGS, ...data.settings, notif: { ...DEFAULT_SETTINGS.notif, ...(data.settings?.notif || {}) } };
-    // تأكد من وجود كل الويدجت (عند إضافة بطاقات جديدة مستقبلاً)
-    const ids = WIDGETS.map((w) => w.id);
-    data.dashboard = data.dashboard || { order: ids, hidden: [] };
-    data.dashboard.order = [...data.dashboard.order.filter((i) => ids.includes(i)), ...ids.filter((i) => !data.dashboard.order.includes(i))];
-    set({ ...emptyData(user), ...data, ready: true, fx: [], toasts: [], focus: null, modal: null, drawer: null });
+    if (user.demo) {
+      mode = 'local';
+      const saved = storage.load('data:demo');
+      get().hydrate(saved || demoData(), user, { demoFresh: !saved });
+      return;
+    }
+    mode = 'remote';
+    engine = createSyncEngine({
+      uid: user.id,
+      onStatus: ({ status, pending }) => set({ sync: { mode: 'remote', status, pending } }),
+      onDataError: () => dataErrorNotice(),
+      onSessionExpired: () => set({ sessionExpired: true }),
+      onOffline: () => get().toast('أنت غير متصل — تغييراتك محفوظة على جهازك وستُرفع تلقائيًا عند عودة الاتصال', { icon: 'clock', duration: 5000 }),
+      onOnline: () => get().toast('عاد الاتصال وتمت مزامنة تغييراتك', { icon: 'check' }),
+    });
+    const cache = loadCache(user.id);
+    let remote = null;
+    let failure = null;
+    try {
+      remote = await fetchRemote();
+      lastFetch = Date.now();
+    } catch (e) {
+      failure = e;
+    }
+    if (mode !== 'remote' || currentUserId !== user.id) return; // أُغلقت الجلسة أثناء التحميل
+    // إذا كانت هناك تغييرات محلية لم تُرفع بعد، النسخة المحلية هي الأحدث
+    if (remote && !(cache && engine.pending())) {
+      const firstRun = remote.__firstRun;
+      delete remote.__firstRun;
+      const base = emptyData(user);
+      const data = { ...base, ...remote };
+      if (firstRun) {
+        // حساب جديد: نبدأ بالعادات والمكافآت الافتراضية ونرفعها
+        if (!remote.habits?.length) data.habits = base.habits;
+        if (!remote.rewards?.length) data.rewards = base.rewards;
+        data.notifications = base.notifications;
+        data.profile = { ...base.profile, ...remote.profile, name: remote.profile?.name || base.profile.name, email: remote.profile?.email || user.email };
+      }
+      get().hydrate(data, user, { firstRun });
+    } else if (cache) {
+      get().hydrate(cache, user, {});
+      if (failure) set({ sync: { mode: 'remote', status: 'offline', pending: engine.pending() } });
+      engine.flush();
+    } else {
+      throw failure || new Error('load-failed');
+    }
+  },
+  hydrate(data, user, { demoFresh = false, firstRun = false } = {}) {
+    data = normalize({ ...data });
+    set({ ...emptyData(user), ...data, ...EPHEMERAL, ready: true, sessionExpired: false, sync: { mode, status: engine?.status() || 'synced', pending: engine?.pending() || 0 } });
+    // نقطة المقارنة: أي تغيير بعد هذه اللحظة يُرفع (حساب جديد = نرفع كل شيء)
+    baseline = firstRun ? null : pick(get());
     get().maintenance();
     // البيانات التجريبية: الإنجازات المستحقة تُفتح بصمت بدون احتفالات
-    if (fresh && user.demo) {
+    if (demoFresh) {
       const st = get();
       const ach = { ...st.achievements };
       ACHIEVEMENTS.forEach((a) => !ach[a.id] && safe(() => a.check(st)) && (ach[a.id] = Date.now() - 86400000));
       set({ achievements: ach });
     }
   },
-  reset() {
+  // إعادة جلب البيانات من الخادم (عند العودة للتبويب أو بعد خطأ حفظ) — فقط إذا لا توجد تغييرات معلقة
+  async refreshRemote() {
+    if (mode !== 'remote' || !engine || engine.pending()) return;
+    try {
+      const remote = await fetchRemote();
+      if (mode !== 'remote' || engine.pending()) return;
+      delete remote.__firstRun;
+      lastFetch = Date.now();
+      const data = normalize({ ...remote });
+      set(data);
+      baseline = pick(get());
+      get().maintenance();
+    } catch (e) {
+      // سيُعاد المحاولة لاحقًا — حالة الاتصال تظهر في الشريط
+      console.warn('[himmah:refresh]', e?.message || e);
+    }
+  },
+  closeSession() {
+    if (mode === 'remote') pushChanges();
+    if (mode === 'local') saveLocal();
+    engine?.stop();
+    engine = null;
+    mode = null;
+    baseline = null;
     currentUserId = null;
-    set({ ...emptyData(), ready: false, fx: [], toasts: [], focus: null, modal: null, drawer: null });
+  },
+  // إيقاف المزامنة بدون رفع التغييرات (بعد حذف الحساب)
+  abandonSession() {
+    clearTimeout(saveTimer);
+    engine?.stop();
+    engine = null;
+    mode = null;
+    baseline = null;
+  },
+  // انتظار رفع كل التغييرات (يُستخدم بعد استيراد البيانات القديمة)
+  async waitForSync() {
+    pushChanges();
+    return engine ? engine.whenIdle(25000) : true;
+  },
+  reset() {
+    get().closeSession();
+    set({ ...emptyData(), ...EPHEMERAL, ready: false, sessionExpired: false, sync: { mode: null, status: 'synced', pending: 0 } });
   },
   // صيانة يومية: توليد المهام المتكررة + فحص الـStreak
   maintenance() {
@@ -56,21 +167,25 @@ export const useStore = create((set, get) => ({
     const tasks = [...s.tasks];
     const templates = tasks.filter((t) => t.template && !t.deletedAt);
     for (const tpl of templates) {
-      for (let i = 0; i < 14; i++) {
+      // نولّد الأيام السبعة القادمة فقط (لا آلاف السجلات)
+      for (let i = 0; i < 7; i++) {
         const date = addDays(T, i);
         if (date < tpl.date) continue;
         if (!repeatMatches(tpl, date)) continue;
         if (tasks.some((t) => t.seriesId === tpl.id && t.date === date)) continue;
-        tasks.push(makeTask({ ...tpl, id: uid(), template: false, seriesId: tpl.id, date, done: false, doneAt: null, xpAwarded: 0, subtasks: tpl.subtasks.map((x) => ({ ...x, done: false })), createdAt: Date.now() }));
+        tasks.push(makeTask({ ...tpl, id: instanceId(tpl.id, date), template: false, seriesId: tpl.id, date, done: false, doneAt: null, xpAwarded: 0, subtasks: tpl.subtasks.map((x) => ({ ...x, done: false })), createdAt: Date.now() }));
       }
     }
     const streak = { ...s.streak };
     const notifications = [...s.notifications];
-    if (streak.count > 0 && streak.lastDate && streak.lastDate < addDays(T, -1)) {
+    const broke = streak.count > 0 && streak.lastDate && streak.lastDate < addDays(T, -1);
+    if (broke) {
       notifications.unshift(notif('streak', 'flame', 'انقطع الـStreak', `كانت سلسلتك ${streak.count} يوم. ابدأ من جديد اليوم!`));
       streak.count = 0;
     }
-    set({ tasks, streak, notifications });
+    // لا نغيّر المراجع إذا لم يتغير شيء (حتى لا نرسل تحديثات بلا داعٍ)
+    if (tasks.length !== s.tasks.length) set({ tasks });
+    if (broke) set({ streak, notifications });
   },
 
   // ————— واجهة —————
@@ -79,6 +194,8 @@ export const useStore = create((set, get) => ({
   setDrawer: (drawer) => set({ drawer }),
   toast(text, opts = {}) {
     const id = uid();
+    // لا نوهم المستخدم أن الحفظ وصل للخادم وهو غير متصل
+    if (mode === 'remote' && get().sync.status === 'offline' && opts.icon === 'check') text += ' — محفوظة على جهازك وستُرفع عند عودة الاتصال';
     set((s) => ({ toasts: [...s.toasts, { id, text, ...opts }].slice(-4) }));
     setTimeout(() => get().dismissToast(id), opts.duration || (opts.action ? 6000 : 3200));
     return id;
@@ -273,7 +390,7 @@ export const useStore = create((set, get) => ({
     if (!f || f.finished) return;
     const minutes = Math.round(f.totalSec / 60);
     const t = get().tasks.find((x) => x.id === f.taskId);
-    set((s) => ({ focus: { ...f, running: false, remainingSec: 0, finished: true, logged: true, minimized: false }, focusLog: [...s.focusLog, { date: todayKey(), minutes, taskId: f.taskId }] }));
+    set((s) => ({ focus: { ...f, running: false, remainingSec: 0, finished: true, logged: true, minimized: false }, focusLog: [...s.focusLog, { id: uid(), date: todayKey(), minutes, taskId: f.taskId }] }));
     if (get().settings.sounds) playSound('timer');
     if (get().settings.vibration) vibrate([60, 60, 60]);
     get().notify('focus', 'timer', 'انتهت جلسة التركيز', `${minutes} دقيقة تركيز${t ? ` على "${t.title}"` : ''}`, { force: true });
@@ -295,7 +412,7 @@ export const useStore = create((set, get) => ({
     if (!f) return;
     const remaining = f.running ? Math.max(0, (f.endAt - Date.now()) / 1000) : f.remainingSec;
     const minutes = Math.round((f.totalSec - remaining) / 60);
-    set((s) => ({ focus: null, focusLog: minutes > 0 && !f.logged ? [...s.focusLog, { date: todayKey(), minutes, taskId: f.taskId }] : s.focusLog }));
+    set((s) => ({ focus: null, focusLog: minutes > 0 && !f.logged ? [...s.focusLog, { id: uid(), date: todayKey(), minutes, taskId: f.taskId }] : s.focusLog }));
     if (complete && f.taskId) get().completeTask(f.taskId);
     get().checkAchievements();
     return minutes;
@@ -340,8 +457,9 @@ export const useStore = create((set, get) => ({
     if (s.settings.browserNotifications && typeof Notification !== 'undefined' && Notification.permission === 'granted' && (document.hidden || force)) {
       try {
         new Notification(title, { body, icon: './brand/icon-192.png', lang: 'ar', dir: 'rtl' });
-      } catch {
-        /* ignore */
+      } catch (e) {
+        // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+        console.warn('[himmah:browser-notification]', e?.message || e);
       }
     }
   },
@@ -505,7 +623,7 @@ export const useStore = create((set, get) => ({
     if (firstTask) get().addTasks(firstTask);
   },
   importData(data) {
-    set({ ...data, ready: true });
+    set({ ...normalize(remapIds(data)), ready: true });
     get().maintenance();
   },
   exportData() {
@@ -561,16 +679,40 @@ export function goalProgress(g, tasks = []) {
   return Math.round((msPct * 0.85 + (tDone / tTotal) * 0.15) * 100);
 }
 
-// حفظ تلقائي (Debounced) لكل تغيير
-useStore.subscribe((s) => {
-  if (!s.ready || !currentUserId) return;
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    const data = Object.fromEntries(PERSIST_KEYS.map((k) => [k, s[k]]));
-    storage.save('data:' + currentUserId, data);
-  }, 250);
-});
-window.addEventListener('beforeunload', () => {
+// ————— الحفظ —————
+// الحسابات: نرفع الفرق فقط إلى Supabase (عبر محرك المزامنة) ونحتفظ بنسخة Cache محلية للفتح السريع
+function pushChanges() {
   const s = useStore.getState();
-  if (s.ready && currentUserId) storage.save('data:' + currentUserId, Object.fromEntries(PERSIST_KEYS.map((k) => [k, s[k]])));
+  if (mode !== 'remote' || !engine || !s.ready || !currentUserId) return;
+  const snap = pick(s);
+  const ops = diffState(baseline, snap, currentUserId);
+  baseline = snap;
+  saveCache(currentUserId, snap);
+  engine.queue(ops);
+}
+// التجربة بدون حساب: LocalStorage فقط
+function saveLocal() {
+  const s = useStore.getState();
+  if (mode === 'local' && s.ready) storage.save('data:demo', pick(s));
+}
+
+let lastDataError = 0;
+function dataErrorNotice() {
+  if (Date.now() - lastDataError < 8000) return;
+  lastDataError = Date.now();
+  useStore.getState().toast('تعذر حفظ بعض التغييرات، أعدنا تحميل آخر نسخة محفوظة.', { icon: 'clock', duration: 5000 });
+  engine?.whenIdle(10000).then(() => useStore.getState().refreshRemote());
+}
+
+useStore.subscribe((s, prev) => {
+  if (!s.ready) return;
+  // تغييرات الحالة المؤقتة (رسائل، نوافذ، حالة المزامنة) لا تحتاج حفظًا
+  if (PERSIST_KEYS.every((k) => s[k] === prev[k])) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(mode === 'remote' ? pushChanges : saveLocal, mode === 'remote' ? 350 : 250);
+});
+window.addEventListener('beforeunload', () => (mode === 'remote' ? pushChanges() : saveLocal()));
+// عند الرجوع للتبويب: نجلب آخر نسخة (مزامنة بين الأجهزة) إذا مر وقت كافٍ
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && mode === 'remote' && Date.now() - lastFetch > 60000) useStore.getState().refreshRemote();
 });

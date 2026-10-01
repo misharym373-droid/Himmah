@@ -24,8 +24,9 @@ const localAdapter = {
   remove(key) {
     try {
       localStorage.removeItem(PREFIX + key);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+      console.warn('[himmah:storage]', e?.message || e);
     }
   },
 };
@@ -50,16 +51,18 @@ export const session = {
   set(userId, remember) {
     try {
       (remember ? localStorage : sessionStorage).setItem(PREFIX + 'session', userId);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+      console.warn('[himmah:storage]', e?.message || e);
     }
   },
   clear() {
     try {
       sessionStorage.removeItem(PREFIX + 'session');
       localStorage.removeItem(PREFIX + 'session');
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+      console.warn('[himmah:storage]', e?.message || e);
     }
   },
 };

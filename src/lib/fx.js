@@ -25,14 +25,16 @@ export function playSound(kind = 'done') {
     } else if (kind === 'timer') {
       [660, 660, 880].forEach((f, i) => tone(f, i * 0.25, 0.2, 0.07));
     }
-  } catch {
-    /* الصوت غير مدعوم */
+  } catch (e) {
+    // الصوت غير مدعوم
+    console.warn('[himmah:sound]', e?.message || e);
   }
 }
 export function vibrate(pattern = 30) {
   try {
     navigator.vibrate?.(pattern);
-  } catch {
-    /* ignore */
+  } catch (e) {
+    // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
+    console.warn('[himmah:vibrate]', e?.message || e);
   }
 }
