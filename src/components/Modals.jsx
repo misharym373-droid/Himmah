@@ -1,33 +1,40 @@
-// النوافذ التفاعلية: الصوت، الصورة، إعادة التخطيط، أنقذ يومي، عندي ساعة، وش أسوي الآن، التجربة التفاعلية
+// النوافذ التفاعلية: الصوت، الصورة، التركيز، إعادة التخطيط، أنقذ يومي، عندي ساعة، وش أسوي الآن، التجربة التفاعلية
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Square, Check, X, ImagePlus, Loader2, Sparkles, Play, CalendarPlus, Trash2, ArrowLeft, Undo2, Keyboard } from 'lucide-react';
+import { Mic, Square, Check, X, ImagePlus, Loader2, Sparkles, Play, CalendarPlus, Trash2, ArrowLeft, Undo2, Keyboard, Calendar, Clock, Timer, Repeat, MicOff, RotateCcw, Pencil, Zap, Sun, CalendarArrowUp, CalendarDays, BatteryLow, BatteryMedium, BatteryFull, Siren, Hourglass } from 'lucide-react';
 import { useStore } from '../store.js';
+import { useAssistantState } from '../hooks.js';
 import { Modal, CheckBox } from './ui.jsx';
-import { parseTasks } from '../lib/nlp.js';
+import { Glyph } from './Glyph.jsx';
+import { parseTasks, guessMeta } from '../lib/nlp.js';
 import { extractText, textToTasks } from '../lib/ocr.js';
 import { rescuePlan, fitInTime, suggestNow, say } from '../lib/assistant.js';
 import { formatDuration, relativeDay, todayKey, addDays, formatLong } from '../lib/date.js';
-import { guessMeta } from '../lib/nlp.js';
+import { AREAS, PRIORITIES } from '../config.js';
 
 const SR = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
 
-function ParsedList({ items, onRemove }) {
+// عرض مختصر لمهام مستخرجة (للقراءة فقط)
+export function ParsedList({ items, onRemove, onOpen }) {
   return (
     <div className="parsed">
       {items.map((t, i) => (
-        <div className="parsed-item" key={i} style={{ animationDelay: `${i * 0.08}s` }}>
-          <span style={{ fontSize: '1.4rem' }}>{t.icon}</span>
+        <div className={`parsed-item ${onOpen ? 'clickable' : ''}`} key={t.id || i} style={{ animationDelay: `${i * 0.06}s` }} onClick={onOpen ? () => onOpen(t) : undefined} role={onOpen ? 'button' : undefined} tabIndex={onOpen ? 0 : undefined}>
+          <span className="t-icon" style={{ color: AREAS[t.area]?.color }}>
+            <Glyph name={t.icon} size={18} />
+          </span>
           <div className="grow">
             <div className="bold">{t.title}</div>
-            <div className="tiny muted row wrap" style={{ gap: 10 }}>
-              <span>📅 {relativeDay(t.date)}</span>
-              <span className="num">⏰ {t.time || '—'}</span>
-              <span>⏱️ {formatDuration(t.duration)}</span>
-              {t.repeat?.type !== 'none' && <span>🔁 متكررة</span>}
+            <div className="t-meta">
+              <span className="meta-item"><Calendar size={12} /> {relativeDay(t.date)}</span>
+              <span className="meta-item num"><Clock size={12} /> {t.time || '—'}</span>
+              <span className="meta-item"><Timer size={12} /> {formatDuration(t.duration)}</span>
+              {t.priority && t.priority !== 'med' && <span className="prio-tag" style={{ '--c': PRIORITIES[t.priority]?.color }}>{PRIORITIES[t.priority]?.label}</span>}
+              {t.repeat?.type && t.repeat.type !== 'none' && <span className="meta-item"><Repeat size={12} /> متكررة</span>}
             </div>
           </div>
+          {onOpen && <Pencil size={15} className="dim" aria-hidden />}
           {onRemove && (
-            <button className="icon-btn sm plain" aria-label="إزالة" onClick={() => onRemove(i)}>
+            <button className="icon-btn sm plain" aria-label={`إزالة ${t.title}`} onClick={() => onRemove(i)}>
               <X />
             </button>
           )}
@@ -37,139 +44,263 @@ function ParsedList({ items, onRemove }) {
   );
 }
 
+// محرر المهام المستخرجة: يسمح بتعديل كل حقل قبل الحفظ
+export function ParsedEditor({ items, onChange }) {
+  const upd = (i, patch) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  return (
+    <div className="col" style={{ gap: 10 }}>
+      {items.map((t, i) => (
+        <div className="parsed-edit reveal" key={i} style={{ animationDelay: `${i * 0.06}s` }}>
+          <div className="row">
+            <span className="t-icon" style={{ color: AREAS[t.area]?.color }}>
+              <Glyph name={t.icon} size={18} />
+            </span>
+            <input className="input" value={t.title} aria-label="عنوان المهمة" onChange={(e) => upd(i, { title: e.target.value, ...guessMeta(e.target.value) })} />
+            <button className="icon-btn sm plain" aria-label={`إزالة ${t.title}`} onClick={() => onChange(items.filter((_, j) => j !== i))}>
+              <X />
+            </button>
+          </div>
+          <div className="parsed-fields">
+            <label className="field">
+              <span>التاريخ</span>
+              <input className="input" type="date" value={t.date} onChange={(e) => upd(i, { date: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>الوقت</span>
+              <input className="input" type="time" value={t.time || ''} onChange={(e) => upd(i, { time: e.target.value || null })} />
+            </label>
+            <label className="field">
+              <span>المدة (د)</span>
+              <input className="input" type="number" min="5" step="5" value={t.duration} onChange={(e) => upd(i, { duration: Math.max(5, +e.target.value || 30) })} />
+            </label>
+            <label className="field">
+              <span>الأولوية</span>
+              <select className="select" value={t.priority || 'med'} onChange={(e) => upd(i, { priority: e.target.value })}>
+                {Object.entries(PRIORITIES).map(([k, p]) => (
+                  <option key={k} value={k}>{p.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ————— إضافة بالصوت —————
+// الحالات: idle → listening → review  (أو unsupported/error مع بقاء الإدخال النصي متاحًا)
 export function VoiceModal() {
   const close = useStore((s) => s.closeModal);
-  const addTasks = useStore((s) => s.addTasks);
-  const setFlag = useStore((s) => s.setFlag);
-  const [listening, setListening] = useState(false);
+  const [status, setStatus] = useState(SR ? 'idle' : 'unsupported');
   const [text, setText] = useState('');
   const [interim, setInterim] = useState('');
   const [items, setItems] = useState([]);
   const [err, setErr] = useState('');
   const rec = useRef(null);
+  const textRef = useRef('');
 
-  useEffect(() => () => rec.current?.abort?.(), []);
+  useEffect(
+    () => () => {
+      try {
+        rec.current?.abort?.();
+      } catch {
+        /* ignore */
+      }
+    },
+    []
+  );
+
+  const setTranscript = (v) => {
+    textRef.current = v;
+    setText(v);
+    setItems(parseTasks(v));
+  };
 
   function start() {
     setErr('');
-    if (!SR) {
-      setErr('متصفحك لا يدعم التعرف على الصوت. جرّب Chrome أو Safari، أو اكتب مهمتك بالأسفل.');
-      return;
+    if (!SR) return setStatus('unsupported');
+    try {
+      const r = new SR();
+      r.lang = 'ar-SA';
+      r.interimResults = true;
+      r.continuous = false;
+      r.onresult = (e) => {
+        let fin = '';
+        let mid = '';
+        for (let k = e.resultIndex; k < e.results.length; k++) {
+          const res = e.results[k];
+          if (res.isFinal) fin += res[0].transcript;
+          else mid += res[0].transcript;
+        }
+        if (fin) setTranscript(((textRef.current ? textRef.current + ' ' : '') + fin).trim());
+        setInterim(mid);
+      };
+      r.onerror = (e) => {
+        const msg = {
+          'not-allowed': 'اسمح للموقع باستخدام الميكروفون من إعدادات المتصفح.',
+          'service-not-allowed': 'اسمح للموقع باستخدام الميكروفون من إعدادات المتصفح.',
+          'no-speech': 'ما سمعت شيء. حاول مرة ثانية وتكلم بوضوح.',
+          'audio-capture': 'ما فيه ميكروفون متصل بالجهاز.',
+          network: 'التعرف على الصوت يحتاج اتصال بالإنترنت.',
+        }[e.error];
+        if (e.error !== 'aborted') setErr(msg || 'تعذر التعرف على الصوت، حاول مرة أخرى أو اكتب مهامك.');
+        setStatus('idle');
+      };
+      r.onend = () => {
+        setInterim('');
+        setStatus(textRef.current ? 'review' : 'idle');
+      };
+      rec.current = r;
+      r.start();
+      setStatus('listening');
+    } catch {
+      setErr('تعذر تشغيل الميكروفون. اكتب مهامك بالأسفل.');
+      setStatus('idle');
     }
-    const r = new SR();
-    r.lang = 'ar-SA';
-    r.interimResults = true;
-    r.continuous = false;
-    r.onresult = (e) => {
-      let fin = '';
-      let mid = '';
-      for (const res of e.results) (res.isFinal ? (fin += res[0].transcript) : (mid += res[0].transcript));
-      if (fin) {
-        setText((t) => (t ? t + ' ' : '') + fin);
-        setItems(parseTasks((text ? text + ' ' : '') + fin));
-      }
-      setInterim(mid);
-    };
-    r.onerror = (e) => {
-      setErr(e.error === 'not-allowed' ? 'اسمح للموقع باستخدام الميكروفون من إعدادات المتصفح.' : 'لم أتمكن من سماعك بوضوح، حاول مرة أخرى.');
-      setListening(false);
-    };
-    r.onend = () => setListening(false);
-    rec.current = r;
-    r.start();
-    setListening(true);
   }
   function stop() {
-    rec.current?.stop();
-    setListening(false);
+    try {
+      rec.current?.stop();
+    } catch {
+      /* ignore */
+    }
   }
-  function add() {
-    addTasks(items);
-    setFlag('voice');
-    useStore.getState().checkAchievements();
-    useStore.getState().toast(items.length > 1 ? `تمت إضافة ${items.length} مهام إلى الجدول` : 'تمت الإضافة إلى الجدول', { icon: 'check' });
+  async function add() {
+    const list = items.filter((t) => t.title.trim());
+    if (!list.length) return;
+    const s = useStore.getState();
+    s.addTasks(list);
+    s.setFlag('voice');
+    s.checkAchievements();
+    s.toast(list.length > 1 ? `تمت إضافة ${list.length} مهام إلى يومك` : `تمت إضافة "${list[0].title}" إلى يومك`, { icon: 'check' });
     close();
   }
   const example = 'ذكرني بكرة الساعة 8 أذاكر التفاضل لمدة ساعة';
+  const listening = status === 'listening';
+  const label = { idle: 'اضغط على المايك وتكلم', listening: 'أسمعك الآن… تكلم براحتك', review: items.length ? 'راجع المهام قبل الحفظ' : 'ما فهمت مهام واضحة — عدّل النص', unsupported: 'التعرف على الصوت غير مدعوم في هذا المتصفح' }[status];
 
   return (
-    <Modal title="إضافة مهمة بالصوت" onClose={close}>
-      <div className="col" style={{ alignItems: 'stretch', gap: 18 }}>
-        <div style={{ textAlign: 'center' }}>
-          <button className={`mic-big ${listening ? 'live' : ''}`} onClick={listening ? stop : start} aria-label={listening ? 'إيقاف التسجيل' : 'ابدأ التحدث'}>
-            {listening ? <Square /> : <Mic />}
+    <Modal title="إضافة بالصوت" sub="تكلم بطريقتك: المهمة، الوقت، والمدة" onClose={close} size={items.length ? 'wide' : ''}>
+      <div className="col" style={{ alignItems: 'stretch', gap: 16 }}>
+        <div className="voice-stage" aria-live="polite">
+          <button className={`mic-big ${listening ? 'live' : ''}`} onClick={listening ? stop : start} disabled={status === 'unsupported'} aria-pressed={listening} aria-label={listening ? 'إيقاف التسجيل' : 'ابدأ التسجيل الصوتي'}>
+            {status === 'unsupported' ? <MicOff /> : listening ? <Square /> : <Mic />}
           </button>
-          <div className="bold mt">{listening ? 'تحدث الآن…' : items.length ? 'تم فهم المهمة ✓' : 'اضغط وتحدث'}</div>
-          <div className={`wave mt-s ${listening ? '' : 'idle'}`} aria-hidden>
-            {Array.from({ length: 22 }).map((_, i) => (
-              <i key={i} style={{ '--h': `${14 + ((i * 37) % 44)}px`, animationDelay: `${(i % 7) * 0.09}s` }} />
-            ))}
+          <div className={`voice-status ${listening ? 'live' : ''}`}>
+            {listening && <span className="rec-dot" aria-hidden />}
+            {label}
           </div>
-          {(interim || text) && <p className="muted mt-s">"{text} <span className="dim">{interim}</span>"</p>}
-          {!text && !listening && <p className="tiny dim mt-s">مثال: "{example}"</p>}
-        </div>
-        {err && <div className="err">{err}</div>}
-        <div className="row">
-          <input
-            className="input"
-            value={text}
-            placeholder="أو اكتب هنا…"
-            onChange={(e) => {
-              setText(e.target.value);
-              setItems(parseTasks(e.target.value));
-            }}
-          />
-          {!text && (
-            <button className="btn btn-sm" onClick={() => (setText(example), setItems(parseTasks(example)))}>
-              مثال
-            </button>
-          )}
-        </div>
-        {items.length > 0 && (
-          <>
-            <div className="row green bold">
-              <Check size={18} /> تم فهم {items.length > 1 ? `${items.length} مهام` : 'المهمة'}
+          {listening && (
+            <div className="wave" aria-hidden>
+              {Array.from({ length: 18 }).map((_, i) => (
+                <i key={i} style={{ '--h': `${12 + ((i * 37) % 36)}px`, animationDelay: `${(i % 6) * 0.1}s` }} />
+              ))}
             </div>
-            <ParsedList items={items} onRemove={(i) => setItems(items.filter((_, j) => j !== i))} />
-            <button className="btn btn-primary btn-lg btn-block" onClick={add}>
-              <CalendarPlus /> إضافة إلى الجدول
+          )}
+          {(interim || text) && (
+            <p className="transcript">
+              {text} <span className="dim">{interim}</span>
+            </p>
+          )}
+          {status === 'unsupported' && <p className="small muted">جرّب Chrome أو Safari، أو اكتب مهامك بالأسفل — النتيجة نفسها.</p>}
+        </div>
+        {err && <div className="err" role="alert">{err}</div>}
+        <label className="field">
+          <span>النص {status === 'review' ? '(تقدر تعدّله)' : ''}</span>
+          <div className="row">
+            <input className="input" value={text} placeholder="أو اكتب هنا…" onChange={(e) => setTranscript(e.target.value)} />
+            {!text && (
+              <button className="btn btn-sm" onClick={() => (setTranscript(example), setStatus('review'))}>
+                مثال
+              </button>
+            )}
+            {text && !listening && (
+              <button className="icon-btn" aria-label="مسح وإعادة التسجيل" title="من جديد" onClick={() => (setTranscript(''), setStatus(SR ? 'idle' : 'unsupported'))}>
+                <RotateCcw />
+              </button>
+            )}
+          </div>
+        </label>
+        {items.length > 0 && !listening && (
+          <>
+            <div className="row green bold small">
+              <Check size={16} /> فهمت {items.length > 1 ? `${items.length} مهام` : 'مهمة واحدة'} — عدّل أي شيء قبل الحفظ
+            </div>
+            <ParsedEditor items={items} onChange={setItems} />
+            <button className="btn btn-primary btn-lg btn-block" onClick={add} disabled={!items.some((t) => t.title.trim())}>
+              <CalendarPlus /> إضافة إلى يومي
             </button>
           </>
         )}
+        <p className="tiny dim" style={{ textAlign: 'center' }}>
+          التحليل يتم محليًا على جهازك
+        </p>
       </div>
     </Modal>
   );
 }
 
-// ————— تم إنشاء جدولك (من الإدخال السريع) —————
+// ————— تم إنشاء المهام (من الإدخال السريع) —————
 export function CreatedModal({ ids }) {
   const close = useStore((s) => s.closeModal);
+  const open = useStore((s) => s.openModal);
   const all = useStore((s) => s.tasks);
   const tasks = useMemo(() => all.filter((t) => ids.includes(t.id)), [all, ids]);
   const purge = useStore((s) => s.purgeTask);
   return (
     <Modal
       onClose={close}
+      title={tasks.length > 1 ? `أضفت ${tasks.length} مهام` : 'تمت إضافة المهمة'}
+      sub="اضغط على أي مهمة لتعديلها"
       footer={
         <>
           <button className="btn btn-ghost" onClick={() => (ids.forEach(purge), close(), useStore.getState().toast('تم التراجع'))}>
             <Undo2 /> تراجع
           </button>
           <button className="btn btn-primary" onClick={close}>
-            تمام
+            <Check /> تمام
           </button>
         </>
       }
     >
-      <div style={{ textAlign: 'center' }} className="mb">
-        <div className="ai-orb" style={{ margin: '0 auto 14px', width: 70, height: 70, borderRadius: 22 }}>
-          <Sparkles />
-        </div>
-        <h3 style={{ fontSize: '1.35rem' }}>تم إنشاء جدولك {tasks[0]?.date === todayKey() ? 'اليومي' : ''} ✨</h3>
-        <p className="muted small mt-s">أضفت {tasks.length > 1 ? `${tasks.length} مهام` : 'المهمة'} إلى جدولك</p>
+      <ParsedList items={tasks} onOpen={(t) => open('task', { task: t })} />
+    </Modal>
+  );
+}
+
+// ————— بدء جلسة تركيز —————
+export function FocusStartModal({ taskId }) {
+  const close = useStore((s) => s.closeModal);
+  const task = useStore((s) => s.tasks.find((t) => t.id === taskId));
+  const startFocus = useStore((s) => s.startFocus);
+  const [custom, setCustom] = useState(task?.duration || 30);
+  const presets = [15, 25, 45];
+  return (
+    <Modal title="ابدأ جلسة تركيز" sub={task ? task.title : null} onClose={close}>
+      <div className="focus-presets">
+        {presets.map((m) => (
+          <button key={m} className="seg-btn" onClick={() => startFocus(taskId, m)}>
+            <span className="xbold num" style={{ fontSize: '1.6rem' }}>{m}</span>
+            <span className="tiny muted">دقيقة</span>
+          </button>
+        ))}
       </div>
-      <ParsedList items={tasks} />
+      <div className="divider" />
+      <label className="field">
+        <span>تخصيص المدة (دقيقة)</span>
+        <div className="row">
+          <input className="input" type="number" min="5" max="240" step="5" value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && startFocus(taskId, Math.max(1, +custom || 25))} />
+          <button className="btn btn-primary" onClick={() => startFocus(taskId, Math.max(1, +custom || 25))}>
+            <Play /> ابدأ
+          </button>
+        </div>
+      </label>
+      {task?.duration && !presets.includes(task.duration) && (
+        <button className="btn btn-ghost btn-sm mt" onClick={() => startFocus(taskId, task.duration)}>
+          <Timer /> مدة المهمة كاملة ({formatDuration(task.duration)})
+        </button>
+      )}
     </Modal>
   );
 }
@@ -288,37 +419,29 @@ export function RescheduleModal({ id }) {
   const task = useStore((s) => s.tasks.find((t) => t.id === id));
   const postpone = useStore((s) => s.postponeTask);
   const del = useStore((s) => s.deleteTask);
-  const startFocus = useStore((s) => s.startFocus);
+  const pickFocus = useStore((s) => s.pickFocus);
   if (!task) return null;
   const opts = [
-    ['now', '⚡', 'الآن', 'ابدأها مباشرة'],
-    ['later', '🕐', 'لاحقًا', 'بعد ساعتين اليوم'],
-    ['tomorrow', '🌅', 'غدًا', formatLong(addDays(todayKey(), 1))],
-    ['week', '📅', 'هذا الأسبوع', 'قبل نهاية الأسبوع'],
+    ['now', Zap, 'الآن', 'ابدأها بجلسة تركيز'],
+    ['later', Sun, 'لاحقًا اليوم', 'بعد ساعتين تقريبًا'],
+    ['tomorrow', CalendarArrowUp, 'غدًا', formatLong(addDays(todayKey(), 1))],
+    ['week', CalendarDays, 'هذا الأسبوع', 'قبل نهاية الأسبوع'],
   ];
   return (
     <Modal title="ماذا تريد أن تفعل بهذه المهمة؟" onClose={close}>
-      <div className="task mb" style={{ pointerEvents: 'none' }}>
-        <span className="t-icon">{task.icon}</span>
-        <div className="grow">
-          <div className="t-title">{task.title}</div>
-          <div className="t-meta">
-            {relativeDay(task.date)} {task.time && `· ${task.time}`} · {formatDuration(task.duration)}
-          </div>
-        </div>
-      </div>
-      <div className="grid g2">
-        {opts.map(([k, em, l, d]) => (
+      <ParsedList items={[task]} />
+      <div className="grid g2 mt">
+        {opts.map(([k, I, l, d]) => (
           <button
             key={k}
             className="seg-btn"
             onClick={() => {
               postpone(id, k);
               close();
-              if (k === 'now') startFocus(id);
+              if (k === 'now') pickFocus(id);
             }}
           >
-            <span className="em">{em}</span>
+            <I size={20} className="purple" />
             {l}
             <span className="tiny dim">{d}</span>
           </button>
@@ -334,13 +457,13 @@ export function RescheduleModal({ id }) {
 // ————— أنقذ يومي —————
 export function RescueModal() {
   const close = useStore((s) => s.closeModal);
-  const state = useStore();
-  const plan = useMemo(() => rescuePlan(state), []); // eslint-disable-line
+  const state = useAssistantState();
+  const plan = useMemo(() => rescuePlan(state), []); // eslint-disable-line react-hooks/exhaustive-deps
   const apply = useStore((s) => s.applyRescue);
   return (
-    <Modal title="🚨 أنقذ يومي" onClose={close} size="wide">
+    <Modal title={<span className="row"><Siren size={22} className="red" /> أنقذ يومي</span>} labelledBy="أنقذ يومي" onClose={close} size="wide">
       {!plan.total ? (
-        <p className="muted">ما عندك مهام متبقية اليوم — يومك بأمان 👌</p>
+        <p className="muted">ما عندك مهام متبقية اليوم — يومك بأمان.</p>
       ) : (
         <>
           <div className="grid g2 mb">
@@ -362,8 +485,8 @@ export function RescueModal() {
                   {i + 1}
                 </span>
                 <div className="grow">
-                  <div className="bold">
-                    {t.icon} {t.title}
+                  <div className="bold row" style={{ gap: 6 }}>
+                    <Glyph name={t.icon} size={16} /> {t.title}
                   </div>
                   <div className="tiny muted">
                     <span className="num">{t.newTime}</span> · {formatDuration(t.duration)}
@@ -379,7 +502,7 @@ export function RescueModal() {
               <div className="chips">
                 {plan.move.map((t) => (
                   <span className="chip" key={t.id}>
-                    {t.icon} {t.title}
+                    <Glyph name={t.icon} size={14} /> {t.title}
                   </span>
                 ))}
               </div>
@@ -402,12 +525,12 @@ export function RescueModal() {
 // ————— عندي ساعة فقط —————
 export function OneHourModal() {
   const close = useStore((s) => s.closeModal);
-  const state = useStore();
+  const state = useAssistantState();
   const startFocus = useStore((s) => s.startFocus);
   const [min, setMin] = useState(60);
   const r = fitInTime(state, min);
   return (
-    <Modal title="⏳ عندي وقت محدود" sub="اختر الوقت المتاح وسأعرض أفضل ما يمكن إنجازه" onClose={close}>
+    <Modal title={<span className="row"><Hourglass size={22} className="gold" /> عندي وقت محدود</span>} labelledBy="عندي وقت محدود" sub="اختر الوقت المتاح وسأعرض أفضل ما يمكن إنجازه" onClose={close}>
       <div className="chips mb">
         {[15, 30, 45, 60, 90, 120].map((m) => (
           <button key={m} className={`chip ${min === m ? 'on' : ''}`} onClick={() => setMin(m)}>
@@ -423,7 +546,9 @@ export function OneHourModal() {
           <div className="col">
             {r.tasks.map((t, i) => (
               <div className="parsed-item" key={t.id} style={{ animationDelay: `${i * 0.08}s` }}>
-                <span style={{ fontSize: '1.3rem' }}>{t.icon}</span>
+                <span className="t-icon" style={{ color: AREAS[t.area]?.color }}>
+                  <Glyph name={t.icon} size={18} />
+                </span>
                 <div className="grow">
                   <div className="bold">{t.title}</div>
                   <div className="tiny muted">{formatDuration(t.duration)}</div>
@@ -443,7 +568,7 @@ export function OneHourModal() {
           </button>
         </p>
       ) : (
-        <p className="muted">ما عندك مهام مفتوحة اليوم 🌿</p>
+        <p className="muted">ما عندك مهام مفتوحة اليوم.</p>
       )}
     </Modal>
   );
@@ -452,8 +577,8 @@ export function OneHourModal() {
 // ————— وش أسوي الآن؟ —————
 export function WhatNowModal() {
   const close = useStore((s) => s.closeModal);
-  const state = useStore();
-  const startFocus = useStore((s) => s.startFocus);
+  const state = useAssistantState();
+  const pickFocus = useStore((s) => s.pickFocus);
   const open = useStore((s) => s.openModal);
   const [thinking, setThinking] = useState(true);
   const r = useMemo(() => suggestNow(state), []); // eslint-disable-line
@@ -492,7 +617,9 @@ export function WhatNowModal() {
               </div>
             )}
             <div className="task mt" style={{ pointerEvents: 'none', textAlign: 'start' }}>
-              <span className="t-icon">{r.task.icon}</span>
+              <span className="t-icon" style={{ color: AREAS[r.task.area]?.color }}>
+                <Glyph name={r.task.icon} size={18} />
+              </span>
               <div className="grow">
                 <div className="t-title">{r.task.title}</div>
                 <div className="t-meta">
@@ -501,7 +628,7 @@ export function WhatNowModal() {
               </div>
             </div>
             <div className="row mt" style={{ justifyContent: 'center' }}>
-              <button className="btn btn-primary btn-lg" onClick={() => (close(), startFocus(r.task.id))}>
+              <button className="btn btn-primary btn-lg" onClick={() => pickFocus(r.task.id)}>
                 <Play /> ابدأ المهمة
               </button>
             </div>
@@ -552,7 +679,7 @@ export function InteractiveModal() {
       c += chunk;
       budget -= chunk;
       if (budget >= 15 && out.length < 6) {
-        out.push({ title: 'استراحة', duration: 15, icon: '☕', area: 'health', priority: 'low', time: toHM(c), date: todayKey(), repeat: { type: 'none', days: [] } });
+        out.push({ title: 'استراحة', duration: 15, icon: 'coffee', area: 'health', priority: 'low', time: toHM(c), date: todayKey(), repeat: { type: 'none', days: [] } });
         c += 15;
         budget -= 15;
       }
@@ -582,12 +709,12 @@ export function InteractiveModal() {
             <span>ما طاقتك اليوم؟</span>
             <div className="seg">
               {[
-                ['low', '😴', 'منخفضة'],
-                ['mid', '😐', 'متوسطة'],
-                ['high', '🔥', 'عالية'],
-              ].map(([k, e, l]) => (
-                <button key={k} className={`seg-btn ${energy === k ? 'on green' : ''}`} onClick={() => setE(k)}>
-                  <span className="em">{e}</span>
+                ['low', BatteryLow, 'منخفضة'],
+                ['mid', BatteryMedium, 'متوسطة'],
+                ['high', BatteryFull, 'عالية'],
+              ].map(([k, I, l]) => (
+                <button key={k} className={`seg-btn ${energy === k ? 'on' : ''}`} onClick={() => setE(k)}>
+                  <I size={22} />
                   {l}
                 </button>
               ))}
@@ -616,7 +743,7 @@ export function InteractiveModal() {
       )}
       {step === 2 && (
         <div className="onb-step">
-          <h3 style={{ textAlign: 'center', marginBottom: 14 }}>خطتك جاهزة ✨</h3>
+          <h3 style={{ textAlign: 'center', marginBottom: 14 }}>خطتك جاهزة</h3>
           <ParsedList items={plan} onRemove={(i) => setPlan(plan.filter((_, j) => j !== i))} />
           <div className="modal-ft">
             <button className="btn btn-ghost" onClick={() => setStep(0)}>
@@ -627,7 +754,7 @@ export function InteractiveModal() {
               onClick={() => {
                 setEnergy(energy);
                 addTasks(plan);
-                useStore.getState().toast('تمت إضافة خطتك إلى يومك 🚀', { icon: 'sparkles' });
+                useStore.getState().toast('تمت إضافة خطتك إلى يومك', { icon: 'sparkles' });
                 close();
                 document.getElementById('day-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}

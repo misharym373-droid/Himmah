@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Sparkles, Mic } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Mic, BatteryLow, BatteryMedium, BatteryFull } from 'lucide-react';
 import { useStore } from '../store.js';
 import { asset } from '../components/ui.jsx';
 import { parseTasks, guessMeta } from '../lib/nlp.js';
 import { AREAS, TAGLINE } from '../config.js';
 import { todayKey } from '../lib/date.js';
+import { Glyph } from '../components/Glyph.jsx';
 
 const GOALS = ['تحسين الدراسة', 'زيادة اللياقة', 'تنظيم الوقت', 'قراءة أكثر', 'تعلم مهارة', 'إنجاز مشروع'];
 
@@ -33,7 +34,7 @@ export default function Onboarding() {
         firstTask,
       });
       useStore.getState().setProfile({ personalGoals: a.goal ? [a.goal] : [] });
-      useStore.getState().toast('يومك جاهز! 🚀', { icon: 'sparkles' });
+      useStore.getState().toast('يومك جاهز', { icon: 'sparkles' });
     }, 2200);
   }
 
@@ -50,7 +51,7 @@ export default function Onboarding() {
             <div style={{ textAlign: 'center' }} className="col">
               <img src={asset('brand/logo.webp')} alt="هّمة" style={{ width: 'min(300px,80%)', margin: '0 auto', mixBlendMode: 'screen' }} />
               <p className="muted">هّمة .. {TAGLINE}</p>
-              <h2 style={{ fontSize: '1.7rem', marginTop: 8 }}>مرحبًا بك في هّمة{name ? ` يا ${name}` : ''} 👋</h2>
+              <h2 style={{ fontSize: '1.7rem', marginTop: 8 }}>مرحبًا بك في هّمة{name ? ` يا ${name}` : ''}</h2>
               <p className="muted">خلنا نجهز يومك في أقل من دقيقة، بخمس أسئلة بسيطة.</p>
               <button className="btn btn-primary btn-lg mt" onClick={next} style={{ alignSelf: 'center' }}>
                 يلا نبدأ <ArrowLeft />
@@ -77,12 +78,12 @@ export default function Onboarding() {
               <p className="muted">نستخدمها لاقتراح المهام المناسبة لك</p>
               <div className="seg">
                 {[
-                  ['low', '😴', 'منخفضة'],
-                  ['mid', '😐', 'متوسطة'],
-                  ['high', '🔥', 'عالية'],
-                ].map(([k, e, l]) => (
+                  ['low', BatteryLow, 'منخفضة'],
+                  ['mid', BatteryMedium, 'متوسطة'],
+                  ['high', BatteryFull, 'عالية'],
+                ].map(([k, E, l]) => (
                   <button key={k} className={`seg-btn ${a.energy === k ? 'on' : ''}`} onClick={() => set('energy', k)} style={{ padding: 20 }}>
-                    <span className="em" style={{ fontSize: '2.2rem' }}>{e}</span>
+                    <E size={28} />
                     {l}
                   </button>
                 ))}
@@ -117,7 +118,7 @@ export default function Onboarding() {
               <div className="grid g3" style={{ gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
                 {Object.entries(AREAS).map(([k, ar]) => (
                   <button key={k} className={`seg-btn ${a.areas.includes(k) ? 'on' : ''}`} onClick={() => set('areas', a.areas.includes(k) ? a.areas.filter((x) => x !== k) : [...a.areas, k])}>
-                    <span className="em">{ar.emoji}</span>
+                    <Glyph name={ar.icon} size={22} />
                     {ar.label}
                   </button>
                 ))}
@@ -137,7 +138,7 @@ export default function Onboarding() {
                 <div className="parsed">
                   {parseTasks(a.task).map((t, i) => (
                     <div className="parsed-item" key={i}>
-                      <span>{t.icon}</span>
+                      <Glyph name={t.icon} size={16} />
                       <span className="bold">{t.title}</span>
                       <span className="tiny muted num">
                         {t.time || '—'} · {t.duration}د

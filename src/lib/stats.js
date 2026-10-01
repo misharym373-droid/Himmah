@@ -47,7 +47,11 @@ export function summary(tasks, focusLog = [], range = 7) {
   for (const t of real(tasks)) if (t.postponed) post[t.area] = (post[t.area] || 0) + t.postponed;
   const topPost = Object.entries(post).sort((a, b) => b[1] - a[1])[0];
 
+  // التأجيل ضمن الفترة
+  const postponedTasks = list.filter((t) => t.postponed > 0).length;
   return {
+    postponedTasks,
+    postponeRate: list.length ? Math.round((postponedTasks / list.length) * 100) : 0,
     total: list.length,
     done: done.length,
     pending: list.length - done.length,

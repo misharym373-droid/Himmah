@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Sparkles, Trash2, Play, Plus, X, Wand2, Check } from 'lucide-react';
+import { Sparkles, Trash2, Plus, X, Wand2, Check, Timer } from 'lucide-react';
 import { useStore } from '../store.js';
 import { Modal } from './ui.jsx';
-import { AREAS, PRIORITIES } from '../config.js';
+import { Glyph, IconPicker } from './Glyph.jsx';
+import { AREAS, PRIORITIES, TASK_ICONS } from '../config.js';
 import { DAYS_SHORT, todayKey } from '../lib/date.js';
 import { guessMeta, parseTasks, looksLikeSchedule } from '../lib/nlp.js';
 import { breakdownTask, isBigTask } from '../lib/assistant.js';
 import { taskXp, taskSize } from '../lib/game.js';
 
-const ICONS = ['📚', '📝', '🎓', '📖', '💪', '🚶', '☕', '🥗', '💧', '😴', '💼', '💻', '💰', '🛒', '👨‍👩‍👦', '🕌', '🎮', '🎬', '✈️', '✨'];
 const DURS = [15, 30, 45, 60, 90, 120];
 
 export default function TaskModal({ task, preset = {} }) {
@@ -16,11 +16,11 @@ export default function TaskModal({ task, preset = {} }) {
   const addTask = useStore((s) => s.addTask);
   const updateTask = useStore((s) => s.updateTask);
   const deleteTask = useStore((s) => s.deleteTask);
-  const startFocus = useStore((s) => s.startFocus);
+  const pickFocus = useStore((s) => s.pickFocus);
   const goals = useStore((s) => s.goals);
   const editing = !!task;
   const [f, setF] = useState(() => ({
-    title: '', desc: '', notes: '', date: todayKey(), time: '', duration: 30, priority: 'med', area: 'study', icon: '📚',
+    title: '', desc: '', notes: '', date: todayKey(), time: '', duration: 30, priority: 'med', area: 'study', icon: 'book',
     repeat: { type: 'none', days: [] }, goalId: '', subtasks: [], ...preset, ...(task || {}),
   }));
   const [iconTouched, setIconTouched] = useState(editing);
@@ -69,8 +69,8 @@ export default function TaskModal({ task, preset = {} }) {
             </button>
           )}
           {editing && !task.done && (
-            <button className="btn" onClick={() => (close(), startFocus(task.id))}>
-              <Play /> ابدأ التركيز
+            <button className="btn" onClick={() => pickFocus(task.id)}>
+              <Timer /> ابدأ جلسة تركيز
             </button>
           )}
           <button className="btn btn-ghost" onClick={close}>
@@ -105,13 +105,7 @@ export default function TaskModal({ task, preset = {} }) {
 
         <div className="field">
           <span>الأيقونة</span>
-          <div className="chips">
-            {ICONS.map((i) => (
-              <button key={i} type="button" className={`chip ${f.icon === i ? 'on' : ''}`} style={{ width: 40, padding: 0, justifyContent: 'center', fontSize: '1.1rem' }} onClick={() => (set('icon', i), setIconTouched(true))} aria-label={`أيقونة ${i}`}>
-                {i}
-              </button>
-            ))}
-          </div>
+          <IconPicker value={f.icon} options={TASK_ICONS} onChange={(i) => (set('icon', i), setIconTouched(true))} />
         </div>
 
         <div className="grid g3">
@@ -155,7 +149,7 @@ export default function TaskModal({ task, preset = {} }) {
           <div className="chips">
             {Object.entries(AREAS).map(([k, a]) => (
               <button key={k} className={`chip ${f.area === k ? 'on' : ''}`} onClick={() => set('area', k)}>
-                {a.emoji} {a.label}
+                <Glyph name={a.icon} size={15} /> {a.label}
               </button>
             ))}
           </div>
@@ -199,7 +193,7 @@ export default function TaskModal({ task, preset = {} }) {
               <option value="">بدون</option>
               {goals.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.icon} {g.title}
+                  {g.title}
                 </option>
               ))}
             </select>
@@ -230,7 +224,7 @@ export default function TaskModal({ task, preset = {} }) {
         )}
         {showBreak && (
           <div className="card tight glow">
-            <div className="bold mb">✨ الخطوات المقترحة — عدّلها كما تحب</div>
+            <div className="bold mb row"><Sparkles size={16} className="purple" /> الخطوات المقترحة — عدّلها كما تحب</div>
             <div className="col">
               {breakSteps.map((s, i) => (
                 <div className="row" key={i}>

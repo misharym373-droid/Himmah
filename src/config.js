@@ -7,20 +7,24 @@ export const TAGLINE = 'نحو يوم أفضل';
 export const SURRA_URL = 'https://misharym373-droid.github.io/sorra/';
 
 // مجالات الحياة
+// ألوان النظام: Primary بنفسجي · Success أخضر · Warning ذهبي · Danger أحمر · Info أزرق
+export const COLORS = { primary: '#7C5CFF', primarySoft: '#A78BFA', success: '#34D399', warning: '#FBBF24', danger: '#F87171', info: '#3B82F6', muted: '#94A3B8' };
+
+// مجالات الحياة (icon = مفتاح أيقونة lucide في Glyph.jsx)
 export const AREAS = {
-  study: { label: 'الدراسة', emoji: '🎓', color: '#7C5CFF' },
-  health: { label: 'الصحة', emoji: '💪', color: '#34D399' },
-  work: { label: 'العمل', emoji: '💼', color: '#3B82F6' },
-  money: { label: 'المال', emoji: '💰', color: '#FBBF24' },
-  family: { label: 'العائلة', emoji: '👨‍👩‍👦', color: '#F472B6' },
-  fun: { label: 'الترفيه', emoji: '🎮', color: '#F87171' },
+  study: { label: 'الدراسة', icon: 'study', color: COLORS.primary },
+  health: { label: 'الصحة', icon: 'health', color: COLORS.success },
+  work: { label: 'العمل', icon: 'work', color: COLORS.info },
+  money: { label: 'المال', icon: 'money', color: COLORS.warning },
+  family: { label: 'العائلة', icon: 'family', color: COLORS.primarySoft },
+  fun: { label: 'الترفيه', icon: 'fun', color: COLORS.muted },
 };
 
 export const PRIORITIES = {
-  low: { label: 'منخفضة', color: '#94A3B8', weight: 1 },
-  med: { label: 'متوسطة', color: '#3B82F6', weight: 2 },
-  high: { label: 'عالية', color: '#FBBF24', weight: 3 },
-  urgent: { label: 'عاجلة', color: '#F87171', weight: 4 },
+  low: { label: 'منخفضة', color: COLORS.muted, weight: 1 },
+  med: { label: 'متوسطة', color: COLORS.info, weight: 2 },
+  high: { label: 'عالية', color: COLORS.warning, weight: 3 },
+  urgent: { label: 'عاجلة', color: COLORS.danger, weight: 4 },
 };
 
 export const ACCENTS = {
@@ -32,8 +36,19 @@ export const ACCENTS = {
 };
 
 export const PERSONAS = {
-  friend: { label: 'صديق', emoji: '🤝', desc: 'قريب وودود' },
-  coach: { label: 'مدرب', emoji: '🧑‍🏫', desc: 'واضح ومنظم' },
-  hype: { label: 'محفز', emoji: '⚡', desc: 'حماس وطاقة' },
-  calm: { label: 'هادئ', emoji: '🧘', desc: 'لطيف ومطمئن' },
+  friend: { label: 'صديق', icon: 'handshake', desc: 'قريب وودود' },
+  coach: { label: 'مدرب', icon: 'target', desc: 'واضح ومنظم' },
+  hype: { label: 'محفز', icon: 'zap', desc: 'حماس وطاقة' },
+  calm: { label: 'هادئ', icon: 'meditation', desc: 'لطيف ومطمئن' },
 };
+
+// مستويات الطاقة اليومية
+export const ENERGY = {
+  low: { label: 'منخفضة', hint: 'مهام قصيرة' },
+  mid: { label: 'متوسطة', hint: 'مزيج متوازن' },
+  high: { label: 'عالية', hint: 'المهام الكبيرة' },
+};
+
+// اقتراحات أيقونات للمنتقيات
+export const TASK_ICONS = ['book', 'pen', 'study', 'read', 'dumbbell', 'walk', 'coffee', 'food', 'water', 'sleep', 'work', 'laptop', 'money', 'cart', 'family', 'pray', 'fun', 'film', 'travel', 'sparkles'];
+export const GOAL_ICONS = ['target', 'globe', 'dumbbell', 'book', 'work', 'money', 'brain', 'palette', 'walk', 'read', 'rocket', 'heart'];

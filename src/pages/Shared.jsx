@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Users, Plus, UserPlus, Trash2, X, Info } from 'lucide-react';
 import { useStore } from '../store.js';
 import { Modal, Bar, Empty, Avatar, useConfirm } from '../components/ui.jsx';
+import { Glyph } from '../components/Glyph.jsx';
 
 const STATUS = {
   todo: { label: 'لم تبدأ', color: '#94A3B8' },
@@ -39,7 +40,7 @@ export default function Shared() {
           <div className="tabs mb">
             {projects.map((p) => (
               <button key={p.id} className={`tab ${project?.id === p.id ? 'on' : ''}`} onClick={() => setActive(p.id)}>
-                {p.icon} {p.name}
+                <Glyph name={p.icon} size={15} /> {p.name}
               </button>
             ))}
           </div>
@@ -68,7 +69,7 @@ function Project({ p }) {
       <div className="card span-4 r-6 reveal">
         <div className="row between">
           <h3>
-            {p.icon} {p.name}
+            <Glyph name={p.icon} size={20} className="purple" /> {p.name}
           </h3>
           <button className="icon-btn sm plain" aria-label="حذف المشروع" onClick={() => confirm({ title: 'حذف المشروع', body: `حذف "${p.name}" وكل مهامه؟`, danger: true, confirmLabel: 'حذف', onConfirm: () => s.deleteProject(p.id) })}>
             <Trash2 />
@@ -175,7 +176,7 @@ function Project({ p }) {
 function ProjectModal({ onClose, onCreated }) {
   const add = useStore((s) => s.addProject);
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('📁');
+  const [icon, setIcon] = useState('folder');
   function save() {
     if (!name.trim()) return;
     add(name.trim(), icon);
@@ -203,9 +204,9 @@ function ProjectModal({ onClose, onCreated }) {
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مشروع الجامعة" autoFocus onKeyDown={(e) => e.key === 'Enter' && save()} />
         </label>
         <div className="chips">
-          {['📁', '🎓', '💼', '🏠', '🚀', '🎉', '💻', '📊'].map((i) => (
-            <button key={i} className={`chip ${icon === i ? 'on' : ''}`} style={{ width: 42, padding: 0, justifyContent: 'center', fontSize: '1.2rem' }} onClick={() => setIcon(i)} aria-label={i}>
-              {i}
+          {['folder', 'study', 'work', 'home', 'rocket', 'party', 'laptop', 'chart'].map((i) => (
+            <button key={i} className={`chip icon-chip ${icon === i ? 'on' : ''}`} onClick={() => setIcon(i)} aria-label={i}>
+              <Glyph name={i} size={17} />
             </button>
           ))}
         </div>

@@ -59,8 +59,8 @@ export function formatDuration(min) {
   if (min < 60) return `${min} دقيقة`;
   const h = Math.floor(min / 60);
   const m = min % 60;
-  const hs = h === 1 ? 'ساعة' : h === 2 ? 'ساعتان' : `${h} ساعات`;
-  return m ? `${hs} و${m} د` : hs;
+  const hs = h === 1 ? 'ساعة' : h === 2 ? 'ساعتان' : h <= 10 ? `${h} ساعات` : `${h} ساعة`;
+  return m ? `${hs} و ${m} د` : hs;
 }
 export function formatClock(sec) {
   sec = Math.max(0, Math.round(sec));

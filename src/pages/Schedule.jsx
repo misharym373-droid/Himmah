@@ -4,6 +4,7 @@ import { CalendarDays, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import { useStore } from '../store.js';
 import { DayMap } from '../components/Widgets.jsx';
 import { todayKey, addDays, fromKey, toKey, DAYS, DAYS_SHORT, MONTHS, formatLong, toMin } from '../lib/date.js';
+import { Glyph } from '../components/Glyph.jsx';
 
 export default function Schedule() {
   const [view, setView] = useState('week');
@@ -108,7 +109,7 @@ function Week({ date, onOpenDay }) {
           <DayCol key={k} k={k} tasks={byDay[k]} onOpenDay={onOpenDay} />
         ))}
       </div>
-      <DragOverlay>{active ? <div className="wk-task dragging">{active.icon} {active.title}</div> : null}</DragOverlay>
+      <DragOverlay>{active ? <div className="wk-task dragging"><Glyph name={active.icon} size={13} /> {active.title}</div> : null}</DragOverlay>
     </DndContext>
   );
 }
@@ -143,7 +144,7 @@ function DraggableTask({ t }) {
   return (
     <div ref={setNodeRef} {...listeners} {...attributes} className={`wk-task ${t.done ? 'done' : ''}`} style={{ opacity: isDragging ? 0.3 : undefined, borderInlineStart: `3px solid var(--primary)` }} onClick={() => open('task', { task: t })}>
       <div className="bold ellipsis">
-        {t.icon} {t.title}
+        <Glyph name={t.icon} size={13} /> {t.title}
       </div>
       {t.time && <div className="tiny muted num">{t.time}</div>}
     </div>
@@ -177,7 +178,7 @@ function Month({ date, onOpenDay }) {
               <span className="n num">{c.getDate()}</span>
               {list.slice(0, 3).map((t) => (
                 <span key={t.id} className={`pill ${t.done ? 'done' : ''}`}>
-                  {t.icon} {t.title}
+                  <Glyph name={t.icon} size={13} /> {t.title}
                 </span>
               ))}
               {list.length > 3 && <span className="tiny muted">+{list.length - 3}</span>}

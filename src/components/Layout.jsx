@@ -1,25 +1,30 @@
-import { useState } from 'react';
-import { House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, LogOut, Keyboard, X } from 'lucide-react';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, X, Calendar, Clock, Timer, ImagePlus } from 'lucide-react';
 import { useStore } from '../store.js';
 import { navigate, useRoute } from '../router.js';
 import { Logo, Avatar, asset } from './ui.jsx';
-import { parseTasks } from '../lib/nlp.js';
+import { Glyph } from './Glyph.jsx';
 import { guessMeta } from '../lib/nlp.js';
-import { TAGLINE, SURRA_URL } from '../config.js';
+import { previewTasks, analyzeInput } from '../lib/smartInput.js';
+import { relativeDay, formatDuration } from '../lib/date.js';
+import { TAGLINE, SURRA_URL, AREAS, PRIORITIES } from '../config.js';
 
+// الصفحات الأساسية تظهر دائمًا، والباقي داخل "المزيد"
 export const NAV = [
-  { id: 'home', label: 'الرئيسية', icon: House },
-  { id: 'tasks', label: 'المهام', icon: ListChecks },
-  { id: 'schedule', label: 'الجدول', icon: CalendarDays },
-  { id: 'goals', label: 'الأهداف', icon: Target },
-  { id: 'habits', label: 'العادات', icon: Repeat },
-  { id: 'stats', label: 'الإحصائيات', icon: ChartColumn },
-  { id: 'achievements', label: 'الإنجازات', icon: Trophy },
-  { id: 'rewards', label: 'المكافآت', icon: Gift },
-  { id: 'shared', label: 'المشاركة', icon: Users },
-  { id: 'profile', label: 'الملف الشخصي', icon: User },
-  { id: 'settings', label: 'الإعدادات', icon: Settings },
+  { id: 'home', label: 'الرئيسية', icon: House, primary: true },
+  { id: 'tasks', label: 'المهام', icon: ListChecks, primary: true },
+  { id: 'schedule', label: 'الجدول', icon: CalendarDays, primary: true },
+  { id: 'goals', label: 'الأهداف', icon: Target, primary: true },
+  { id: 'profile', label: 'ملفي', icon: User, primary: true },
+  { id: 'habits', label: 'العادات', icon: Repeat, desc: 'تابع عاداتك اليومية' },
+  { id: 'stats', label: 'الإحصائيات', icon: ChartColumn, desc: 'إنتاجيتك بالأرقام' },
+  { id: 'achievements', label: 'الإنجازات', icon: Trophy, desc: 'الإنجازات والتحديات' },
+  { id: 'rewards', label: 'المكافآت', icon: Gift, desc: 'استبدل نقاطك' },
+  { id: 'shared', label: 'المشاركة', icon: Users, desc: 'مشاريع الفريق' },
+  { id: 'settings', label: 'الإعدادات', icon: Settings, desc: 'المظهر والتنبيهات والحساب' },
 ];
+const PRIMARY = NAV.filter((n) => n.primary);
+const SECONDARY = NAV.filter((n) => !n.primary);
 
 export function Scene() {
   return (
@@ -28,32 +33,62 @@ export function Scene() {
       <div className="stars" />
       <div className="blob b1" />
       <div className="blob b2" />
-      <div className="blob b3" />
     </div>
   );
+}
+
+// إغلاق عند النقر خارج العنصر أو Escape
+function useDismiss(open, setOpen, ref) {
+  useEffect(() => {
+    if (!open) return;
+    const out = (e) => !ref.current?.contains(e.target) && setOpen(false);
+    const esc = (e) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', out);
+    document.addEventListener('keydown', esc);
+    return () => (document.removeEventListener('pointerdown', out), document.removeEventListener('keydown', esc));
+  }, [open, setOpen, ref]);
 }
 
 export function Rail() {
   const { name } = useRoute();
   const profile = useStore((s) => s.profile);
+  const [more, setMore] = useState(false);
+  const ref = useRef(null);
+  useDismiss(more, setMore, ref);
+  const inMore = SECONDARY.some((n) => n.id === name);
   return (
     <aside className="rail" aria-label="القائمة الرئيسية">
-      <button onClick={() => navigate('home')} aria-label="هّمة — الرئيسية">
-        <img className="rail-logo" src={asset('brand/icon.webp')} alt="هّمة" width="52" height="52" />
+      <button onClick={() => navigate('home')} aria-label="هّمة — الرئيسية" className="rail-logo-btn">
+        <img className="rail-logo" src={asset('brand/icon.webp')} alt="" width="48" height="48" />
       </button>
-      <nav>
-        {NAV.slice(0, 10).map(({ id, label, icon: Icon }) => (
-          <button key={id} className={`rail-item ${name === id ? 'active' : ''}`} onClick={() => navigate(id)} aria-current={name === id ? 'page' : undefined} title={label}>
+      <nav aria-label="الصفحات الأساسية">
+        {PRIMARY.map(({ id, label, icon: Icon }) => (
+          <button key={id} className={`rail-item ${name === id ? 'active' : ''}`} onClick={() => navigate(id)} aria-current={name === id ? 'page' : undefined}>
             <Icon />
-            <span>{label === 'الملف الشخصي' ? 'ملفي' : label}</span>
+            <span>{label}</span>
           </button>
         ))}
+        <div className="rail-more" ref={ref}>
+          <button className={`rail-item ${inMore || more ? 'active-soft' : ''}`} onClick={() => setMore(!more)} aria-haspopup="menu" aria-expanded={more}>
+            <Ellipsis />
+            <span>{inMore ? SECONDARY.find((n) => n.id === name).label : 'المزيد'}</span>
+          </button>
+          {more && (
+            <div className="rail-pop" role="menu" aria-label="المزيد من الصفحات">
+              {SECONDARY.map(({ id, label, desc, icon: Icon }) => (
+                <button key={id} role="menuitem" className={name === id ? 'on' : ''} onClick={() => (navigate(id), setMore(false))}>
+                  <Icon size={18} />
+                  <span className="grow">
+                    <span className="bold" style={{ display: 'block' }}>{label}</span>
+                    <span className="tiny muted">{desc}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </nav>
       <div className="rail-foot">
-        <button className={`rail-item ${name === 'settings' ? 'active' : ''}`} onClick={() => navigate('settings')} title="الإعدادات" aria-current={name === 'settings' ? 'page' : undefined}>
-          <Settings />
-          <span>الإعدادات</span>
-        </button>
         <button onClick={() => navigate('profile')} aria-label="الملف الشخصي">
           <Avatar name={profile.name} src={profile.avatar} size="sm" />
         </button>
@@ -62,14 +97,18 @@ export function Rail() {
   );
 }
 
-// الإدخال السريع: يحلل النص ويحوله إلى مهام مباشرة
-export function QuickInput({ className = 'quick', id }) {
+// الإدخال الذكي: معاينة فورية لما فهمه النظام + إنشاء المهام عند Enter
+export function QuickInput({ className = 'quick', id, big }) {
   const [v, setV] = useState('');
+  const [focused, setFocused] = useState(false);
   const open = useStore((s) => s.openModal);
-  function submit() {
+  const deferred = useDeferredValue(v);
+  const preview = deferred.trim().length > 2 ? previewTasks(deferred) : [];
+  async function submit() {
     const text = v.trim();
     if (!text) return;
-    const parsed = parseTasks(text);
+    setV('');
+    const parsed = await analyzeInput(text);
     const st = useStore.getState();
     if (parsed.length) {
       const created = st.addTasks(parsed);
@@ -78,37 +117,56 @@ export function QuickInput({ className = 'quick', id }) {
       const t = st.addTask({ title: text, ...guessMeta(text) });
       st.toast(`تمت إضافة "${t.title}"`, { icon: 'check' });
     }
-    setV('');
   }
   return (
-    <form
-      className={className}
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-      role="search"
-    >
-      <Sparkles size={18} className="spark" aria-hidden />
-      <input id={id} value={v} onChange={(e) => setV(e.target.value)} placeholder="اكتب ماذا لديك اليوم ومتى…" aria-label="إضافة سريعة: اكتب مهامك وأوقاتها" />
-      <button type="button" className="icon-btn sm mic-btn" onClick={() => open('voice')} aria-label="إضافة بالصوت" title="إضافة بالصوت (V)">
-        <Mic />
-      </button>
-      <button type="submit" className="icon-btn sm primary" aria-label="إضافة" disabled={!v.trim()}>
-        <ArrowLeft />
-      </button>
-    </form>
+    <div className={`quick-wrap ${big ? 'big' : ''} ${className.includes('mobile-quick') ? 'mobile-quick' : ''}`} onFocus={() => setFocused(true)} onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setFocused(false)}>
+      <form
+        className="quick"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+        role="search"
+        aria-label="الإدخال الذكي"
+      >
+        <Sparkles size={18} className="spark" aria-hidden />
+        <input id={id} value={v} onChange={(e) => setV(e.target.value)} placeholder="اكتب ماذا لديك ومتى… مثال: النادي اليوم الساعة 8" aria-label="اكتب مهامك وأوقاتها بطريقتك" autoComplete="off" />
+        <button type="button" className="mic-btn" onClick={() => open('voice')} aria-label="إضافة بالصوت" title="إضافة بالصوت (V)">
+          <Mic />
+        </button>
+        <button type="submit" className="icon-btn sm primary" aria-label="إضافة المهام" disabled={!v.trim()}>
+          <ArrowLeft />
+        </button>
+      </form>
+      {focused && preview.length > 0 && (
+        <div className="quick-preview" role="status" aria-live="polite">
+          <div className="tiny muted bold">سيتم إنشاء {preview.length > 1 ? `${preview.length} مهام` : 'مهمة'} — اضغط Enter</div>
+          {preview.slice(0, 4).map((t, i) => (
+            <div className="qp-item" key={i}>
+              <Glyph name={t.icon} size={16} className="purple" />
+              <span className="bold grow ellipsis">{t.title}</span>
+              <span className="qp-chip"><Calendar size={12} /> {relativeDay(t.date)}</span>
+              {t.time && <span className="qp-chip num"><Clock size={12} /> {t.time}</span>}
+              <span className="qp-chip"><Timer size={12} /> {formatDuration(t.duration)}</span>
+              {t.priority !== 'med' && <span className="prio-tag" style={{ '--c': PRIORITIES[t.priority].color }}>{PRIORITIES[t.priority].label}</span>}
+              <span className="qp-chip hide-mobile" style={{ color: AREAS[t.area]?.color }}>{AREAS[t.area]?.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 export function Header() {
+  const { name } = useRoute();
   const setDrawer = useStore((s) => s.setDrawer);
   const unread = useStore((s) => s.notifications.filter((n) => !n.read).length);
   const profile = useStore((s) => s.profile);
   return (
     <header className="header">
       <Logo onClick={() => navigate('home')} />
-      <QuickInput id="quick-input" />
+      {name !== 'home' ? <QuickInput id="quick-input" /> : <div className="grow" />}
       <div className="header-actions">
         <button className="icon-btn hide-m" onClick={() => setDrawer('command')} aria-label="بحث وأوامر" title="بحث (Ctrl+K)">
           <Search />
@@ -128,16 +186,18 @@ export function Header() {
   );
 }
 
+const BOTTOM = ['home', 'tasks', 'schedule'];
+
 export function BottomNav() {
   const { name } = useRoute();
   const open = useStore((s) => s.openModal);
   const [more, setMore] = useState(false);
   const items = [NAV[0], NAV[1], null, NAV[2]];
-  const inMore = !['home', 'tasks', 'schedule'].includes(name);
+  const inMore = !BOTTOM.includes(name);
   return (
     <>
       <nav className="bottom-nav" aria-label="التنقل">
-        {items.map((it, i) =>
+        {items.map((it) =>
           it ? (
             <button key={it.id} className={`bn-item ${name === it.id ? 'active' : ''}`} onClick={() => navigate(it.id)} aria-current={name === it.id ? 'page' : undefined}>
               <it.icon />
@@ -149,7 +209,7 @@ export function BottomNav() {
             </button>
           )
         )}
-        <button className={`bn-item ${inMore ? 'active' : ''}`} onClick={() => setMore(true)} aria-label="المزيد">
+        <button className={`bn-item ${inMore ? 'active' : ''}`} onClick={() => setMore(true)} aria-haspopup="dialog" aria-expanded={more}>
           <Ellipsis />
           المزيد
         </button>
@@ -164,34 +224,42 @@ function MoreSheet({ onClose }) {
   const open = useStore((s) => s.openModal);
   const setDrawer = useStore((s) => s.setDrawer);
   const go = (id) => (navigate(id), onClose());
+  const pages = NAV.filter((n) => !BOTTOM.includes(n.id));
+  const actions = [
+    [Mic, 'بالصوت', () => open('voice')],
+    [ImagePlus, 'من صورة', () => open('image')],
+    [Sparkles, 'اسأل هّمة', () => setDrawer('assistant')],
+    [Search, 'بحث', () => setDrawer('command')],
+  ];
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-label="المزيد">
+      <div className="modal sheet" role="dialog" aria-modal="true" aria-label="المزيد">
+        <div className="sheet-grip" aria-hidden />
         <div className="modal-hd">
           <h3>المزيد</h3>
           <button className="icon-btn sm" onClick={onClose} aria-label="إغلاق">
             <X />
           </button>
         </div>
-        <div className="grid g3" style={{ gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
-          {NAV.slice(3).map(({ id, label, icon: Icon }) => (
-            <button key={id} className={`seg-btn ${name === id ? 'on' : ''}`} onClick={() => go(id)}>
-              <Icon size={22} />
-              <span className="small">{label}</span>
+        <div className="sheet-actions">
+          {actions.map(([I, l, run]) => (
+            <button key={l} onClick={() => (onClose(), run())}>
+              <span className="sa-ico"><I size={20} /></span>
+              {l}
             </button>
           ))}
-          <button className="seg-btn" onClick={() => (onClose(), setDrawer('command'))}>
-            <Search size={22} />
-            <span className="small">بحث</span>
-          </button>
         </div>
-        <div className="grid g2 mt">
-          <button className="btn" onClick={() => (onClose(), open('voice'))}>
-            <Mic /> إضافة بالصوت
-          </button>
-          <button className="btn" onClick={() => (onClose(), open('image'))}>
-            📷 من صورة
-          </button>
+        <div className="sheet-list">
+          {pages.map(({ id, label, desc, icon: Icon }) => (
+            <button key={id} className={name === id ? 'on' : ''} onClick={() => go(id)} aria-current={name === id ? 'page' : undefined}>
+              <span className="sa-ico"><Icon size={19} /></span>
+              <span className="grow" style={{ textAlign: 'start' }}>
+                <span className="bold" style={{ display: 'block' }}>{label === 'ملفي' ? 'الملف الشخصي' : label}</span>
+                {desc && <span className="tiny muted">{desc}</span>}
+              </span>
+              <ArrowLeft size={16} className="dim" />
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -249,4 +317,3 @@ export function SurraLink({ url: custom, className = '', children }) {
   );
 }
 
-export { LogOut, Keyboard };

@@ -4,7 +4,8 @@ import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import { Modal, Bar, Empty, useConfirm } from '../components/ui.jsx';
 import { ACHIEVEMENTS, levelInfo } from '../lib/game.js';
-import { todayKey, addDays, diffDays, formatShort, fromKey, DAYS_SHORT } from '../lib/date.js';
+import { todayKey, addDays, diffDays, formatShort, fromKey, toKey, DAYS_SHORT } from '../lib/date.js';
+import { Glyph, IconTile, IconPicker } from '../components/Glyph.jsx';
 
 export default function Achievements() {
   const { params } = useRoute();
@@ -59,10 +60,12 @@ function Badges() {
           return (
             <div key={a.id} className={`ach reveal ${on ? 'on' : 'off'}`} style={{ animationDelay: `${i * 0.03}s` }}>
               {!on && <Lock size={16} className="lock" />}
-              <div className="em">{hidden ? '❔' : a.icon}</div>
+              <div className="em">
+                <Glyph name={hidden ? 'sparkles' : a.icon} size={34} />
+              </div>
               <div className="bold">{hidden ? 'إنجاز سري' : a.title}</div>
               <div className="tiny muted mt-s">{hidden ? 'استمر في استخدام هّمة لتكتشفه' : a.desc}</div>
-              {on && <div className="tiny gold mt-s">✓ {formatShort(new Date(achievements[a.id]).toISOString().slice(0, 10))}</div>}
+              {on && <div className="tiny gold mt-s">فُتح في {formatShort(toKey(new Date(achievements[a.id])))}</div>}
             </div>
           );
         })}
@@ -99,7 +102,7 @@ function Challenges() {
             return (
               <div key={c.id} className={`card reveal ${complete ? 'glow' : ''}`} style={{ animationDelay: `${i * 0.05}s` }}>
                 <div className="row" style={{ gap: 14 }}>
-                  <span style={{ fontSize: '2rem', width: 60, height: 60, display: 'grid', placeItems: 'center', borderRadius: 18, background: 'rgba(251,191,36,.12)', border: '1px solid rgba(251,191,36,.3)', flexShrink: 0 }}>{c.icon}</span>
+                  <IconTile name={c.icon} color="var(--gold)" size={56} />
                   <div className="grow">
                     <h3 style={{ fontSize: '1.1rem' }}>{c.title}</h3>
                     <div className="small muted">{c.desc}</div>
@@ -123,7 +126,7 @@ function Challenges() {
                     return (
                       <button key={d} className="d" style={{ minWidth: 30 }} disabled={future} onClick={() => checkChallenge(c.id, d)} aria-label={`${d} ${on ? 'منجز' : ''}`}>
                         <i className={on ? (d === T ? 'fire' : 'on') : d < T ? 'miss' : ''} style={{ opacity: future ? 0.35 : 1 }}>
-                          {on ? '✓' : d < T ? '×' : k + 1}
+                          {on ? <Check size={13} /> : d < T ? '–' : k + 1}
                         </i>
                         {DAYS_SHORT[fromKey(d).getDay()].slice(0, 2)}
                       </button>
@@ -140,7 +143,7 @@ function Challenges() {
                       <Check /> أنجزت اليوم
                     </button>
                   ) : (
-                    <span className="small muted grow">{complete ? '🏅 تحدي مكتمل!' : T < c.start ? 'يبدأ قريبًا' : 'انتهت مدة التحدي'}</span>
+                    <span className="small muted grow">{complete ? 'تحدي مكتمل' : T < c.start ? 'يبدأ قريبًا' : 'انتهت مدة التحدي'}</span>
                   )}
                   <button className="icon-btn" aria-label="حذف التحدي" onClick={() => confirm({ title: 'حذف التحدي', body: `هل تريد حذف "${c.title}"؟`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteChallenge(c.id) })}>
                     <Trash2 />
@@ -157,21 +160,21 @@ function Challenges() {
 }
 
 const PRESETS = [
-  ['🔥', 'تحدي 7 أيام بدون تأجيل', 'أنجز مهامك في وقتها', 7],
-  ['📖', 'قراءة 30 دقيقة يوميًا', '30 دقيقة قراءة كل يوم', 14],
-  ['🌅', 'الاستيقاظ مبكرًا', 'الاستيقاظ قبل 6:30', 7],
-  ['💪', 'التمرين 5 أيام', '5 تمارين في أسبوع', 5],
-  ['📵', 'ديتوكس السوشال', 'ساعة واحدة فقط يوميًا', 7],
-  ['💧', '30 يوم ماء', '8 أكواب يوميًا', 30],
+  ['flame', 'تحدي 7 أيام بدون تأجيل', 'أنجز مهامك في وقتها', 7],
+  ['read', 'قراءة 30 دقيقة يوميًا', '30 دقيقة قراءة كل يوم', 14],
+  ['sunrise', 'الاستيقاظ مبكرًا', 'الاستيقاظ قبل 6:30', 7],
+  ['dumbbell', 'التمرين 5 أيام', '5 تمارين في أسبوع', 5],
+  ['phoneoff', 'ديتوكس السوشال', 'ساعة واحدة فقط يوميًا', 7],
+  ['water', '30 يوم ماء', '8 أكواب يوميًا', 30],
 ];
 
 function ChallengeModal({ onClose }) {
   const add = useStore((s) => s.addChallenge);
-  const [f, setF] = useState({ icon: '🔥', title: '', desc: '', days: 7 });
+  const [f, setF] = useState({ icon: 'flame', title: '', desc: '', days: 7 });
   function save() {
     if (!f.title.trim()) return;
     add({ ...f, days: Math.max(1, Math.min(365, +f.days || 7)) });
-    useStore.getState().toast('بدأ التحدي! 🔥', { icon: 'sparkles' });
+    useStore.getState().toast('بدأ التحدي', { icon: 'sparkles' });
     onClose();
   }
   return (
@@ -193,7 +196,7 @@ function ChallengeModal({ onClose }) {
         <div className="chips">
           {PRESETS.map(([icon, title, desc, days]) => (
             <button key={title} className={`chip ${f.title === title ? 'on' : ''}`} onClick={() => setF({ icon, title, desc, days })}>
-              {icon} {title}
+              <Glyph name={icon} size={15} /> {title}
             </button>
           ))}
         </div>
@@ -208,7 +211,7 @@ function ChallengeModal({ onClose }) {
         <div className="grid" style={{ gridTemplateColumns: '90px 1fr', gap: 10 }}>
           <label className="field">
             <span>الرمز</span>
-            <input className="input" value={f.icon} onChange={(e) => setF({ ...f, icon: e.target.value.slice(0, 2) })} style={{ textAlign: 'center' }} />
+            <IconPicker value={f.icon} options={['flame', 'read', 'sunrise', 'dumbbell', 'phoneoff', 'water', 'meditation', 'target']} onChange={(icon) => setF({ ...f, icon })} />
           </label>
           <label className="field">
             <span>المدة (أيام)</span>

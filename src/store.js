@@ -67,7 +67,7 @@ export const useStore = create((set, get) => ({
     const streak = { ...s.streak };
     const notifications = [...s.notifications];
     if (streak.count > 0 && streak.lastDate && streak.lastDate < addDays(T, -1)) {
-      notifications.unshift(notif('streak', '💔', 'انقطع الـStreak', `كانت سلسلتك ${streak.count} يوم. ابدأ من جديد اليوم!`));
+      notifications.unshift(notif('streak', 'flame', 'انقطع الـStreak', `كانت سلسلتك ${streak.count} يوم. ابدأ من جديد اليوم!`));
       streak.count = 0;
     }
     set({ tasks, streak, notifications });
@@ -143,12 +143,16 @@ export const useStore = create((set, get) => ({
     }));
     if (s.settings.sounds) playSound('done');
     if (s.settings.vibration) vibrate([20, 40, 20]);
-    if (!silent) get().pushFx({ type: 'xp', amount: xp });
+    if (!silent) {
+      const left = get().tasks.filter((x) => !x.deletedAt && !x.template && !x.done && x.date === todayKey()).length;
+      const cheer = ['أحسنت!', 'إنجاز رائع', 'خطوة ممتازة', 'استمر كذا'][Math.floor(Math.random() * 4)];
+      get().toast(`${cheer} ${t.date === todayKey() ? (left ? `باقي ${left} مهام اليوم` : 'أكملت كل مهام اليوم') : ''} · +${xp} XP`, { icon: 'check', tone: 'success' });
+    }
     const after = levelInfo(get().user.totalXp).level;
     if (after > before) {
       get().pushFx({ type: 'level', level: after });
       if (s.settings.sounds) setTimeout(() => playSound('level'), 300);
-      get().notify('achievements', '✨', 'Level Up!', `وصلت إلى المستوى ${after}`);
+      get().notify('achievements', 'sparkles', 'Level Up!', `وصلت إلى المستوى ${after}`);
     }
     get().updateStreak();
     get().checkAchievements();
@@ -225,7 +229,7 @@ export const useStore = create((set, get) => ({
       ),
       flags: { ...s.flags, rescued: true },
     }));
-    get().toast('تم تحديث جدولك ✨', { icon: 'sparkles' });
+    get().toast('تم تحديث جدولك', { icon: 'sparkles' });
     get().checkAchievements();
   },
   setSubtasks(id, titles) {
@@ -245,7 +249,7 @@ export const useStore = create((set, get) => ({
         date: d.date,
         time: '18:00',
         duration: i === p.plan.length - 1 ? 120 : 90,
-        icon: i === p.plan.length - 1 ? '📝' : '📚',
+        icon: i === p.plan.length - 1 ? 'pen' : 'book',
         area: 'study',
         priority: i === p.plan.length - 1 ? 'urgent' : 'high',
       })
@@ -258,7 +262,22 @@ export const useStore = create((set, get) => ({
   startFocus(taskId, minutes) {
     const t = get().tasks.find((x) => x.id === taskId);
     const total = Math.round((minutes || t?.duration || 25) * 60);
-    set({ focus: { taskId, totalSec: total, remainingSec: total, endAt: Date.now() + total * 1000, running: true, minimized: false, startedAt: Date.now() } });
+    const session = get().focus?.taskId === taskId ? (get().focus.session || 1) + 1 : 1;
+    set({ modal: null, focus: { taskId, totalSec: total, remainingSec: total, endAt: Date.now() + total * 1000, running: true, minimized: false, startedAt: Date.now(), session, finished: false, logged: false } });
+  },
+  // اختيار مدة الجلسة قبل البدء (15 / 25 / 45 / تخصيص)
+  pickFocus: (taskId) => set({ modal: { name: 'focusStart', payload: { taskId } } }),
+  // انتهاء المؤقت: تسجيل الوقت + إشعار + عرض خيارات (إكمال المهمة / جلسة أخرى)
+  finishFocus() {
+    const f = get().focus;
+    if (!f || f.finished) return;
+    const minutes = Math.round(f.totalSec / 60);
+    const t = get().tasks.find((x) => x.id === f.taskId);
+    set((s) => ({ focus: { ...f, running: false, remainingSec: 0, finished: true, logged: true, minimized: false }, focusLog: [...s.focusLog, { date: todayKey(), minutes, taskId: f.taskId }] }));
+    if (get().settings.sounds) playSound('timer');
+    if (get().settings.vibration) vibrate([60, 60, 60]);
+    get().notify('focus', 'timer', 'انتهت جلسة التركيز', `${minutes} دقيقة تركيز${t ? ` على "${t.title}"` : ''}`, { force: true });
+    get().checkAchievements();
   },
   pauseFocus() {
     const f = get().focus;
@@ -276,7 +295,7 @@ export const useStore = create((set, get) => ({
     if (!f) return;
     const remaining = f.running ? Math.max(0, (f.endAt - Date.now()) / 1000) : f.remainingSec;
     const minutes = Math.round((f.totalSec - remaining) / 60);
-    set((s) => ({ focus: null, focusLog: minutes > 0 ? [...s.focusLog, { date: todayKey(), minutes, taskId: f.taskId }] : s.focusLog }));
+    set((s) => ({ focus: null, focusLog: minutes > 0 && !f.logged ? [...s.focusLog, { date: todayKey(), minutes, taskId: f.taskId }] : s.focusLog }));
     if (complete && f.taskId) get().completeTask(f.taskId);
     get().checkAchievements();
     return minutes;
@@ -291,7 +310,7 @@ export const useStore = create((set, get) => ({
       const count = s.streak.lastDate === addDays(T, -1) ? s.streak.count + 1 : 1;
       set({ streak: { ...s.streak, count, best: Math.max(s.streak.best || 0, count), lastDate: T, days: { ...s.streak.days, [T]: true } } });
       get().pushFx({ type: 'streak', count });
-      get().notify('streak', '🔥', 'أكملت يومك!', `الـStreak الآن ${count} يوم متتالي`);
+      get().notify('streak', 'flame', 'أكملت يومك!', `الـStreak الآن ${count} يوم متتالي`);
     }
   },
 
@@ -308,16 +327,17 @@ export const useStore = create((set, get) => ({
         get().pushFx({ type: 'achievement', ach: a });
         if (get().settings.sounds) playSound('achievement');
       }, 600 + i * 1800);
-      get().notify('achievements', '🏆', 'إنجاز جديد', `فتحت إنجاز "${a.title}"`);
+      get().notify('achievements', 'trophy', 'إنجاز جديد', `فتحت إنجاز "${a.title}"`);
     });
   },
 
   // ————— الإشعارات —————
-  notify(type, icon, title, body) {
+  // force: يُرسل للمتصفح حتى لو كانت الصفحة ظاهرة (مثل نهاية جلسة التركيز)
+  notify(type, icon, title, body, { force = false } = {}) {
     const s = get();
     if (s.settings.notif[type] === false) return;
     set({ notifications: [notif(type, icon, title, body), ...s.notifications].slice(0, 60) });
-    if (s.settings.browserNotifications && typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
+    if (s.settings.browserNotifications && typeof Notification !== 'undefined' && Notification.permission === 'granted' && (document.hidden || force)) {
       try {
         new Notification(title, { body, icon: './brand/icon-192.png', lang: 'ar', dir: 'rtl' });
       } catch {
@@ -336,7 +356,7 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— الأهداف —————
-  addGoal({ title, deadline, area = 'study', icon = '🎯', months = 6, breakdown, addDaily = true }) {
+  addGoal({ title, deadline, area = 'study', icon = 'target', months = 6, breakdown, addDaily = true }) {
     const milestones = breakdown
       ? breakdown.months.map((m) => ({ id: uid(), title: m.title.replace(/^الشهر \d+: /, ''), level: 'month', total: m.weeks.length, done: 0, weeks: m.weeks }))
       : [];
@@ -373,8 +393,8 @@ export const useStore = create((set, get) => ({
       get().pushFx({ type: 'xp', amount: xp });
       const g = get().goals.find((x) => x.id === goalId);
       const pct = goalProgress(g, get().tasks);
-      if (pct >= 75 && pct < 100) get().notify('goals', '🎯', 'اقتربت من تحقيق هدفك', `"${g.title}" وصل ${pct}%`);
-      if (pct === 100) get().notify('goals', '🏁', 'حققت هدفك!', `مبروك! أنجزت "${g.title}"`);
+      if (pct >= 75 && pct < 100) get().notify('goals', 'target', 'اقتربت من تحقيق هدفك', `"${g.title}" وصل ${pct}%`);
+      if (pct === 100) get().notify('goals', 'target', 'حققت هدفك!', `مبروك! أنجزت "${g.title}"`);
     }
   },
   addMilestone(goalId, title, total = 1) {
@@ -410,7 +430,7 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— التحديات —————
-  addChallenge: (c) => set((s) => ({ challenges: [...s.challenges, { id: uid(), log: {}, start: todayKey(), days: 7, icon: '🔥', desc: '', ...c }] })),
+  addChallenge: (c) => set((s) => ({ challenges: [...s.challenges, { id: uid(), log: {}, start: todayKey(), days: 7, icon: 'flame', desc: '', ...c }] })),
   deleteChallenge: (id) => set((s) => ({ challenges: s.challenges.filter((c) => c.id !== id) })),
   checkChallenge(id, date = todayKey()) {
     const c = get().challenges.find((x) => x.id === id);
@@ -423,7 +443,7 @@ export const useStore = create((set, get) => ({
       const done = Object.values({ ...c.log, [date]: true }).filter(Boolean).length;
       if (done >= c.days) {
         set((s) => ({ user: { totalXp: s.user.totalXp + 100, xp: s.user.xp + 100 } }));
-        get().notify('achievements', '🏅', 'أكملت التحدي!', `"${c.title}" — +100 XP`);
+        get().notify('achievements', 'medal', 'أكملت التحدي!', `"${c.title}" — +100 XP`);
         get().pushFx({ type: 'achievement', ach: { icon: c.icon, title: 'تحدي مكتمل', desc: c.title } });
       }
     } else {
@@ -432,7 +452,7 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— المكافآت —————
-  addReward: (r) => set((s) => ({ rewards: [...s.rewards, { id: uid(), icon: '🎁', ...r }] })),
+  addReward: (r) => set((s) => ({ rewards: [...s.rewards, { id: uid(), icon: 'gift', ...r }] })),
   deleteReward: (id) => set((s) => ({ rewards: s.rewards.filter((r) => r.id !== id) })),
   redeemReward(id) {
     const s = get();
@@ -446,7 +466,7 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— المشاريع المشتركة —————
-  addProject(name, icon = '📁') {
+  addProject(name, icon = 'folder') {
     const me = { id: 'me', name: get().profile.name || 'أنا', color: '#7C5CFF' };
     set((s) => ({ projects: [...s.projects, { id: uid(), name, icon, members: [me], tasks: [], createdAt: Date.now() }] }));
     get().checkAchievements();

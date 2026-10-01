@@ -7,6 +7,7 @@ import { Empty, useConfirm } from '../components/ui.jsx';
 import { AREAS, PRIORITIES } from '../config.js';
 import { todayKey, addDays, toMin, relativeDay, timeAgo, DAYS_SHORT } from '../lib/date.js';
 import { isOverdue } from '../lib/game.js';
+import { Glyph } from '../components/Glyph.jsx';
 
 const TABS = [
   ['today', 'اليوم'],
@@ -116,7 +117,7 @@ export default function Tasks() {
             <option value="">كل المجالات</option>
             {Object.entries(AREAS).map(([k, a]) => (
               <option key={k} value={k}>
-                {a.emoji} {a.label}
+                {a.label}
               </option>
             ))}
           </select>
@@ -194,7 +195,7 @@ export default function Tasks() {
           {tab === 'trash' ? (
             <Empty icon={<Trash2 />} title="سلة المحذوفات فارغة" text="المهام المحذوفة تظهر هنا ويمكنك استرجاعها." />
           ) : tab === 'overdue' ? (
-            <Empty icon={<CheckCheck />} title="لا توجد مهام متأخرة 👏" text="أنت ماشي على الخطة." />
+            <Empty icon={<CheckCheck />} title="لا توجد مهام متأخرة" text="أنت ماشي على الخطة." />
           ) : tab === 'recurring' ? (
             <Empty icon={<Repeat />} title="لا توجد مهام متكررة" text="مثل: النادي كل الأحد والثلاثاء والخميس" action={<button className="btn btn-primary" onClick={() => open('task', { preset: { repeat: { type: 'days', days: [0, 2, 4] } } })}><Plus /> مهمة متكررة</button>} />
           ) : q || area || prio ? (
@@ -237,7 +238,7 @@ function TrashRow({ t, selecting, selected, onSelect }) {
   return (
     <div className="task" style={{ cursor: 'default' }}>
       {selecting && <input type="checkbox" checked={selected} onChange={() => onSelect(t.id)} aria-label="تحديد" style={{ width: 18, height: 18, accentColor: 'var(--primary)' }} />}
-      <span className="t-icon">{t.icon}</span>
+      <span className="t-icon"><Glyph name={t.icon} size={18} /></span>
       <div className="grow">
         <div className="t-title ellipsis">{t.title}</div>
         <div className="t-meta">حُذفت {timeAgo(t.deletedAt)}</div>
@@ -263,7 +264,7 @@ function RecurringRow({ t }) {
   const label = r.type === 'daily' ? 'يوميًا' : r.type === 'weekly' ? 'أسبوعيًا' : r.type === 'monthly' ? 'شهريًا' : `كل ${r.days.map((d) => DAYS_SHORT[d]).join('، ')}`;
   return (
     <div className="task" onClick={() => open('task', { task: t })} role="button" tabIndex={0}>
-      <span className="t-icon">{t.icon}</span>
+      <span className="t-icon"><Glyph name={t.icon} size={18} /></span>
       <div className="grow">
         <div className="t-title">{t.title}</div>
         <div className="t-meta">

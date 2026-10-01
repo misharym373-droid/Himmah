@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Settings as SettingsIcon, User, Palette, Bell, Volume2, Sparkles, Languages, Shield, LayoutDashboard, Database, LogOut, Check, Download, Upload, RotateCcw, Trash2, Moon, Sun, SunMoon, Keyboard } from 'lucide-react';
+import { Settings as SettingsIcon, User, Palette, Bell, Sparkles, Languages, Shield, LayoutDashboard, Database, LogOut, Check, Download, Upload, RotateCcw, Trash2, Moon, Sun, SunMoon, Keyboard } from 'lucide-react';
 import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import { Switch, CardTitle, useConfirm } from '../components/ui.jsx';
@@ -13,22 +13,22 @@ import { say } from '../lib/assistant.js';
 import { deleteAccount } from '../lib/auth.js';
 import { session } from '../lib/storage.js';
 import { todayKey } from '../lib/date.js';
+import { Glyph } from '../components/Glyph.jsx';
 
+// مجموعات واضحة — والروابط القديمة (sound/language/privacy/data) تُوجَّه لمجموعتها الجديدة
 const TABS = [
-  ['account', 'الحساب', User],
-  ['appearance', 'المظهر والألوان', Palette],
-  ['notifications', 'الإشعارات', Bell],
-  ['sound', 'الصوت والأنيميشن', Volume2],
-  ['assistant', 'شخصية المساعد', Sparkles],
-  ['language', 'اللغة', Languages],
-  ['privacy', 'الخصوصية', Shield],
-  ['dashboard', 'تخصيص Dashboard', LayoutDashboard],
-  ['data', 'إدارة البيانات', Database],
+  ['appearance', 'المظهر', Palette],
+  ['notifications', 'الإشعارات والتذكيرات', Bell],
+  ['assistant', 'المساعد', Sparkles],
+  ['dashboard', 'الصفحة الرئيسية', LayoutDashboard],
+  ['account', 'الحساب والبيانات', User],
 ];
+const ALIASES = { sound: 'appearance', language: 'account', privacy: 'account', data: 'account' };
 
 export default function Settings() {
   const { params } = useRoute();
-  const [tab, setTab] = useState(TABS.some((t) => t[0] === params.tab) ? params.tab : 'appearance');
+  const initial = ALIASES[params.tab] || params.tab;
+  const [tab, setTab] = useState(TABS.some((t) => t[0] === initial) ? initial : 'appearance');
   const confirm = useConfirm();
   return (
     <>
@@ -61,15 +61,18 @@ export default function Settings() {
           </button>
         </nav>
         <div className="card reveal" key={tab}>
-          {tab === 'account' && <Account />}
           {tab === 'appearance' && <Appearance />}
           {tab === 'notifications' && <Notifications />}
-          {tab === 'sound' && <Sound />}
           {tab === 'assistant' && <Assistant />}
-          {tab === 'language' && <Language />}
-          {tab === 'privacy' && <Privacy />}
           {tab === 'dashboard' && <Dashboard />}
-          {tab === 'data' && <Data />}
+          {tab === 'account' && (
+            <div className="col" style={{ gap: 28 }}>
+              <Account />
+              <Data />
+              <Privacy />
+              <Language />
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -102,6 +105,11 @@ function Account() {
       <Row t="الاسم" d={profile.name} />
       <Row t="البريد الإلكتروني" d={profile.email || '—'} />
       <Row t="نوع الحساب" d={sid === 'demo' ? 'حساب تجريبي — البيانات قابلة للتعديل والحذف' : 'حساب محلي محمي بكلمة مرور مشفّرة على هذا الجهاز'} />
+      <Row t="تسجيل الخروج" d="بياناتك تبقى محفوظة على هذا الجهاز">
+        <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => window.__himmahLogout?.() })}>
+          <LogOut /> تسجيل الخروج
+        </button>
+      </Row>
       <Row t="رابط صُرّة لإدارة الأموال" d="يُستخدم لزر «فتح صُرّة» في الملف الشخصي والفوتر">
         <input className="input" style={{ width: 260, maxWidth: '100%' }} dir="ltr" placeholder="https://…" value={url} onChange={(e) => setUrl(e.target.value)} />
         <button
@@ -143,7 +151,7 @@ function Appearance() {
   const set = useSet();
   return (
     <>
-      <CardTitle icon={<Palette size={18} />}>تخصيص هّمة</CardTitle>
+      <CardTitle icon={<Palette size={18} />} sub="كل تغيير يُطبّق فورًا">المظهر</CardTitle>
       <Row t="المظهر" d="الوضع الافتراضي: الليلي">
         {[
           ['dark', 'الوضع الليلي', Moon],
@@ -187,6 +195,17 @@ function Appearance() {
           </button>
         ))}
       </Row>
+      <Row t="الحركة" d="الوضع الخفيف أو الإيقاف مناسب لتقليل التشتت — ويُحترم إعداد تقليل الحركة في جهازك">
+        {[
+          ['full', 'كاملة'],
+          ['lite', 'خفيفة'],
+          ['off', 'إيقاف'],
+        ].map(([k, l]) => (
+          <button key={k} className={`chip ${s.motion === k ? 'on' : ''}`} onClick={() => set('motion', k)}>
+            {l}
+          </button>
+        ))}
+      </Row>
     </>
   );
 }
@@ -197,14 +216,17 @@ function Notifications() {
   const set = useSet();
   const [perm, setPerm] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
   const types = [
-    ['upcoming', '🔔 المهام القادمة', 'تذكير قبل المهمة بـ 15 دقيقة'],
-    ['streak', '🔥 الـStreak', 'تنبيه عندما تكون على وشك خسارته'],
-    ['goals', '🎯 الأهداف', 'عند الاقتراب من تحقيق هدف'],
-    ['achievements', '🏆 الإنجازات', 'عند فتح إنجاز جديد أو Level Up'],
+    ['upcoming', 'المهمة القادمة', 'تذكير قبل بدء المهمة بـ 15 دقيقة'],
+    ['overdue', 'المهام المتأخرة', 'تنبيه واحد يوميًا يجمع المهام المتأخرة'],
+    ['streak', 'تذكير الـStreak', 'مساءً، إذا كان يومك غير مكتمل'],
+    ['endOfDay', 'نهاية اليوم', 'قبل موعد نومك بساعة إذا بقيت مهام'],
+    ['focus', 'نهاية جلسة التركيز', 'عند انتهاء مؤقت التركيز'],
+    ['goals', 'الأهداف', 'عند الاقتراب من تحقيق هدف'],
+    ['achievements', 'الإنجازات', 'عند فتح إنجاز جديد أو الوصول لمستوى جديد'],
   ];
   return (
     <>
-      <CardTitle icon={<Bell size={18} />}>الإشعارات</CardTitle>
+      <CardTitle icon={<Bell size={18} />} sub="تنبيهات قليلة ومفيدة — فعّل ما تحتاجه فقط">الإشعارات والتذكيرات</CardTitle>
       {types.map(([k, t, d]) => (
         <Row key={k} t={t} d={d}>
           <Switch on={s.notif[k] !== false} onChange={(v) => setN(k, v)} label={t} />
@@ -223,32 +245,11 @@ function Notifications() {
           }}
         />
       </Row>
-    </>
-  );
-}
-
-function Sound() {
-  const s = useStore((x) => x.settings);
-  const set = useSet();
-  return (
-    <>
-      <CardTitle icon={<Volume2 size={18} />}>الصوت والأنيميشن</CardTitle>
-      <Row t="أصوات الإنجاز" d="صوت خفيف عند إكمال مهمة أو Level Up">
+      <Row t="أصوات الإنجاز" d="صوت خفيف عند إكمال مهمة أو انتهاء جلسة التركيز">
         <Switch on={s.sounds} onChange={(v) => set('sounds', v)} label="أصوات الإنجاز" />
       </Row>
-      <Row t="الاهتزازات" d="على الجوال عند الإنجاز">
-        <Switch on={s.vibration} onChange={(v) => set('vibration', v)} label="الاهتزازات" />
-      </Row>
-      <Row t="الأنيميشن">
-        {[
-          ['full', 'كامل'],
-          ['lite', 'خفيف'],
-          ['off', 'إيقاف'],
-        ].map(([k, l]) => (
-          <button key={k} className={`chip ${s.motion === k ? 'on' : ''}`} onClick={() => set('motion', k)}>
-            {l}
-          </button>
-        ))}
+      <Row t="الاهتزاز" d="على الجوال عند الإنجاز">
+        <Switch on={s.vibration} onChange={(v) => set('vibration', v)} label="الاهتزاز" />
       </Row>
     </>
   );
@@ -265,7 +266,7 @@ function Assistant() {
       <div className="grid g2 mt">
         {Object.entries(PERSONAS).map(([k, p]) => (
           <button key={k} className={`seg-btn ${persona === k ? 'on' : ''}`} onClick={() => set('persona', k)} style={{ padding: 18 }}>
-            <span className="em">{p.emoji}</span>
+            <Glyph name={p.icon} size={22} className="purple" />
             {p.label}
             <span className="tiny dim">{p.desc}</span>
           </button>
@@ -370,7 +371,7 @@ function Data() {
       try {
         const j = JSON.parse(r.result);
         if (j.app !== 'himmah' || !j.data?.tasks) throw new Error();
-        confirm({ title: 'استيراد البيانات', body: 'سيتم استبدال بياناتك الحالية بالنسخة المستوردة.', confirmLabel: 'استيراد', onConfirm: () => (st().importData(j.data), st().toast('تم استيراد البيانات ✓', { icon: 'check' })) });
+        confirm({ title: 'استيراد البيانات', body: 'سيتم استبدال بياناتك الحالية بالنسخة المستوردة.', confirmLabel: 'استيراد', onConfirm: () => (st().importData(j.data), st().toast('تم استيراد البيانات', { icon: 'check' })) });
       } catch {
         st().toast('الملف غير صالح');
       }

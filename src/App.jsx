@@ -4,6 +4,7 @@ import { useRoute, navigate } from './router.js';
 import { session } from './lib/storage.js';
 import { findById } from './lib/auth.js';
 import { todayKey, toMin, nowMin } from './lib/date.js';
+import { isOverdue } from './lib/game.js';
 import { Scene, Rail, Header, BottomNav, Footer, QuickInput } from './components/Layout.jsx';
 import { Toasts, FxLayer, FocusMode, ModalRoot } from './components/Overlays.jsx';
 import Auth from './pages/Auth.jsx';
@@ -89,7 +90,7 @@ function Shell() {
         <div className="main">
           <Header />
           <main className="content" id="main">
-            <QuickInput className="quick mobile-quick" />
+            {name !== 'home' && <QuickInput className="mobile-quick" id="mobile-input" />}
             <div className="page" key={name}>
               {Page ? (
                 <Suspense fallback={<PageLoader />}>
@@ -167,7 +168,7 @@ function useShortcuts() {
       else if (e.key === '?') st.openModal('shortcuts');
       else if (e.key === '/') {
         e.preventDefault();
-        (document.getElementById('quick-input')?.offsetParent ? document.getElementById('quick-input') : document.querySelector('.mobile-quick input'))?.focus();
+        ['home-input', 'quick-input', 'mobile-input'].map((id) => document.getElementById(id)).find((el) => el?.offsetParent)?.focus();
       }
     }
     window.addEventListener('keydown', onKey);
@@ -175,30 +176,44 @@ function useShortcuts() {
   }, []);
 }
 
-// تذكير بالمهام القادمة + تنبيه الـStreak
+// التذكيرات: مفيدة وقليلة — المهمة القادمة، تجميعة المتأخرة (مرة يوميًا)، الـStreak، ونهاية اليوم
 function useReminders() {
   useEffect(() => {
     function check() {
       const st = useStore.getState();
       const T = todayKey();
       const now = nowMin();
+      const hour = Math.floor(now / 60);
       const notified = st.flags.notified || {};
       const upd = { ...notified };
       let changed = false;
-      for (const t of st.tasks) {
-        if (t.deletedAt || t.done || t.template || t.date !== T || !t.time) continue;
+      const mark = (k) => ((upd[k] = T), (changed = true));
+      const open = st.tasks.filter((t) => !t.deletedAt && !t.done && !t.template && t.date === T);
+      // 1) المهمة القادمة خلال 15 دقيقة (مرة واحدة لكل مهمة)
+      for (const t of open) {
+        if (!t.time) continue;
         const diff = toMin(t.time) - now;
         if (diff > 0 && diff <= 15 && !notified[t.id]) {
-          st.notify('upcoming', '🔔', 'مهمتك القادمة', `باقي ${diff} دقيقة على مهمتك القادمة: ${t.title}`);
-          upd[t.id] = 1;
-          changed = true;
+          st.notify('upcoming', 'bell', 'مهمتك القادمة', `بعد ${diff} دقيقة: ${t.title}`);
+          mark(t.id);
         }
       }
-      const hour = new Date().getHours();
-      if (hour >= 19 && st.streak.count > 0 && st.streak.lastDate !== T && notified.streakWarn !== T) {
-        st.notify('streak', '🔥', 'حافظ على الـStreak', `بقي يوم واحد لتحافظ على الـStreak (${st.streak.count} يوم). أكمل مهام اليوم!`);
-        upd.streakWarn = T;
-        changed = true;
+      // 2) المهام المتأخرة — تنبيه واحد مجمّع يوميًا بدل تنبيه لكل مهمة
+      const overdue = st.tasks.filter((t) => isOverdue(t));
+      if (overdue.length && notified.overdue !== T && hour >= 9) {
+        st.notify('overdue', 'alarm', overdue.length > 1 ? `${overdue.length} مهام متأخرة` : 'مهمة متأخرة', `${overdue.slice(0, 2).map((t) => t.title).join('، ')} — أعد جدولتها أو انقلها لوقت آخر`);
+        mark('overdue');
+      }
+      // 3) تذكير الـStreak مساءً
+      if (hour >= 19 && st.streak.count > 0 && st.streak.lastDate !== T && open.length && notified.streakWarn !== T) {
+        st.notify('streak', 'flame', 'حافظ على الـStreak', `أكمل مهام اليوم لتحافظ على سلسلة ${st.streak.count} يوم`);
+        mark('streakWarn');
+      }
+      // 4) نهاية اليوم: قبل موعد النوم بساعة إذا بقيت مهام
+      const sleep = toMin(st.profile.sleep || '23:00') ?? 23 * 60;
+      if (open.length && now >= sleep - 60 && now < sleep && notified.endOfDay !== T) {
+        st.notify('endOfDay', 'sunset', 'قارب يومك على الانتهاء', `باقي ${open.length} مهام — انقل غير الضروري لبكرة وارتح`);
+        mark('endOfDay');
       }
       // تنظيف المعرفات القديمة
       if (Object.keys(upd).length > 200) for (const k of Object.keys(upd).slice(0, 100)) delete upd[k];

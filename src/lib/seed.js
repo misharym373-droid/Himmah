@@ -13,21 +13,25 @@ export const DEFAULT_SETTINGS = {
   persona: 'friend',
   language: 'ar',
   browserNotifications: false,
-  notif: { upcoming: true, streak: true, goals: true, achievements: true, assistant: true },
+  notif: { upcoming: true, overdue: true, streak: true, endOfDay: true, focus: true, goals: true, achievements: true, assistant: true },
   privacy: { hideStatsOnHome: false, analytics: false },
   surraUrl: '',
 };
 
+// بطاقات الرئيسية: core = الأساسية (أعلى الصفحة بترتيب ثابت)، more = أقسام قابلة للطي أسفل الصفحة
 export const WIDGETS = [
-  { id: 'progress', label: 'إحصائيات اليوم' },
-  { id: 'topTask', label: 'أهم مهمة الآن' },
-  { id: 'dayMap', label: 'المهام — خريطة اليوم' },
-  { id: 'trio', label: 'الأهداف + التحديات + العادات' },
-  { id: 'stats', label: 'الإحصائيات' },
-  { id: 'xp', label: 'XP + Streak + المكافآت' },
-  { id: 'ai', label: 'مساعد هّمة الذكي' },
-  { id: 'balance', label: 'توازن الحياة' },
-  { id: 'timeMachine', label: 'آلة الزمن' },
+  { id: 'summary', label: 'ملخص اليوم', section: 'core' },
+  { id: 'top3', label: 'أهم 3 مهام اليوم', section: 'core' },
+  { id: 'next', label: 'المهمة القادمة', section: 'core' },
+  { id: 'goals', label: 'اختصار الأهداف', section: 'core' },
+  { id: 'focus', label: 'التركيز', section: 'core' },
+  { id: 'dayMap', label: 'خريطة اليوم', section: 'more' },
+  { id: 'habits', label: 'العادات والتحديات', section: 'more' },
+  { id: 'xp', label: 'المستوى والـStreak والمكافآت', section: 'more' },
+  { id: 'stats', label: 'إحصائيات الأسبوع', section: 'more' },
+  { id: 'ai', label: 'مساعد التخطيط', section: 'more' },
+  { id: 'balance', label: 'توازن الحياة', section: 'more' },
+  { id: 'timeMachine', label: 'آلة الزمن', section: 'more' },
 ];
 
 export const DEFAULT_PROFILE = {
@@ -46,7 +50,7 @@ export function makeTask(p = {}) {
     duration: 30,
     priority: 'med',
     area: 'work',
-    icon: '✨',
+    icon: 'sparkles',
     repeat: { type: 'none', days: [] },
     goalId: null,
     subtasks: [],
@@ -76,7 +80,7 @@ export function emptyData(user) {
     rewardHistory: [],
     achievements: {},
     notifications: [
-      { id: uid(), type: 'info', icon: '👋', title: 'مرحبًا بك في هّمة', body: 'ابدأ بإضافة أول مهمة ليومك.', time: Date.now(), read: false },
+      { id: uid(), type: 'info', icon: 'sparkles', title: 'مرحبًا بك في هّمة', body: 'ابدأ بإضافة أول مهمة ليومك.', time: Date.now(), read: false },
     ],
     projects: [],
     focusLog: [],
@@ -89,20 +93,20 @@ export function emptyData(user) {
 
 function defaultRewards() {
   return [
-    { id: uid(), icon: '🎮', title: 'ساعة ألعاب', cost: 100 },
-    { id: uid(), icon: '🍔', title: 'وجبة', cost: 300 },
-    { id: uid(), icon: '🎬', title: 'فيلم', cost: 500 },
-    { id: uid(), icon: '🛍️', title: 'شراء شيء', cost: 1000 },
+    { id: uid(), icon: 'fun', title: 'ساعة ألعاب', cost: 100 },
+    { id: uid(), icon: 'meal', title: 'وجبة', cost: 300 },
+    { id: uid(), icon: 'film', title: 'فيلم', cost: 500 },
+    { id: uid(), icon: 'cart', title: 'شراء شيء', cost: 1000 },
   ];
 }
 
 function defaultHabits(withLogs) {
   const H = [
-    { icon: '💧', title: 'شرب الماء', target: 8, unit: 'أكواب', color: '#3B82F6', rate: 0.8 },
-    { icon: '📖', title: 'القراءة', target: 1, unit: 'مرة', color: '#7C5CFF', rate: 0.75 },
-    { icon: '🚶', title: 'المشي', target: 1, unit: 'مرة', color: '#34D399', rate: 0.7 },
-    { icon: '😴', title: 'النوم مبكرًا', target: 1, unit: 'مرة', color: '#FBBF24', rate: 0.55 },
-    { icon: '🧘', title: 'التأمل', target: 1, unit: 'مرة', color: '#F472B6', rate: 0.5 },
+    { icon: 'water', title: 'شرب الماء', target: 8, unit: 'أكواب', color: '#3B82F6', rate: 0.8 },
+    { icon: 'read', title: 'القراءة', target: 1, unit: 'مرة', color: '#7C5CFF', rate: 0.75 },
+    { icon: 'walk', title: 'المشي', target: 1, unit: 'مرة', color: '#34D399', rate: 0.7 },
+    { icon: 'sleep', title: 'النوم مبكرًا', target: 1, unit: 'مرة', color: '#FBBF24', rate: 0.55 },
+    { icon: 'meditation', title: 'التأمل', target: 1, unit: 'مرة', color: '#F472B6', rate: 0.5 },
   ];
   return H.map((h, i) => {
     const log = {};
@@ -140,21 +144,21 @@ export function demoData() {
 
   // مهام اليوم — 82% مكتملة (بالوزن حسب المدة)
   const done = [
-    ['06:30', 15, '🕌', 'الأذكار والاستيقاظ', 'family', 'low'],
-    ['06:50', 20, '📖', 'قراءة 20 صفحة', 'study', 'low'],
-    ['07:15', 45, '💪', 'تمرين صباحي', 'health', 'med'],
-    ['08:05', 20, '🥗', 'فطور صحي', 'health', 'low'],
-    ['08:30', 60, '🎓', 'محاضرة الجامعة', 'study', 'high'],
-    ['09:40', 30, '📝', 'حل مسائل', 'study', 'med'],
-    ['10:15', 45, '💼', 'اجتماع المشروع', 'work', 'med'],
-    ['11:05', 45, '📝', 'تسليم الواجب', 'study', 'high'],
-    ['12:00', 60, '☕', 'غداء وراحة', 'health', 'low'],
+    ['06:30', 15, 'pray', 'الأذكار والاستيقاظ', 'family', 'low'],
+    ['06:50', 20, 'read', 'قراءة 20 صفحة', 'study', 'low'],
+    ['07:15', 45, 'dumbbell', 'تمرين صباحي', 'health', 'med'],
+    ['08:05', 20, 'food', 'فطور صحي', 'health', 'low'],
+    ['08:30', 60, 'study', 'محاضرة الجامعة', 'study', 'high'],
+    ['09:40', 30, 'pen', 'حل مسائل', 'study', 'med'],
+    ['10:15', 45, 'work', 'اجتماع المشروع', 'work', 'med'],
+    ['11:05', 45, 'pen', 'تسليم الواجب', 'study', 'high'],
+    ['12:00', 60, 'coffee', 'غداء وراحة', 'health', 'low'],
   ];
   const now = nowMin();
   const pendStart = Math.min(Math.max(roundUp5(now + 20), 13 * 60 + 15), 21 * 60 + 30);
   const pending = [
-    [fromMin(pendStart), 45, '📚', 'مذاكرة التفاضل', 'study', 'high'],
-    [fromMin(pendStart + 55), 30, '🎓', 'مراجعة المحاضرة', 'study', 'med'],
+    [fromMin(pendStart), 45, 'book', 'مذاكرة التفاضل', 'study', 'high'],
+    [fromMin(pendStart + 55), 30, 'study', 'مراجعة المحاضرة', 'study', 'med'],
   ];
   for (const [time, duration, icon, title, area, priority] of done) {
     const [h, m] = time.split(':').map(Number);
@@ -167,28 +171,28 @@ export function demoData() {
 
   // الغد والأيام القادمة
   const upcoming = [
-    [1, '08:00', 60, '📚', 'مذاكرة الفيزياء', 'study', 'high'],
-    [1, '11:00', 90, '🎓', 'محاضرة الرياضيات', 'study', 'med'],
-    [1, '19:00', 60, '👨‍👩‍👦', 'زيارة الأهل', 'family', 'med'],
-    [2, '10:00', 45, '💰', 'مراجعة الميزانية الشهرية', 'money', 'med'],
-    [2, '16:00', 120, '💻', 'العمل على مشروع التخرج', 'work', 'high'],
-    [3, '09:00', 60, '📝', 'تحضير العرض التقديمي', 'study', 'urgent'],
-    [4, '20:00', 120, '🎮', 'سهرة ألعاب مع الأصدقاء', 'fun', 'low'],
+    [1, '08:00', 60, 'book', 'مذاكرة الفيزياء', 'study', 'high'],
+    [1, '11:00', 90, 'study', 'محاضرة الرياضيات', 'study', 'med'],
+    [1, '19:00', 60, 'family', 'زيارة الأهل', 'family', 'med'],
+    [2, '10:00', 45, 'money', 'مراجعة الميزانية الشهرية', 'money', 'med'],
+    [2, '16:00', 120, 'laptop', 'العمل على مشروع التخرج', 'work', 'high'],
+    [3, '09:00', 60, 'pen', 'تحضير العرض التقديمي', 'study', 'urgent'],
+    [4, '20:00', 120, 'fun', 'سهرة ألعاب مع الأصدقاء', 'fun', 'low'],
   ];
   for (const [off, time, duration, icon, title, area, priority] of upcoming) {
     d.tasks.push(makeTask({ title, time, duration, icon, area, priority, date: addDays(T, off) }));
   }
   // مهمة متأخرة من أمس (لعرض إعادة التخطيط)
-  d.tasks.push(makeTask({ title: 'قراءة ملخص الفصل الثالث', time: '21:00', duration: 30, icon: '📖', area: 'study', priority: 'low', date: addDays(T, -1), postponed: 1 }));
+  d.tasks.push(makeTask({ title: 'قراءة ملخص الفصل الثالث', time: '21:00', duration: 30, icon: 'read', area: 'study', priority: 'low', date: addDays(T, -1), postponed: 1 }));
 
   // مهمة متكررة: النادي (الأحد، الثلاثاء، الخميس)
-  d.tasks.push(makeTask({ title: 'النادي', time: '18:00', duration: 60, icon: '💪', area: 'health', priority: 'med', date: T, template: true, repeat: { type: 'days', days: [0, 2, 4] } }));
+  d.tasks.push(makeTask({ title: 'النادي', time: '18:00', duration: 60, icon: 'dumbbell', area: 'health', priority: 'med', date: T, template: true, repeat: { type: 'days', days: [0, 2, 4] } }));
 
   // تاريخ الإنجاز لآخر 45 يوم (للإحصائيات وآلة الزمن وتوازن الحياة)
   const pool = [
-    ['📚', 'مذاكرة', 'study', 60], ['📝', 'حل واجب', 'study', 45], ['🎓', 'محاضرة', 'study', 60], ['📖', 'قراءة', 'study', 30],
-    ['💪', 'تمرين', 'health', 45], ['🚶', 'مشي', 'health', 30], ['💼', 'اجتماع', 'work', 45], ['💻', 'مشروع التخرج', 'work', 90],
-    ['💰', 'مراجعة المصاريف', 'money', 20], ['👨‍👩‍👦', 'وقت مع العائلة', 'family', 60], ['🎮', 'استراحة ألعاب', 'fun', 45],
+    ['book', 'مذاكرة', 'study', 60], ['pen', 'حل واجب', 'study', 45], ['study', 'محاضرة', 'study', 60], ['read', 'قراءة', 'study', 30],
+    ['dumbbell', 'تمرين', 'health', 45], ['walk', 'مشي', 'health', 30], ['work', 'اجتماع', 'work', 45], ['laptop', 'مشروع التخرج', 'work', 90],
+    ['money', 'مراجعة المصاريف', 'money', 20], ['family', 'وقت مع العائلة', 'family', 60], ['fun', 'استراحة ألعاب', 'fun', 45],
   ];
   const weights = [16, 9, 8, 6, 12, 5, 12, 6, 6, 5, 5];
   const wsum = weights.reduce((a, b) => a + b, 0);
@@ -217,7 +221,7 @@ export function demoData() {
 
   d.goals = [
     {
-      id: uid(), title: 'تعلم الإنجليزية خلال 6 أشهر', area: 'study', icon: '🌍', deadline: addDays(T, 120), createdAt: Date.now() - 60 * 86400000,
+      id: uid(), title: 'تعلم الإنجليزية خلال 6 أشهر', area: 'study', icon: 'globe', deadline: addDays(T, 120), createdAt: Date.now() - 60 * 86400000,
       lastActivity: Date.now() - 86400000, months: 6,
       milestones: [
         { id: uid(), title: 'تأسيس القواعد', level: 'month', total: 2, done: 2 },
@@ -228,7 +232,7 @@ export function demoData() {
       daily: ['تعلم 10 كلمات جديدة', 'استماع 15 دقيقة', 'مراجعة قاعدة واحدة'],
     },
     {
-      id: uid(), title: 'رفع اللياقة البدنية', area: 'health', icon: '💪', deadline: addDays(T, 75), createdAt: Date.now() - 20 * 86400000,
+      id: uid(), title: 'رفع اللياقة البدنية', area: 'health', icon: 'dumbbell', deadline: addDays(T, 75), createdAt: Date.now() - 20 * 86400000,
       lastActivity: Date.now() - 3 * 3600000, months: 3,
       milestones: [
         { id: uid(), title: 'بناء الروتين', level: 'month', total: 4, done: 3 },
@@ -240,15 +244,15 @@ export function demoData() {
   ];
   d.habits = defaultHabits(true);
   d.challenges = [
-    { id: uid(), icon: '🔥', title: 'تحدي 7 أيام بدون تأجيل', desc: 'أنجز كل مهامك في وقتها', days: 7, start: addDays(T, -4), log: Object.fromEntries([1, 2, 3, 4].map((i) => [addDays(T, -i), true])) },
-    { id: uid(), icon: '📖', title: 'قراءة 30 دقيقة يوميًا', desc: '30 دقيقة قراءة كل يوم', days: 14, start: addDays(T, -9), log: Object.fromEntries([0, 1, 2, 3, 5, 6, 7, 9].map((i) => [addDays(T, -i), true])) },
-    { id: uid(), icon: '🌅', title: 'الاستيقاظ مبكرًا', desc: 'الاستيقاظ قبل 6:30', days: 7, start: addDays(T, -1), log: { [addDays(T, -1)]: true, [T]: true } },
-    { id: uid(), icon: '💪', title: 'التمرين 5 أيام', desc: '5 تمارين هذا الأسبوع', days: 5, start: addDays(T, -3), log: { [addDays(T, -3)]: true, [addDays(T, -2)]: true, [T]: true } },
+    { id: uid(), icon: 'flame', title: 'تحدي 7 أيام بدون تأجيل', desc: 'أنجز كل مهامك في وقتها', days: 7, start: addDays(T, -4), log: Object.fromEntries([1, 2, 3, 4].map((i) => [addDays(T, -i), true])) },
+    { id: uid(), icon: 'read', title: 'قراءة 30 دقيقة يوميًا', desc: '30 دقيقة قراءة كل يوم', days: 14, start: addDays(T, -9), log: Object.fromEntries([0, 1, 2, 3, 5, 6, 7, 9].map((i) => [addDays(T, -i), true])) },
+    { id: uid(), icon: 'sunrise', title: 'الاستيقاظ مبكرًا', desc: 'الاستيقاظ قبل 6:30', days: 7, start: addDays(T, -1), log: { [addDays(T, -1)]: true, [T]: true } },
+    { id: uid(), icon: 'dumbbell', title: 'التمرين 5 أيام', desc: '5 تمارين هذا الأسبوع', days: 5, start: addDays(T, -3), log: { [addDays(T, -3)]: true, [addDays(T, -2)]: true, [T]: true } },
   ];
-  d.rewardHistory = [{ id: uid(), title: 'ساعة ألعاب', icon: '🎮', cost: 100, time: Date.now() - 5 * 86400000 }];
+  d.rewardHistory = [{ id: uid(), title: 'ساعة ألعاب', icon: 'fun', cost: 100, time: Date.now() - 5 * 86400000 }];
   d.projects = [
     {
-      id: uid(), name: 'مشروع الجامعة', icon: '🎓', createdAt: Date.now(),
+      id: uid(), name: 'مشروع الجامعة', icon: 'study', createdAt: Date.now(),
       members: [
         { id: 'me', name: 'مشاري', color: '#7C5CFF' },
         { id: 'm2', name: 'أحمد', color: '#3B82F6' },
@@ -270,10 +274,10 @@ export function demoData() {
   d.achievements = { first: Date.now() - 40 * 86400000, ten: Date.now() - 35 * 86400000, fifty: Date.now() - 12 * 86400000, streak7: Date.now() - 5 * 86400000, xp1000: Date.now() - 20 * 86400000, goal: Date.now() - 60 * 86400000, reward: Date.now() - 5 * 86400000, focus: Date.now() - 10 * 86400000, team: Date.now() - 3 * 86400000 };
   d.energy = {};
   d.notifications = [
-    { id: uid(), type: 'upcoming', icon: '🔔', title: 'مهمتك القادمة', body: 'باقي 15 دقيقة على مهمتك القادمة: مذاكرة التفاضل', time: Date.now() - 10 * 60000, read: false },
-    { id: uid(), type: 'streak', icon: '🔥', title: 'حافظ على الـStreak', body: 'أكمل مهامك اليوم لتصل إلى 13 يوم متتالي', time: Date.now() - 60 * 60000, read: false },
-    { id: uid(), type: 'goals', icon: '🎯', title: 'اقتربت من هدفك', body: 'هدف "رفع اللياقة البدنية" وصل 30%', time: Date.now() - 5 * 3600000, read: true },
-    { id: uid(), type: 'achievements', icon: '🏆', title: 'إنجاز جديد', body: 'فتحت إنجاز "روح الفريق"', time: Date.now() - 3 * 86400000, read: true },
+    { id: uid(), type: 'upcoming', icon: 'bell', title: 'مهمتك القادمة', body: 'باقي 15 دقيقة على مهمتك القادمة: مذاكرة التفاضل', time: Date.now() - 10 * 60000, read: false },
+    { id: uid(), type: 'streak', icon: 'flame', title: 'حافظ على الـStreak', body: 'أكمل مهامك اليوم لتصل إلى 13 يوم متتالي', time: Date.now() - 60 * 60000, read: false },
+    { id: uid(), type: 'goals', icon: 'target', title: 'اقتربت من هدفك', body: 'هدف "رفع اللياقة البدنية" وصل 30%', time: Date.now() - 5 * 3600000, read: true },
+    { id: uid(), type: 'achievements', icon: 'trophy', title: 'إنجاز جديد', body: 'فتحت إنجاز "روح الفريق"', time: Date.now() - 3 * 86400000, read: true },
   ];
   return d;
 }

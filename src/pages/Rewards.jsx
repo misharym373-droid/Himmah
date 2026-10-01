@@ -3,6 +3,7 @@ import { Gift, Plus, Trash2, History, Star } from 'lucide-react';
 import { useStore } from '../store.js';
 import { Modal, Bar, Num, Empty, CardTitle, useConfirm } from '../components/ui.jsx';
 import { fmt, timeAgo } from '../lib/date.js';
+import { Glyph, IconTile } from '../components/Glyph.jsx';
 
 export default function Rewards() {
   const user = useStore((s) => s.user);
@@ -30,7 +31,7 @@ export default function Rewards() {
       <div className="card glow mb reveal">
         <div className="row between wrap">
           <div className="row" style={{ gap: 16 }}>
-            <span style={{ fontSize: '2.6rem', filter: 'drop-shadow(0 0 14px #fbbf24)' }}>⭐</span>
+            <IconTile name="star" color="var(--gold)" size={56} />
             <div>
               <div className="small muted bold">رصيد XP</div>
               <div className="xbold" style={{ fontSize: '2.4rem', lineHeight: 1.1 }}>
@@ -56,7 +57,9 @@ export default function Rewards() {
                 <button className="icon-btn sm plain" style={{ position: 'absolute', top: 10, insetInlineEnd: 10 }} aria-label="حذف المكافأة" onClick={() => confirm({ title: 'حذف المكافأة', body: `حذف "${r.title}"؟`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteReward(r.id) })}>
                   <Trash2 />
                 </button>
-                <div className="em">{r.icon}</div>
+                <div className="em">
+                  <Glyph name={r.icon} size={30} />
+                </div>
                 <div className="bold">{r.title}</div>
                 <div className="purple xbold num">{fmt(r.cost)} XP</div>
                 {!can && (
@@ -98,7 +101,7 @@ export default function Rewards() {
             {history.slice(0, 20).map((h) => (
               <div key={h.id} className="row between small">
                 <span>
-                  {h.icon} {h.title}
+                  <Glyph name={h.icon} size={14} /> {h.title}
                 </span>
                 <span className="muted">
                   <span className="num red">-{fmt(h.cost)} XP</span> · {timeAgo(h.time)}
@@ -113,11 +116,11 @@ export default function Rewards() {
   );
 }
 
-const ICONS = ['🎮', '🍔', '🎬', '🛍️', '☕', '🍰', '📱', '✈️', '🏖️', '🎧', '📚', '🎁'];
+const ICONS = ['fun', 'meal', 'film', 'cart', 'coffee', 'cake', 'smartphone', 'travel', 'beach', 'headphones', 'book', 'gift'];
 
 function RewardModal({ onClose }) {
   const add = useStore((s) => s.addReward);
-  const [f, setF] = useState({ icon: '🎁', title: '', cost: 200 });
+  const [f, setF] = useState({ icon: 'gift', title: '', cost: 200 });
   function save() {
     if (!f.title.trim()) return;
     add({ ...f, title: f.title.trim(), cost: Math.max(10, +f.cost || 100) });
@@ -141,8 +144,8 @@ function RewardModal({ onClose }) {
       <div className="col" style={{ gap: 14 }}>
         <div className="chips">
           {ICONS.map((i) => (
-            <button key={i} className={`chip ${f.icon === i ? 'on' : ''}`} style={{ width: 42, padding: 0, justifyContent: 'center', fontSize: '1.2rem' }} onClick={() => setF({ ...f, icon: i })} aria-label={i}>
-              {i}
+            <button key={i} className={`chip icon-chip ${f.icon === i ? 'on' : ''}`} onClick={() => setF({ ...f, icon: i })} aria-label={i}>
+              <Glyph name={i} size={17} />
             </button>
           ))}
         </div>

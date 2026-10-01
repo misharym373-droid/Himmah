@@ -12,7 +12,7 @@ const VOICE = {
   friend: {
     hi: ['هلا والله!', 'يا هلا!', 'أهلين!'],
     now: 'رأيي تبدأ الآن بـ',
-    push: 'أنت قدها 🤝',
+    push: 'أنت قدها.',
     rescue: 'ولا يهمك، نرتبها سوا.',
     empty: 'يومك فاضي حاليًا، وش رأيك نضيف أول مهمة؟',
     done: 'كفو عليك!',
@@ -26,20 +26,20 @@ const VOICE = {
     done: 'إنجاز ممتاز. استمر.',
   },
   hype: {
-    hi: ['يلا يا بطل! ⚡', 'وقت الإنجاز! 🔥', 'جاهز تكسرها؟ 🚀'],
+    hi: ['يلا يا بطل!', 'وقت الإنجاز!', 'جاهز تكسرها؟'],
     now: 'انطلق الآن في',
-    push: 'ولا شيء يوقفك! 🔥',
-    rescue: 'نقدر نقلب اليوم لصالحك! ⚡',
-    empty: 'الساحة فاضية! أضف مهمة ونشعلها 🔥',
-    done: 'وحش! 🔥🔥',
+    push: 'ولا شيء يوقفك!',
+    rescue: 'نقدر نقلب اليوم لصالحك!',
+    empty: 'الساحة فاضية! أضف مهمة ونبدأ.',
+    done: 'وحش!',
   },
   calm: {
-    hi: ['مرحبًا، خذ نفسًا عميقًا 🌿', 'أهلًا بك بهدوء.', 'لا بأس، خطوة بخطوة.'],
+    hi: ['مرحبًا، خذ نفسًا عميقًا.', 'أهلًا بك بهدوء.', 'لا بأس، خطوة بخطوة.'],
     now: 'ربما من الجميل أن تبدأ بـ',
-    push: 'خطوة صغيرة تكفي الآن 🌿',
+    push: 'خطوة صغيرة تكفي الآن.',
     rescue: 'لا تقلق، ما زال هناك وقت. لنخفف الحمل:',
     empty: 'يومك هادئ. أضف ما يهمك حين تكون جاهزًا.',
-    done: 'أحسنت، خذ لحظة لتستمتع بإنجازك 🌿',
+    done: 'أحسنت، خذ لحظة لتستمتع بإنجازك.',
   },
 };
 const pick = (a) => (Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a);
@@ -248,7 +248,7 @@ export function chat(s, message) {
   }
   if (/متاخر|متأخر|انقذ|أنقذ|ساعدني|ضايع|ضغط/.test(m)) {
     const p = rescuePlan(s);
-    if (!p.total) return { text: `${hi} ما عندك مهام متبقية اليوم، أنت بالسليم 👌` };
+    if (!p.total) return { text: `${hi} ما عندك مهام متبقية اليوم، أنت بالسليم.` };
     return {
       text: `${p.text}\nباقي لك تقريبًا ${formatDuration(p.remaining)}. أهم ${p.keep.length} مهام الآن، و${p.move.length} أقترح نقلها لبكرة.`,
       tasks: p.keep,
@@ -259,7 +259,7 @@ export function chat(s, message) {
   if (hourM && /(اقدر|أقدر|انجز|أنجز|عندي|خلال|فقط|بس)/.test(m) && !/اختبار|امتحان/.test(m) && !parseTasks(message).some((t) => t.time)) {
     const minutes = hourM[1] ? +hourM[1] : /ساعتين/.test(m) ? 120 : /نص ساعة/.test(m) ? 30 : 60;
     const r = fitInTime(s, minutes);
-    if (!r.tasks.length && !r.partial) return { text: 'ما عندك مهام مفتوحة اليوم. استغل الوقت لشيء تحبه 🌿' };
+    if (!r.tasks.length && !r.partial) return { text: 'ما عندك مهام مفتوحة اليوم. استغل الوقت لشيء تحبه.' };
     if (!r.tasks.length) return { text: `ما فيه مهمة كاملة تناسب ${minutes} دقيقة، لكن تقدر تبدأ جزء من "${r.partial.title}".`, tasks: [r.partial], actions: [{ type: 'focus', label: 'ابدأ جزءًا منها', payload: r.partial.id }] };
     return { text: `خلال ${formatDuration(minutes)} تقدر تنجز ${r.tasks.length} مهام (${formatDuration(r.used)}):`, tasks: r.tasks, actions: [{ type: 'focus', label: 'ابدأ بالأولى', payload: r.tasks[0].id }] };
   }
@@ -298,7 +298,7 @@ export function chat(s, message) {
   if (parsed.length && parsed.some((p) => p.time)) {
     return { text: `فهمت ${parsed.length > 1 ? `${parsed.length} مهام` : 'المهمة'}:`, parsed, actions: [{ type: 'addParsed', label: 'أضفها لجدولي', payload: parsed }] };
   }
-  if (/شكرا|شكرًا|يعطيك|تسلم/.test(m)) return { text: 'العفو! أنا هنا متى ما احتجتني ✨' };
+  if (/شكرا|شكرًا|يعطيك|تسلم/.test(m)) return { text: 'العفو! أنا هنا متى ما احتجتني.' };
   return {
     text: `${hi} أقدر أساعدك في:\n• "رتب يومي"\n• "وش أسوي الآن؟"\n• "وش أقدر أنجز خلال ساعة؟"\n• "أنا متأخر اليوم، ساعدني"\n• "عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول"\n• "قسم لي هدف تعلم الإنجليزية خلال 6 أشهر"\n• أو اكتب مهامك مع أوقاتها وأجدولها لك.`,
   };

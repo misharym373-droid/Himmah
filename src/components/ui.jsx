@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { useStore } from '../store.js';
+import { IconTile } from './Glyph.jsx';
 
 const base = import.meta.env.BASE_URL;
 export const asset = (p) => base + p;
@@ -244,7 +245,7 @@ export function ConfirmModal({ title, body, confirmLabel = 'تأكيد', danger,
       }
     >
       <div className="row" style={{ alignItems: 'flex-start' }}>
-        {icon && <span style={{ fontSize: '2rem', lineHeight: 1 }}>{icon}</span>}
+        {icon && (typeof icon === 'string' ? <IconTile name={icon} size={44} /> : icon)}
         <p className="muted">{body}</p>
       </div>
     </Modal>

@@ -1,11 +1,15 @@
-import { useRef, useState } from 'react';
-import { User, Camera, LogOut, Wallet, ExternalLink, Plus, X, Save, Palette, Flame, Star, Target } from 'lucide-react';
-import { useStore } from '../store.js';
+import { useMemo, useRef, useState } from 'react';
+import { User, Camera, LogOut, Wallet, ExternalLink, Plus, Save, Palette, Flame, Star, Target } from 'lucide-react';
+import { useStore, goalProgress } from '../store.js';
 import { navigate } from '../router.js';
 import { Avatar, Bar, Num, CardTitle, useConfirm, asset } from '../components/ui.jsx';
 import { SurraLink } from '../components/Layout.jsx';
-import { levelInfo } from '../lib/game.js';
-import { fmt } from '../lib/date.js';
+import { levelInfo, ACHIEVEMENTS } from '../lib/game.js';
+import { fmt, formatHM } from '../lib/date.js';
+import { summary } from '../lib/stats.js';
+import { AREAS } from '../config.js';
+import { IconTile } from '../components/Glyph.jsx';
+import { Collapsible } from '../components/Widgets.jsx';
 
 const GOALS = ['زيادة اللياقة', 'تحسين الدراسة', 'تنظيم الوقت', 'قراءة أكثر', 'تعلم مهارة', 'إنجاز مشروع'];
 const INTERESTS = ['التقنية', 'الرياضة', 'القراءة', 'التصميم', 'الطبخ', 'السفر', 'الألعاب', 'ريادة الأعمال', 'اللغات', 'الموسيقى'];
@@ -16,6 +20,12 @@ export default function Profile() {
   const streak = useStore((s) => s.streak);
   const surra = useStore((s) => s.settings.surraUrl);
   const setProfile = useStore((s) => s.setProfile);
+  const goals = useStore((s) => s.goals);
+  const tasks = useStore((s) => s.tasks);
+  const focusLog = useStore((s) => s.focusLog);
+  const achievements = useStore((s) => s.achievements);
+  const stats = useMemo(() => summary(tasks, focusLog, Infinity), [tasks, focusLog]);
+  const unlocked = ACHIEVEMENTS.filter((a) => achievements[a.id]).length;
   const confirm = useConfirm();
   const [f, setF] = useState(profile);
   const [goal, setGoal] = useState('');
@@ -45,7 +55,7 @@ export default function Profile() {
   function save() {
     if (!f.name.trim()) return useStore.getState().toast('الاسم مطلوب');
     setProfile({ ...f, name: f.name.trim() });
-    useStore.getState().toast('تم حفظ معلوماتك ✓', { icon: 'check' });
+    useStore.getState().toast('تم حفظ معلوماتك', { icon: 'check' });
   }
   const toggle = (k, v) => setF((x) => ({ ...x, [k]: x[k].includes(v) ? x[k].filter((y) => y !== v) : [...x[k], v] }));
 
@@ -59,11 +69,6 @@ export default function Profile() {
             </span>
             ملفي الشخصي
           </h1>
-        </div>
-        <div className="row">
-          <button className="btn" onClick={() => navigate('settings')}>
-            <Palette /> تخصيص هّمة
-          </button>
         </div>
       </div>
 
@@ -102,12 +107,126 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="dash">
-        <div className="card span-8 reveal d1">
-          <div className="card-hd">
-            <CardTitle icon={<User size={18} />}>معلوماتي</CardTitle>
-            <span className="tiny dim">كل الحقول اختيارية ما عدا الاسم</span>
+      <div className="kpis mt">
+        {[
+          ['award', 'var(--green)', 'مهمة مكتملة', fmt(stats.done)],
+          ['zap', 'var(--blue)', 'ساعات تركيز', formatHM(stats.focus)],
+          ['flame', 'var(--gold)', 'أفضل Streak', `${streak.best || streak.count} يوم`],
+          ['trophy', 'var(--primary)', 'إنجازات مفتوحة', `${unlocked}/${ACHIEVEMENTS.length}`],
+        ].map(([icon, c, l, v]) => (
+          <div className="sum-tile" key={l}>
+            <IconTile name={icon} color={c} size={40} />
+            <div>
+              <div className="sum-l">{l}</div>
+              <div className="sum-v num">{v}</div>
+            </div>
           </div>
+        ))}
+      </div>
+
+      <div className="dash">
+        <div className="card span-7 reveal d1">
+          <div className="card-hd">
+            <CardTitle icon={<Target size={18} />} color="green" sub="أهدافك الكبيرة وتقدمك فيها">
+              أهدافي
+            </CardTitle>
+            <button className="btn btn-xs btn-ghost" onClick={() => navigate('goals')}>
+              إدارة الأهداف
+            </button>
+          </div>
+          {goals.length ? (
+            <div className="col" style={{ gap: 12 }}>
+              {goals.slice(0, 3).map((g) => {
+                const p = goalProgress(g, tasks);
+                return (
+                  <div key={g.id} className="row">
+                    <IconTile name={g.icon} color={AREAS[g.area]?.color} size={36} />
+                    <div className="grow">
+                      <div className="row between small">
+                        <span className="bold ellipsis">{g.title}</span>
+                        <span className="num purple bold">{p}%</span>
+                      </div>
+                      <Bar value={p} className="thin mt-s" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="small muted">لا توجد أهداف بعد.</p>
+          )}
+          <div className="divider" />
+          <div className="small bold mb">أهدافي الشخصية</div>
+            <div className="chips">
+              {[...new Set([...GOALS, ...f.personalGoals])].map((g) => (
+                <button key={g} className={`chip ${f.personalGoals.includes(g) ? 'on' : ''}`} onClick={() => (toggle('personalGoals', g), setProfile({ personalGoals: f.personalGoals.includes(g) ? f.personalGoals.filter((x) => x !== g) : [...f.personalGoals, g] }))}>
+                  {g}
+                </button>
+              ))}
+            </div>
+            <form
+              className="row mt"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!goal.trim()) return;
+                const next = [...f.personalGoals, goal.trim()];
+                setF({ ...f, personalGoals: next });
+                setProfile({ personalGoals: next });
+                setGoal('');
+              }}
+            >
+              <input className="input" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="هدف خاص…" aria-label="هدف خاص" />
+              <button className="icon-btn" aria-label="إضافة هدف">
+                <Plus />
+              </button>
+            </form>
+        </div>
+
+        <div className="span-5 col" style={{ gap: 20 }}>
+          <div className="product-card reveal d2">
+            <span className="p-ico">
+              <Wallet />
+            </span>
+            <div className="grow" style={{ minWidth: 150 }}>
+              <div className="tiny muted bold">منتجاتي</div>
+              <div className="bold">صُرّة لإدارة الأموال</div>
+              <div className="small muted">إدارة أموالك ومصروفاتك وأهدافك المالية في مكان واحد.</div>
+            </div>
+            <SurraLink url={surra} className="btn btn-sm btn-primary">
+              فتح صُرّة <ExternalLink />
+            </SurraLink>
+          </div>
+
+          <div className="card reveal d3">
+            <div className="row" style={{ gap: 12 }}>
+              <img src={asset('brand/icon.webp')} alt="" width="44" height="44" style={{ borderRadius: 13 }} />
+              <div className="grow">
+                <div className="bold">حسابك</div>
+                <div className="tiny muted ellipsis">{profile.email || 'حساب محلي على هذا الجهاز'}</div>
+              </div>
+              <button className="btn btn-sm btn-ghost" onClick={() => navigate('settings')}>
+                <Palette /> الإعدادات
+              </button>
+            </div>
+            <button
+              className="btn btn-danger btn-block mt"
+              onClick={() =>
+                confirm({
+                  title: 'تسجيل الخروج',
+                  body: 'هل تريد تسجيل الخروج؟ بياناتك تبقى محفوظة على هذا الجهاز.',
+                  confirmLabel: 'تسجيل الخروج',
+                  danger: true,
+                  onConfirm: () => window.__himmahLogout?.(),
+                })
+              }
+            >
+              <LogOut /> تسجيل الخروج
+            </button>
+          </div>
+        </div>
+
+        <Collapsible id="profile-info" title="معلوماتي" icon={<User size={18} />} hint="الاسم، التواصل، العمر، أوقات الاستيقاظ والنوم — كلها اختيارية ما عدا الاسم">
+          <div className="card span-12">
           <div className="grid g2">
             <label className="field">
               <span>الاسم *</span>
@@ -172,83 +291,9 @@ export default function Profile() {
               <Save /> حفظ
             </button>
           </div>
-        </div>
-
-        <div className="span-4 col" style={{ gap: 20 }}>
-          <div className="card reveal d2">
-            <CardTitle icon={<Target size={18} />} color="green">
-              أهدافي الشخصية
-            </CardTitle>
-            <div className="chips mt">
-              {[...new Set([...GOALS, ...f.personalGoals])].map((g) => (
-                <button key={g} className={`chip ${f.personalGoals.includes(g) ? 'on' : ''}`} onClick={() => (toggle('personalGoals', g), setProfile({ personalGoals: f.personalGoals.includes(g) ? f.personalGoals.filter((x) => x !== g) : [...f.personalGoals, g] }))}>
-                  {g}
-                </button>
-              ))}
-            </div>
-            <form
-              className="row mt"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!goal.trim()) return;
-                const next = [...f.personalGoals, goal.trim()];
-                setF({ ...f, personalGoals: next });
-                setProfile({ personalGoals: next });
-                setGoal('');
-              }}
-            >
-              <input className="input" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="هدف خاص…" aria-label="هدف خاص" />
-              <button className="icon-btn" aria-label="إضافة هدف">
-                <Plus />
-              </button>
-            </form>
           </div>
-
-          <div className="card reveal d3">
-            <CardTitle icon={<Wallet size={18} />} color="gold">
-              منتجاتي
-            </CardTitle>
-            <div className="product-card mt">
-              <span className="p-ico">
-                <Wallet />
-              </span>
-              <div className="grow" style={{ minWidth: 150 }}>
-                <div className="bold">صُرّة لإدارة الأموال</div>
-                <div className="small muted">إدارة أموالك ومصروفاتك وأهدافك المالية في مكان واحد.</div>
-              </div>
-              <SurraLink url={surra} className="btn btn-sm btn-primary">
-                فتح صُرّة <ExternalLink />
-              </SurraLink>
-            </div>
-          </div>
-
-          <div className="card reveal d4">
-            <div className="row" style={{ gap: 12 }}>
-              <img src={asset('brand/icon.webp')} alt="" width="48" height="48" style={{ borderRadius: 14 }} />
-              <div className="grow">
-                <div className="bold">هّمة</div>
-                <div className="tiny muted">نحو يوم أفضل</div>
-              </div>
-            </div>
-            <button
-              className="btn btn-danger btn-block mt"
-              onClick={() =>
-                confirm({
-                  title: 'تسجيل الخروج',
-                  body: 'هل تريد تسجيل الخروج؟ بياناتك تبقى محفوظة على هذا الجهاز.',
-                  confirmLabel: 'تسجيل الخروج',
-                  danger: true,
-                  onConfirm: () => window.__himmahLogout?.(),
-                })
-              }
-            >
-              <LogOut /> تسجيل الخروج
-            </button>
-          </div>
-        </div>
+        </Collapsible>
       </div>
     </>
   );
 }
-
-export { X };

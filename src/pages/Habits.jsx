@@ -4,6 +4,7 @@ import { useStore } from '../store.js';
 import { Modal, Bar, Ring, Empty, useConfirm } from '../components/ui.jsx';
 import { habitStreak, habitRate } from '../lib/game.js';
 import { todayKey, addDays, fromKey, DAYS_SHORT } from '../lib/date.js';
+import { Glyph, IconTile, IconPicker } from '../components/Glyph.jsx';
 
 export default function Habits() {
   const habits = useStore((s) => s.habits);
@@ -58,7 +59,7 @@ function HabitCard({ h, delay }) {
   return (
     <div className={`card reveal ${done ? 'glow' : ''}`} style={{ animationDelay: `${delay * 0.05}s` }}>
       <div className="row" style={{ gap: 14 }}>
-        <span style={{ fontSize: '2rem', width: 60, height: 60, display: 'grid', placeItems: 'center', borderRadius: 18, background: `${h.color}22`, border: `1px solid ${h.color}55`, flexShrink: 0 }}>{h.icon}</span>
+        <IconTile name={h.icon} color={h.color} size={56} />
         <div className="grow">
           <h3 style={{ fontSize: '1.1rem' }}>{h.title}</h3>
           <div className="row small muted wrap" style={{ gap: 12 }}>
@@ -74,7 +75,7 @@ function HabitCard({ h, delay }) {
           </div>
         </div>
         <Ring value={(v / h.target) * 100} size={64} stroke={7} id={`h${h.id}`} color={h.color}>
-          <span className="small xbold num">{h.target > 1 ? `${v}/${h.target}` : done ? '✓' : '0'}</span>
+          <span className="small xbold num">{h.target > 1 ? `${v}/${h.target}` : done ? <Check size={16} /> : '0'}</span>
         </Ring>
       </div>
       <div className="row mt">
@@ -92,7 +93,7 @@ function HabitCard({ h, delay }) {
           </>
         ) : (
           <button className={`btn btn-block ${done ? 'btn-green' : 'btn-primary'}`} onClick={() => logHabit(h.id, T, done ? -1 : 1)}>
-            <Check /> {done ? 'تم اليوم ✓' : 'سجّل إنجاز اليوم'}
+            <Check /> {done ? 'تم اليوم' : 'سجّل إنجاز اليوم'}
           </button>
         )}
       </div>
@@ -118,7 +119,7 @@ function HabitCard({ h, delay }) {
                 onClick={() => logHabit(h.id, d, val >= h.target ? -h.target : h.target - val)}
                 style={{ opacity: d > T ? 0.25 : 1 }}
               >
-                {val >= h.target ? '✓' : d <= T && d !== T ? '×' : ''}
+                {val >= h.target ? <Check size={11} /> : ''}
               </button>
             );
           })}
@@ -134,21 +135,23 @@ function HabitCard({ h, delay }) {
   );
 }
 
+const HABIT_ICONS = ['water', 'read', 'walk', 'sleep', 'meditation', 'dumbbell', 'pray', 'phoneoff', 'food', 'heart', 'brain', 'sparkles'];
+
 const SUGGEST = [
-  ['💧', 'شرب الماء', 8, 'أكواب'],
-  ['📖', 'القراءة', 1, 'مرة'],
-  ['🚶', 'المشي', 1, 'مرة'],
-  ['😴', 'النوم مبكرًا', 1, 'مرة'],
-  ['🧘', 'التأمل', 1, 'مرة'],
-  ['🏋️', 'التمرين', 1, 'مرة'],
-  ['🕌', 'أذكار الصباح', 1, 'مرة'],
-  ['📵', 'بدون جوال ساعة', 1, 'مرة'],
+  ['water', 'شرب الماء', 8, 'أكواب'],
+  ['read', 'القراءة', 1, 'مرة'],
+  ['walk', 'المشي', 1, 'مرة'],
+  ['sleep', 'النوم مبكرًا', 1, 'مرة'],
+  ['meditation', 'التأمل', 1, 'مرة'],
+  ['dumbbell', 'التمرين', 1, 'مرة'],
+  ['pray', 'أذكار الصباح', 1, 'مرة'],
+  ['phoneoff', 'بدون جوال ساعة', 1, 'مرة'],
 ];
 const COLORS = ['#7C5CFF', '#3B82F6', '#34D399', '#FBBF24', '#F472B6', '#F87171'];
 
 function HabitModal({ onClose }) {
   const addHabit = useStore((s) => s.addHabit);
-  const [f, setF] = useState({ icon: '✨', title: '', target: 1, unit: 'مرة', color: '#7C5CFF' });
+  const [f, setF] = useState({ icon: 'sparkles', title: '', target: 1, unit: 'مرة', color: '#7C5CFF' });
   function save() {
     if (!f.title.trim()) return;
     addHabit({ ...f, title: f.title.trim(), target: Math.max(1, +f.target || 1) });
@@ -174,14 +177,14 @@ function HabitModal({ onClose }) {
         <div className="chips">
           {SUGGEST.map(([icon, title, target, unit]) => (
             <button key={title} className={`chip ${f.title === title ? 'on' : ''}`} onClick={() => setF({ ...f, icon, title, target, unit })}>
-              {icon} {title}
+              <Glyph name={icon} size={15} /> {title}
             </button>
           ))}
         </div>
         <div className="grid" style={{ gridTemplateColumns: '80px 1fr', gap: 10 }}>
           <label className="field">
             <span>الرمز</span>
-            <input className="input" value={f.icon} onChange={(e) => setF({ ...f, icon: e.target.value.slice(0, 2) })} style={{ textAlign: 'center', fontSize: '1.3rem' }} />
+            <IconPicker value={f.icon} options={HABIT_ICONS} onChange={(icon) => setF({ ...f, icon })} />
           </label>
           <label className="field">
             <span>اسم العادة</span>

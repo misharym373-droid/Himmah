@@ -1,56 +1,60 @@
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, CalendarDays, Repeat, Star, ChartColumn, Bot, ChartPie, Hourglass } from 'lucide-react';
 import { useStore } from '../store.js';
 import { navigate } from '../router.js';
-import { Hero, ProgressWidget, QuickActions, Insights, TopTaskWidget, DayMap, TrioWidget, StatsWidget, XpWidget, AIWidget, BalanceWidget, TimeMachineWidget } from '../components/Widgets.jsx';
+import { QuickInput } from '../components/Layout.jsx';
+import { WIDGETS } from '../lib/seed.js';
+import {
+  Greeting, SummaryStrip, Insights, TopThree, NextTask, GoalsShortcut, FocusCard, Collapsible, DayMap, HabitsWidget, StatsWidget, XpWidget, AIWidget,
+  BalanceWidget, TimeMachineWidget,
+} from '../components/Widgets.jsx';
+
+// الأقسام الإضافية (قابلة للطي) — ترتيبها وإظهارها من الإعدادات
+const MORE = {
+  dayMap: { icon: <CalendarDays size={18} />, hint: 'كل مهام اليوم مع السحب والإفلات', open: true, render: () => <DayMap span="span-12" title={null} /> },
+  habits: { icon: <Repeat size={18} />, hint: 'سجّل عادات اليوم وتابع تحدياتك', render: () => <HabitsWidget /> },
+  xp: { icon: <Star size={18} />, hint: 'المستوى، الـStreak، ورصيد المكافآت', render: () => <XpWidget /> },
+  stats: { icon: <ChartColumn size={18} />, hint: 'إنجازك وتركيزك هذا الأسبوع', render: () => <StatsWidget /> },
+  ai: { icon: <Bot size={18} />, hint: 'خطة مذاكرة أو هدف في ثوانٍ', render: () => <AIWidget /> },
+  balance: { icon: <ChartPie size={18} />, hint: 'كيف يتوزع وقتك على مجالات حياتك', render: () => <BalanceWidget span="span-12" /> },
+  timeMachine: { icon: <Hourglass size={18} />, hint: 'أين ستصل بنفس معدلك', render: () => <TimeMachineWidget span="span-12" /> },
+};
 
 export default function Home() {
   const dashboard = useStore((s) => s.dashboard);
   const hideStats = useStore((s) => s.settings.privacy?.hideStatsOnHome);
-  const visible = dashboard.order.filter((id) => !dashboard.hidden.includes(id) && !(hideStats && id === 'stats'));
-
-  // بطاقات تتشارك الصف إذا كانت متجاورة
-  const pairs = { topTask: 'dayMap', dayMap: 'topTask', balance: 'timeMachine', timeMachine: 'balance' };
-  const paired = (id) => {
-    const i = visible.indexOf(id);
-    const mate = pairs[id];
-    return mate && (visible[i - 1] === mate || visible[i + 1] === mate);
-  };
-
-  const render = (id) => {
-    switch (id) {
-      case 'progress':
-        return [<ProgressWidget key="p" />, <QuickActions key="qa" />, <Insights key="in" />];
-      case 'topTask':
-        return <TopTaskWidget key={id} />;
-      case 'dayMap':
-        return <DayMap key={id} span={paired('dayMap') ? 'span-7' : 'span-12'} />;
-      case 'trio':
-        return <TrioWidget key={id} />;
-      case 'stats':
-        return <StatsWidget key={id} />;
-      case 'xp':
-        return <XpWidget key={id} />;
-      case 'ai':
-        return <AIWidget key={id} />;
-      case 'balance':
-        return <BalanceWidget key={id} span={paired('balance') ? 'span-6' : 'span-12'} />;
-      case 'timeMachine':
-        return <TimeMachineWidget key={id} span={paired('timeMachine') ? 'span-6' : 'span-12'} />;
-      default:
-        return null;
-    }
-  };
+  const shown = (id) => !dashboard.hidden.includes(id) && !(hideStats && id === 'stats');
+  const label = (id) => WIDGETS.find((w) => w.id === id)?.label;
+  const more = dashboard.order.filter((id) => MORE[id] && shown(id));
+  // البطاقات المتجاورة تأخذ العرض كاملًا إذا أُخفي شريكها
+  const pair = (a, b, wide, narrow) => (shown(a) && shown(b) ? [wide, narrow] : ['span-12', 'span-12']);
+  const [topSpan, nextSpan] = pair('top3', 'next', 'span-7', 'span-5');
+  const [goalSpan, focusSpan] = pair('goals', 'focus', 'span-7', 'span-5');
 
   return (
     <>
-      <Hero />
-      <div className="row between" style={{ marginTop: 26 }}>
-        <h2 style={{ fontSize: '1.35rem' }}>لوحة يومك</h2>
+      <div className="dash home">
+        <Greeting input={<QuickInput id="home-input" big />} />
+        {shown('summary') && <SummaryStrip />}
+        <Insights />
+        {shown('top3') && <TopThree span={topSpan} />}
+        {shown('next') && <NextTask span={nextSpan} />}
+        {shown('goals') && <GoalsShortcut span={goalSpan} />}
+        {shown('focus') && <FocusCard span={focusSpan} />}
+      </div>
+
+      <div className="row between" style={{ margin: '34px 0 12px' }}>
+        <h2 style={{ fontSize: '1.15rem' }}>المزيد من يومك</h2>
         <button className="btn btn-sm btn-ghost" onClick={() => navigate('settings?tab=dashboard')}>
-          <SlidersHorizontal /> تخصيص
+          <SlidersHorizontal /> تخصيص الرئيسية
         </button>
       </div>
-      <div className="dash">{visible.map(render)}</div>
+      <div className="dash" style={{ marginTop: 0, gap: 12 }}>
+        {more.map((id) => (
+          <Collapsible key={id} id={id} title={label(id)} icon={MORE[id].icon} hint={MORE[id].hint} defaultOpen={!!MORE[id].open}>
+            {MORE[id].render()}
+          </Collapsible>
+        ))}
+      </div>
     </>
   );
 }

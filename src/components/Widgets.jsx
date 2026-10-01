@@ -1,415 +1,460 @@
-// بطاقات الصفحة الرئيسية (Dashboard)
+// بطاقات الصفحة الرئيسية — الأساسية في الأعلى، والتفاصيل في أقسام قابلة للطي
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  Sparkles, Play, Check, Clock, Flame, Star, Target, Trophy, Gift, Repeat, ChartColumn, Bot, Scale, Hourglass, Siren, Mic, ImagePlus, Zap,
-  Brain, TrendingUp, ArrowLeft, CalendarDays, Plus, Lightbulb, X, Pause, CircleCheck, Rocket, ChartPie, Swords,
+  Sparkles, Play, Check, Clock, Flame, Target, Repeat, ChartColumn, Bot, Hourglass, Siren, ImagePlus, Brain, ArrowLeft, CalendarDays,
+  Plus, Lightbulb, X, Pause, CircleCheck, ChartPie, Swords, ChevronDown, Timer, ListTodo, Sunset, BatteryLow, BatteryMedium, BatteryFull,
+  Maximize2, TriangleAlert,
 } from 'lucide-react';
 import { useStore, goalProgress } from '../store.js';
+import { useAssistantState, useToday } from '../hooks.js';
 import { navigate } from '../router.js';
-import { Ring, Bar, Num, CardTitle, Empty, asset, CheckBox } from './ui.jsx';
-import TaskItem, { DragHandle } from './TaskItem.jsx';
+import { Ring, Bar, Num, CardTitle, Empty, CheckBox } from './ui.jsx';
+import { Glyph, IconTile } from './Glyph.jsx';
+import TaskItem, { DragHandle, PostponeMenu } from './TaskItem.jsx';
 import { Bars, TimeLine, Donut } from './Charts.jsx';
 import { formatLong, todayKey, formatDuration, formatHM, nowMin, toMin, fmt, addDays, DAYS_SHORT, fromKey, formatClock } from '../lib/date.js';
-import { levelInfo, dayProgress, habitStreak, isOverdue } from '../lib/game.js';
-import { suggestNow, studyPlan, postponeInsights, say } from '../lib/assistant.js';
+import { levelInfo, habitStreak, isOverdue } from '../lib/game.js';
+import { scoreTask, studyPlan, postponeInsights, say } from '../lib/assistant.js';
 import { weekBars, summary, balance, timeMachine } from '../lib/stats.js';
+import { ENERGY, AREAS } from '../config.js';
 
-// ————— Hero —————
-export function Hero() {
-  const open = useStore((s) => s.openModal);
-  const features = [
-    [Sparkles, 'مهام ذكية'],
-    [Star, 'XP ومستويات'],
-    [ChartColumn, 'إحصائيات متقدمة'],
-    [Bot, 'ذكاء اصطناعي'],
-    [Scale, 'توازن الحياة'],
-  ];
+const ENERGY_ICONS = { low: BatteryLow, mid: BatteryMedium, high: BatteryFull };
+
+// ————— قسم قابل للطي (يتذكر حالته على هذا الجهاز) —————
+export function Collapsible({ id, title, icon, hint, defaultOpen = false, children }) {
+  const key = `himmah:ui:open:${id}`;
+  const [open, setOpen] = useState(() => {
+    try {
+      const v = localStorage.getItem(key);
+      return v == null ? defaultOpen : v === '1';
+    } catch {
+      return defaultOpen;
+    }
+  });
+  const toggle = () => {
+    setOpen(!open);
+    try {
+      localStorage.setItem(key, open ? '0' : '1');
+    } catch {
+      /* ignore */
+    }
+  };
   return (
-    <section className="hero reveal" aria-label="مرحبًا">
-      <div className="hero-stars" />
-      <div className="hero-mountains" aria-hidden>
-        <svg viewBox="0 0 1200 300" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#3b2a8f" />
-              <stop offset="1" stopColor="#120e38" />
-            </linearGradient>
-            <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#1c1655" />
-              <stop offset="1" stopColor="#0a0c24" />
-            </linearGradient>
-            <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#6d5cff" stopOpacity=".55" />
-              <stop offset="1" stopColor="#0a0f24" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="glowLine" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#3b82f6" stopOpacity="0" />
-              <stop offset=".5" stopColor="#a78bfa" />
-              <stop offset="1" stopColor="#3b82f6" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d="M0 190 L120 120 L210 160 L330 70 L450 150 L560 100 L680 170 L800 90 L930 150 L1040 80 L1200 160 L1200 215 L0 215Z" fill="url(#m1)" opacity=".9" />
-          <path d="M0 200 L150 150 L260 185 L380 130 L520 190 L640 140 L760 195 L900 135 L1020 185 L1200 150 L1200 215 L0 215Z" fill="url(#m2)" />
-          <rect x="0" y="213" width="1200" height="90" fill="url(#lake)" />
-          <rect x="0" y="212" width="1200" height="2" fill="url(#glowLine)" />
-          <path d="M0 215 L150 250 L260 228 L380 262 L520 222 L640 255 L760 220 L900 258 L1020 226 L1200 248 L1200 215Z" fill="#6d5cff" opacity=".12" />
-        </svg>
-      </div>
-      <div className="hero-tile">
-        <img src={asset('brand/icon.webp')} alt="" width="170" height="170" />
-      </div>
-      <div className="hero-content">
-        <h1>
-          رتّب يومك. <span className="grad-text">أنجز أكثر.</span> عش أفضل.
-        </h1>
-        <p>هّمة يجمع بين التنظيم والتحفيز والذكاء الاصطناعي لمساعدتك على تحقيق أهدافك مهما كانت كبيرة.</p>
-        <div className="hero-cta">
-          <button className="btn btn-primary btn-lg" onClick={() => open('interactive')}>
-            جرّب التجربة التفاعلية <ArrowLeft />
-          </button>
-          <button className="btn btn-lg btn-glass" onClick={() => document.getElementById('daily')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-            <Rocket /> ابدأ يومك
-          </button>
+    <section className={`collapsible span-12 ${open ? 'open' : ''}`} aria-labelledby={`col-${id}`}>
+      <button className="col-head" onClick={toggle} aria-expanded={open} aria-controls={`col-body-${id}`} id={`col-${id}`}>
+        <span className="col-ico" aria-hidden>{icon}</span>
+        <span className="grow" style={{ textAlign: 'start' }}>
+          <span className="bold">{title}</span>
+          {hint && <span className="tiny muted col-hint">{hint}</span>}
+        </span>
+        <ChevronDown size={18} className="col-chev" aria-hidden />
+      </button>
+      {open && (
+        <div className="dash col-body" id={`col-body-${id}`}>
+          {children}
         </div>
-      </div>
-      <div className="hero-features">
-        {features.map(([I, l]) => (
-          <span className="hero-feature" key={l}>
-            <I /> {l}
-          </span>
-        ))}
-      </div>
+      )}
     </section>
   );
 }
 
 // ————— مستوى الطاقة —————
-export function EnergyCheck({ compact }) {
+export function EnergyCheck() {
   const energy = useStore((s) => s.energy[todayKey()]);
   const setEnergy = useStore((s) => s.setEnergy);
   const [edit, setEdit] = useState(false);
-  const opts = [
-    ['low', '😴', 'منخفضة'],
-    ['mid', '😐', 'متوسطة'],
-    ['high', '🔥', 'عالية'],
-  ];
   if (energy && !edit) {
-    const o = opts.find((x) => x[0] === energy);
+    const I = ENERGY_ICONS[energy];
     return (
-      <button className="chip" onClick={() => setEdit(true)} title="تغيير مستوى الطاقة">
-        {o[1]} طاقتك اليوم: {o[2]}
+      <button className="chip" onClick={() => setEdit(true)} title="تغيير مستوى الطاقة" aria-label={`طاقتك اليوم ${ENERGY[energy].label} — تغيير`}>
+        <I size={16} /> طاقتك: {ENERGY[energy].label}
       </button>
     );
   }
   return (
-    <div className={compact ? '' : 'card reveal'} style={compact ? {} : { padding: 18 }}>
-      <div className="row between wrap" style={{ gap: 14 }}>
-        <div>
-          <div className="bold">كيف طاقتك اليوم؟</div>
-          <div className="tiny muted">إذا كانت منخفضة نقترح مهامًا قصيرة، وإذا كانت عالية نقترح المهام الكبيرة</div>
-        </div>
-        <div className="row">
-          {opts.map(([k, e, l]) => (
-            <button key={k} className={`chip ${energy === k ? 'on' : ''}`} onClick={() => (setEnergy(k), setEdit(false))}>
-              <span style={{ fontSize: '1.1rem' }}>{e}</span> {l}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ————— Daily progress —————
-export function ProgressWidget() {
-  const tasks = useStore((s) => s.tasks);
-  const user = useStore((s) => s.user);
-  const streak = useStore((s) => s.streak);
-  const p = dayProgress(tasks.filter((t) => !t.template));
-  const lv = levelInfo(user.totalXp);
-  return (
-    <div className="card span-12 reveal" id="daily">
-      <div className="row between wrap mb" style={{ gap: 12 }}>
-        <div>
-          <div className="muted small bold">{formatLong(todayKey())}</div>
-          <h2 style={{ fontSize: '1.5rem' }}>يومك اليوم</h2>
-        </div>
-        <EnergyCheck compact />
-      </div>
-      <div className="dash" style={{ marginTop: 0, alignItems: 'center' }}>
-        <div className="span-4 r-6" style={{ display: 'flex', alignItems: 'center', gap: 20, justifyContent: 'center' }}>
-          <Ring value={p.pct} size={170} stroke={14} id="dayRing">
-            <div>
-              <div className="xbold" style={{ fontSize: '2.4rem', lineHeight: 1 }}>
-                <Num value={p.pct} format={(n) => Math.round(n) + '%'} />
-              </div>
-              <div className="tiny muted mt-s">من يومك مكتمل</div>
-            </div>
-          </Ring>
-          <div className="col hide-mobile" style={{ gap: 6 }}>
-            <div className="small">
-              <span className="green xbold num">{p.done}</span> <span className="muted">مكتملة</span>
-            </div>
-            <div className="small">
-              <span className="xbold num">{p.total - p.done}</span> <span className="muted">متبقية</span>
-            </div>
-          </div>
-        </div>
-        <div className="span-8 r-6 grid g3">
-          <div className="mini-stat" style={{ textAlign: 'start' }}>
-            <div className="row">
-              <span style={{ fontSize: '1.8rem' }}>🔥</span>
-              <div>
-                <div className="v">
-                  <Num value={streak.count} />
-                </div>
-                <div className="l">يوم متتالي</div>
-              </div>
-            </div>
-            <StreakDots streak={streak} />
-          </div>
-          <div className="mini-stat" style={{ textAlign: 'start' }}>
-            <div className="row">
-              <span style={{ fontSize: '1.8rem' }}>⭐</span>
-              <div>
-                <div className="v">
-                  <Num value={user.xp} /> <span className="small muted">XP</span>
-                </div>
-                <div className="l">رصيد النقاط</div>
-              </div>
-            </div>
-            <button className="btn btn-xs btn-ghost mt-s" onClick={() => navigate('rewards')}>
-              استبدل مكافأة <ArrowLeft />
-            </button>
-          </div>
-          <div className="mini-stat" style={{ textAlign: 'start' }}>
-            <div className="row between">
-              <div>
-                <div className="tiny muted bold" style={{ letterSpacing: 1 }}>LEVEL</div>
-                <div className="v">
-                  المستوى <Num value={lv.level} />
-                </div>
-              </div>
-              <span className="badge purple num">{lv.pct}%</span>
-            </div>
-            <Bar value={lv.pct} className="mt-s" />
-            <div className="tiny muted mt-s num">
-              {fmt(lv.into)} / {fmt(lv.need)} XP
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StreakDots({ streak }) {
-  const T = todayKey();
-  return (
-    <div className="week-dots mt-s">
-      {Array.from({ length: 7 }).map((_, i) => {
-        const d = addDays(T, i - 6);
-        const on = streak.days?.[d];
+    <div className="energy-pick" role="radiogroup" aria-label="كيف طاقتك اليوم؟">
+      <span className="small muted bold">كيف طاقتك اليوم؟</span>
+      {Object.entries(ENERGY).map(([k, e]) => {
+        const I = ENERGY_ICONS[k];
         return (
-          <div className="d" key={d} title={d}>
-            <i className={on ? (d === T ? 'fire' : 'on') : d === T ? '' : 'miss'}>{on ? '✓' : d === T ? '•' : ''}</i>
-            {DAYS_SHORT[fromKey(d).getDay()].slice(0, 2)}
-          </div>
+          <button key={k} role="radio" aria-checked={energy === k} className={`chip ${energy === k ? 'on' : ''}`} onClick={() => (setEnergy(k), setEdit(false))} title={e.hint}>
+            <I size={16} /> {e.label}
+          </button>
         );
       })}
     </div>
   );
 }
 
-// ————— إجراءات سريعة —————
-export function QuickActions() {
+// ————— 1) الترحيب + الإدخال الذكي + الإجراءات السريعة —————
+export function Greeting({ input }) {
+  const name = useStore((s) => s.profile.name);
   const open = useStore((s) => s.openModal);
+  const { progress, dayLeft } = useToday();
+  const h = new Date().getHours();
+  const hello = h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'مساء النور';
+  const actions = [
+    [Siren, 'أنقذ يومي', () => open('rescue'), 'red'],
+    [Hourglass, 'عندي ساعة فقط', () => open('oneHour'), 'gold'],
+    [ImagePlus, 'مهمة من صورة', () => open('image'), 'blue'],
+  ];
   return (
-    <div className="span-12 reveal d1">
-      <div className="dash" style={{ marginTop: 0 }}>
-        <div className="span-5">
-          <button className="what-now" onClick={() => open('whatNow')}>
-            <span className="wn-ico">
-              <Brain size={24} />
-            </span>
-            <span className="grow">
-              <span className="xbold" style={{ fontSize: '1.25rem', display: 'block' }}>وش أسوي الآن؟</span>
-              <span className="small" style={{ color: '#c7d2fe' }}>تحليل الوقت والأولويات وطاقتك لاقتراح مهمة واحدة</span>
-            </span>
-            <ArrowLeft />
+    <section className="greeting span-12 reveal" aria-label="الترحيب">
+      <div className="greet-top">
+        <div>
+          <p className="small muted bold">{formatLong(todayKey())}</p>
+          <h1 className="greet-title">
+            {hello}
+            {name ? `، ${name}` : ''}
+          </h1>
+          <p className="greet-sub">
+            {progress.total ? (
+              <>
+                أنجزت <b className="num">{progress.done}</b> من <b className="num">{progress.total}</b> مهام
+                {dayLeft > 0 && (
+                  <>
+                    {' '}· باقي <b>{formatDuration(dayLeft)}</b> من يومك
+                  </>
+                )}
+              </>
+            ) : (
+              'يومك فاضي — اكتب ما عندك وهّمة يرتبه لك.'
+            )}
+          </p>
+        </div>
+        <EnergyCheck />
+      </div>
+      {input}
+      <div className="greet-actions">
+        <button className="btn btn-primary btn-sm" onClick={() => open('whatNow')}>
+          <Brain /> وش أسوي الآن؟
+        </button>
+        {actions.map(([I, l, run, c]) => (
+          <button key={l} className={`btn btn-sm btn-ghost tone-${c}`} onClick={run}>
+            <I /> {l}
+          </button>
+        ))}
+        <button className="btn btn-sm btn-ghost" onClick={() => open('interactive')}>
+          <Sparkles /> التجربة التفاعلية
+        </button>
+      </div>
+    </section>
+  );
+}
+
+// ————— 2) ملخص اليوم + 5) نسبة الإنجاز —————
+export function SummaryStrip() {
+  const { progress, dayLeft, openMinutes } = useToday();
+  const streak = useStore((s) => s.streak);
+  const focusLog = useStore((s) => s.focusLog);
+  const T = todayKey();
+  const focusToday = useMemo(() => focusLog.filter((f) => f.date === T).reduce((a, f) => a + f.minutes, 0), [focusLog, T]);
+  const tight = openMinutes > dayLeft && dayLeft > 0;
+  return (
+    <section className="summary span-12 reveal d1" aria-label="ملخص اليوم">
+      <div className="sum-tile sum-ring">
+        <Ring value={progress.pct} size={76} stroke={8} id="dayRing">
+          <span className="xbold num" style={{ fontSize: '1.1rem' }}>{progress.pct}%</span>
+        </Ring>
+        <div>
+          <div className="sum-l">إنجاز اليوم</div>
+          <div className="sum-v">
+            <Num value={progress.done} /> <span className="muted small">/ {progress.total} مهام</span>
+          </div>
+        </div>
+      </div>
+      <div className={`sum-tile ${tight ? 'warn' : ''}`}>
+        <IconTile name="sunrise" color={tight ? 'var(--gold)' : 'var(--blue)'} size={40} />
+        <div>
+          <div className="sum-l">باقي من يومك</div>
+          <div className="sum-v">{dayLeft ? formatDuration(dayLeft) : 'انتهى اليوم'}</div>
+          <div className="tiny muted">{openMinutes ? `مهامك المتبقية تحتاج ${formatDuration(openMinutes)}` : 'لا مهام متبقية'}</div>
+        </div>
+      </div>
+      <div className="sum-tile">
+        <IconTile name="zap" color="var(--green)" size={40} />
+        <div>
+          <div className="sum-l">تركيز اليوم</div>
+          <div className="sum-v num">{formatHM(focusToday)}</div>
+          <div className="tiny muted">ساعة:دقيقة</div>
+        </div>
+      </div>
+      <div className="sum-tile">
+        <IconTile name="flame" color="var(--gold)" size={40} />
+        <div>
+          <div className="sum-l">الـStreak</div>
+          <div className="sum-v">
+            <Num value={streak.count} /> <span className="muted small">يوم</span>
+          </div>
+          <div className="tiny muted">{streak.lastDate === T ? 'حافظت عليه اليوم' : 'أكمل يومك للحفاظ عليه'}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// تنبيهات صغيرة: مهام متأخرة + ذاكرة التأجيل
+export function Insights() {
+  const tasks = useStore((s) => s.tasks);
+  const dismissed = useStore((s) => s.dismissedInsights);
+  const open = useStore((s) => s.openModal);
+  const dismissInsight = useStore((s) => s.dismissInsight);
+  const overdue = useMemo(() => tasks.filter((t) => isOverdue(t)), [tasks]);
+  const ins = useMemo(() => postponeInsights({ tasks, dismissedInsights: dismissed })[0], [tasks, dismissed]);
+  if (!ins && !overdue.length) return null;
+  return (
+    <div className="span-12 notices reveal d2">
+      {overdue.length > 0 && (
+        <div className="notice danger">
+          <TriangleAlert size={18} aria-hidden />
+          <span className="grow small">
+            <b className="num">{overdue.length}</b> مهام متأخرة تحتاج قرارك: <span className="muted">{overdue.slice(0, 2).map((t) => t.title).join('، ')}</span>
+          </span>
+          <button className="btn btn-xs" onClick={() => open('reschedule', { id: overdue[0].id })}>
+            أعد التخطيط
           </button>
         </div>
-        <div className="span-7 quick-actions">
-          <button className="qa red" onClick={() => open('rescue')}>
-            <span className="qi">
-              <Siren size={20} />
-            </span>
-            🚨 أنقذ يومي
-          </button>
-          <button className="qa gold" onClick={() => open('oneHour')}>
-            <span className="qi">
-              <Hourglass size={20} />
-            </span>
-            عندي ساعة فقط
-          </button>
-          <button className="qa purple" onClick={() => open('voice')}>
-            <span className="qi">
-              <Mic size={20} />
-            </span>
-            إضافة بالصوت
-          </button>
-          <button className="qa blue" onClick={() => open('image')}>
-            <span className="qi">
-              <ImagePlus size={20} />
-            </span>
-            مهمة من صورة
+      )}
+      {ins && (
+        <div className="notice warn">
+          <Lightbulb size={18} aria-hidden />
+          <span className="grow small">لاحظنا أنك غالبًا تؤجل مهام "{ins.key}" — تقسيمها لخطوات أصغر يساعد.</span>
+          {!ins.sample.done && !ins.sample.deletedAt && (
+            <button className="btn btn-xs" onClick={() => open('task', { task: ins.sample })}>
+              قسّمها
+            </button>
+          )}
+          <button className="icon-btn sm plain" aria-label="تجاهل الاقتراح" onClick={() => dismissInsight(ins.key)}>
+            <X />
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ترتيب مهام اليوم المفتوحة حسب الأهمية (أولوية + وقت + طاقة)
+function useRankedOpen() {
+  const state = useAssistantState();
+  return useMemo(() => {
+    const T = todayKey();
+    return state.tasks
+      .filter((t) => !t.deletedAt && !t.template && !t.done && (t.date === T || isOverdue(t)))
+      .map((t) => ({ t, ...scoreTask(t, state) }))
+      .sort((a, b) => b.score - a.score);
+  }, [state]);
+}
+
+// ————— 3) أهم 3 مهام اليوم —————
+export function TopThree({ span = 'span-7' }) {
+  const ranked = useRankedOpen();
+  const open = useStore((s) => s.openModal);
+  const { progress } = useToday();
+  const top = ranked.slice(0, 3);
+  return (
+    <div className={`card ${span} reveal d2`}>
+      <div className="card-hd">
+        <CardTitle icon={<ListTodo size={18} />} sub={top.length ? 'مرتبة حسب الأولوية والوقت وطاقتك' : null}>
+          أهم 3 مهام اليوم
+        </CardTitle>
+        <button className="icon-btn sm primary" onClick={() => open('task')} aria-label="إضافة مهمة">
+          <Plus />
+        </button>
+      </div>
+      {!top.length ? (
+        progress.total ? (
+          <Empty icon={<CircleCheck />} title="أنجزت كل مهام اليوم" text="يوم ممتاز. خذ راحتك أو خطط لبكرة." />
+        ) : (
+          <Empty icon={<CalendarDays />} title="يومك جاهز لك." text="أضف أول مهمة وابدأ." action={<button className="btn btn-primary" onClick={() => open('task')}><Plus /> إضافة مهمة</button>} />
+        )
+      ) : (
+        <div className="col" style={{ gap: 8 }}>
+          {top.map(({ t, reasons }, i) => (
+            <div key={t.id} className="rank-row">
+              <span className="rank num" aria-hidden>{i + 1}</span>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <TaskItem task={t} showDate={t.date !== todayKey()} />
+                {reasons?.[0] && <div className="tiny muted rank-why">{reasons.join(' · ')}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <button className="btn btn-ghost btn-sm mt" onClick={() => navigate('tasks')}>
+        كل مهام اليوم ({progress.total}) <ArrowLeft />
+      </button>
+    </div>
+  );
+}
+
+// ————— 4) المهمة القادمة / الجارية مع الوقت المتبقي —————
+export function NextTask({ span = 'span-5' }) {
+  const { current, next, minuteNow } = useToday();
+  const pickFocus = useStore((s) => s.pickFocus);
+  const complete = useStore((s) => s.completeTask);
+  const open = useStore((s) => s.openModal);
+  const task = current || next;
+  if (!task)
+    return (
+      <div className={`card ${span} reveal d3`}>
+        <CardTitle icon={<Clock size={18} />} color="blue">المهمة القادمة</CardTitle>
+        <Empty icon={<Sunset />} title="لا توجد مهام مجدولة لاحقًا اليوم" text="أضف وقتًا لمهامك لتظهر هنا." action={<button className="btn btn-sm" onClick={() => open('task')}><Plus /> مهمة بوقت</button>} />
+      </div>
+    );
+  const start = toMin(task.time);
+  const isNow = task === current;
+  const mins = isNow ? start + task.duration - minuteNow : start - minuteNow;
+  const area = AREAS[task.area] || AREAS.work;
+  return (
+    <div className={`card ${span} reveal d3 next-card ${isNow ? 'is-now' : ''}`}>
+      <div className="card-hd">
+        <CardTitle icon={<Clock size={18} />} color="blue">{isNow ? 'جارية الآن' : 'المهمة القادمة'}</CardTitle>
+        <span className={`badge ${isNow ? 'green' : 'blue'}`}>{isNow ? <><span className="pulse-dot" /> الآن</> : <span className="num">{task.time}</span>}</span>
+      </div>
+      <div className="row" style={{ gap: 14 }}>
+        <IconTile name={task.icon} color={area.color} size={56} />
+        <div className="grow" style={{ minWidth: 0 }}>
+          <h3 className="ellipsis" style={{ fontSize: '1.25rem' }}>{task.title}</h3>
+          <div className="small muted">
+            <span className="num">{task.time}</span> · {formatDuration(task.duration)} · {area.label}
+          </div>
+        </div>
+      </div>
+      <div className="countdown">
+        <span className="tiny muted bold">{isNow ? 'باقي على انتهائها' : 'تبدأ بعد'}</span>
+        <span className="cd-v">{formatDuration(Math.max(1, mins))}</span>
+      </div>
+      <div className="row wrap">
+        <button className="btn btn-primary grow" onClick={() => pickFocus(task.id)}>
+          <Play /> ابدأ جلسة تركيز
+        </button>
+        <button className="btn" onClick={() => complete(task.id)}>
+          <Check /> إكمال
+        </button>
+        <PostponeMenu taskId={task.id} />
       </div>
     </div>
   );
 }
 
-// ————— تنبيهات ذكية (ذاكرة المهام + المتأخرة) —————
-export function Insights() {
-  const state = useStore();
-  const insights = postponeInsights(state);
-  const overdue = state.tasks.filter((t) => isOverdue(t));
-  const open = state.openModal;
-  if (!insights.length && !overdue.length) return null;
-  const ins = insights[0];
+// ————— 6) اختصار الأهداف —————
+export function GoalsShortcut({ span = 'span-7' }) {
+  const goals = useStore((s) => s.goals);
+  const tasks = useStore((s) => s.tasks);
   return (
-    <div className="span-12 grid g2 reveal d2">
-      {overdue.length > 0 && (
-        <div className="card tight" style={{ borderColor: 'rgba(248,113,113,.35)' }}>
-          <div className="row between wrap">
-            <div className="row">
-              <span className="card-title">
-                <span className="ico red">
-                  <Clock size={18} />
+    <div className={`card ${span} reveal`}>
+      <div className="card-hd">
+        <CardTitle icon={<Target size={18} />}>أهدافي</CardTitle>
+        <button className="btn btn-xs btn-ghost" onClick={() => navigate('goals')}>
+          كل الأهداف <ArrowLeft />
+        </button>
+      </div>
+      {!goals.length ? (
+        <Empty icon={<Target />} title="ما الشيء الذي تريد الوصول إليه؟" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('goals?new=1')}>إنشاء هدف</button>} />
+      ) : (
+        <div className="col" style={{ gap: 14 }}>
+          {goals.slice(0, 3).map((g) => {
+            const p = goalProgress(g, tasks);
+            const stage = g.milestones.find((m) => m.done < m.total);
+            return (
+              <button key={g.id} className="goal-row" onClick={() => navigate('goals')}>
+                <IconTile name={g.icon} color={AREAS[g.area]?.color || 'var(--primary)'} size={40} />
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <span className="row between">
+                    <span className="bold small ellipsis">{g.title}</span>
+                    <span className="purple xbold small num">{p}%</span>
+                  </span>
+                  <Bar value={p} className="thin" />
+                  <span className="tiny muted ellipsis" style={{ display: 'block', marginTop: 4 }}>{stage ? `المرحلة الحالية: ${stage.title}` : 'كل المراحل مكتملة'}</span>
                 </span>
-              </span>
-              <div>
-                <div className="bold">{overdue.length} مهام تحتاج قرارك</div>
-                <div className="tiny muted ellipsis" style={{ maxWidth: 280 }}>{overdue.map((t) => t.title).join('، ')}</div>
-              </div>
-            </div>
-            <button className="btn btn-sm" onClick={() => open('reschedule', { id: overdue[0].id })}>
-              أعد التخطيط
-            </button>
-          </div>
-        </div>
-      )}
-      {ins && (
-        <div className="card tight" style={{ borderColor: 'rgba(251,191,36,.35)' }}>
-          <div className="row between wrap" style={{ alignItems: 'flex-start' }}>
-            <div className="row grow" style={{ alignItems: 'flex-start' }}>
-              <span className="card-title">
-                <span className="ico gold">
-                  <Lightbulb size={18} />
-                </span>
-              </span>
-              <div className="grow">
-                <div className="bold small">لاحظنا أنك غالبًا تؤجل مهام "{ins.key}"</div>
-                <div className="tiny muted">هل تريد تقسيمها إلى خطوات أصغر؟</div>
-              </div>
-            </div>
-            <div className="row">
-              {!ins.sample.done && !ins.sample.deletedAt && (
-                <button className="btn btn-xs btn-primary" onClick={() => open('task', { task: ins.sample })}>
-                  قسّمها
-                </button>
-              )}
-              <button className="icon-btn sm plain" aria-label="تجاهل" onClick={() => state.dismissInsight(ins.key)}>
-                <X />
               </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-// ————— أهم مهمة الآن —————
-export function TopTaskWidget() {
-  const state = useStore();
-  const { focus, startFocus, completeTask, openModal, minimizeFocus, pauseFocus, resumeFocus } = state;
-  const r = suggestNow(state);
-  const focusTask = focus ? state.tasks.find((t) => t.id === focus.taskId) : null;
-  const task = focusTask || r.task;
+// ————— 7) التركيز —————
+const FOCUS_TARGET = 120;
+export function FocusCard({ span = 'span-5' }) {
+  const ranked = useRankedOpen();
+  const focus = useStore((s) => s.focus);
+  const focusLog = useStore((s) => s.focusLog);
+  const focusTask = useStore((s) => (s.focus ? s.tasks.find((t) => t.id === s.focus.taskId) : null));
+  const { pickFocus, startFocus, pauseFocus, resumeFocus, minimizeFocus } = useStore.getState();
+  const T = todayKey();
+  const today = useMemo(() => focusLog.filter((f) => f.date === T), [focusLog, T]);
+  const minutes = today.reduce((a, f) => a + f.minutes, 0);
   const [, tick] = useState(0);
   useEffect(() => {
     if (!focus?.running) return;
     const t = setInterval(() => tick((x) => x + 1), 1000);
     return () => clearInterval(t);
   }, [focus?.running]);
-  if (!task)
-    return (
-      <div className="card span-5 reveal d2 focus-card">
-        <CardTitle icon={<Zap size={18} />}>أهم مهمة الآن</CardTitle>
-        <Empty icon={<Sparkles />} title="يومك جاهز لك." text="أضف أول مهمة وابدأ." action={<button className="btn btn-primary" onClick={() => openModal('task')}><Plus /> إضافة مهمة</button>} />
-      </div>
-    );
-  const running = focus && focus.taskId === task.id;
-  const remaining = running ? (focus.running ? Math.max(0, (focus.endAt - Date.now()) / 1000) : focus.remainingSec) : 0;
+  const suggested = ranked[0]?.t;
+  const remaining = focus ? (focus.finished ? 0 : focus.running ? Math.max(0, (focus.endAt - Date.now()) / 1000) : focus.remainingSec) : 0;
   return (
-    <div className={`card span-5 reveal d2 focus-card glow ${running ? 'running' : ''}`}>
+    <div className={`card ${span} reveal ${focus ? 'focus-live' : ''}`}>
       <div className="card-hd">
-        <CardTitle icon={<Zap size={18} />}>أهم مهمة الآن</CardTitle>
-        {running ? (
-          <span className="badge green">
-            <span className="pulse-dot" /> قيد التركيز
-          </span>
-        ) : (
-          r.reasons?.[0] && <span className="badge purple">{r.reasons[0]}</span>
-        )}
-      </div>
-      <div className="row" style={{ gap: 16 }}>
-        <span style={{ fontSize: '2.6rem', width: 72, height: 72, display: 'grid', placeItems: 'center', borderRadius: 22, background: 'rgba(var(--primary-rgb),.14)', border: '1px solid rgba(var(--primary-rgb),.3)', flexShrink: 0 }}>
-          {task.icon}
+        <CardTitle icon={<Timer size={18} />} color="green">التركيز</CardTitle>
+        <span className="tiny muted">
+          <span className="num">{today.length}</span> جلسات اليوم
         </span>
-        <div className="grow">
-          <h3 style={{ fontSize: '1.35rem' }}>{task.title}</h3>
-          <div className="muted small row" style={{ gap: 12 }}>
-            <span>
-              <Clock size={14} style={{ verticalAlign: -2 }} /> {formatDuration(task.duration)}
-            </span>
-            {task.time && <span className="num">{task.time}</span>}
-          </div>
-        </div>
       </div>
-      {running ? (
+      {focus ? (
         <>
-          <div className="xbold num mt" style={{ fontSize: '2.6rem', textAlign: 'center', textShadow: '0 0 30px rgba(52,211,153,.5)' }}>{formatClock(remaining)}</div>
+          <div className="small muted ellipsis">{focusTask?.title || 'جلسة تركيز'}</div>
+          <div className="focus-clock num">{formatClock(remaining)}</div>
           <Bar value={100 - (remaining / focus.totalSec) * 100} variant="green" />
           <div className="row mt wrap">
-            <button className="btn btn-sm" onClick={() => (focus.running ? pauseFocus() : resumeFocus())}>
-              {focus.running ? <Pause /> : <Play />} {focus.running ? 'إيقاف مؤقت' : 'استئناف'}
-            </button>
-            <button className="btn btn-sm" onClick={() => minimizeFocus(false)}>
-              وضع التركيز الكامل
-            </button>
-            <button className="btn btn-sm btn-green" onClick={() => state.endFocus(true)}>
-              <CircleCheck /> تم الإنجاز
+            {!focus.finished && (
+              <button className="btn btn-sm" onClick={() => (focus.running ? pauseFocus() : resumeFocus())}>
+                {focus.running ? <Pause /> : <Play />} {focus.running ? 'إيقاف مؤقت' : 'استئناف'}
+              </button>
+            )}
+            <button className="btn btn-sm btn-primary" onClick={() => minimizeFocus(false)}>
+              <Maximize2 /> وضع التركيز
             </button>
           </div>
         </>
       ) : (
-        <div className="row mt wrap">
-          <button className="btn btn-primary grow" onClick={() => startFocus(task.id)}>
-            <Play /> ابدأ الآن
-          </button>
-          <button className="btn" onClick={() => completeTask(task.id)} title="إكمال">
-            <Check /> إكمال
-          </button>
-          <button className="btn btn-ghost" onClick={() => openModal('reschedule', { id: task.id })}>
-            تأجيل
-          </button>
-        </div>
+        <>
+          <div className="row between">
+            <div>
+              <div className="sum-v num">{formatHM(minutes)}</div>
+              <div className="tiny muted">
+                من هدف <span className="num">{FOCUS_TARGET / 60}</span> ساعات تركيز يوميًا
+              </div>
+            </div>
+            <Ring value={(minutes / FOCUS_TARGET) * 100} size={58} stroke={6} id="focusRing" color="var(--green)">
+              <span className="tiny bold num">{Math.min(100, Math.round((minutes / FOCUS_TARGET) * 100))}%</span>
+            </Ring>
+          </div>
+          {suggested ? (
+            <>
+              <div className="small mt">
+                ابدأ على: <b>{suggested.title}</b>
+              </div>
+              <div className="row mt-s wrap">
+                {[15, 25, 45].map((m) => (
+                  <button key={m} className="btn btn-sm" onClick={() => startFocus(suggested.id, m)} aria-label={`جلسة ${m} دقيقة على ${suggested.title}`}>
+                    <span className="num">{m}</span> د
+                  </button>
+                ))}
+                <button className="btn btn-sm btn-ghost" onClick={() => pickFocus(suggested.id)}>
+                  تخصيص
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="small muted mt">لا توجد مهام مفتوحة للتركيز عليها الآن.</p>
+          )}
+        </>
       )}
     </div>
   );
@@ -429,16 +474,10 @@ export function DayMap({ span = 'span-7', date = todayKey(), title = 'خريطة
   const tasks = useStore((s) => s.tasks);
   const reorder = useStore((s) => s.reorderDay);
   const open = useStore((s) => s.openModal);
-  const list = useMemo(
-    () =>
-      tasks
-        .filter((t) => !t.deletedAt && !t.template && t.date === date)
-        .sort((a, b) => (toMin(a.time) ?? 9999) - (toMin(b.time) ?? 9999)),
-    [tasks, date]
-  );
+  const list = useMemo(() => tasks.filter((t) => !t.deletedAt && !t.template && t.date === date).sort((a, b) => (toMin(a.time) ?? 9999) - (toMin(b.time) ?? 9999)), [tasks, date]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const scroller = useRef(null);
@@ -448,24 +487,28 @@ export function DayMap({ span = 'span-7', date = todayKey(), title = 'خريطة
   }, [date]);
   const now = nowMin();
   const currentId = date === todayKey() ? list.find((t) => !t.done && t.time && toMin(t.time) <= now && toMin(t.time) + t.duration > now)?.id : null;
+  const firstOpenId = list.find((x) => !x.done)?.id;
   function onEnd({ active, over }) {
     if (!over || active.id === over.id) return;
     const ids = list.map((t) => t.id);
-    const next = arrayMove(ids, ids.indexOf(active.id), ids.indexOf(over.id));
-    reorder(date, next);
-    useStore.getState().toast('تمت إعادة ترتيب الجدول تلقائيًا ✨', { icon: 'sparkles' });
+    reorder(date, arrayMove(ids, ids.indexOf(active.id), ids.indexOf(over.id)));
+    useStore.getState().toast('تمت إعادة ترتيب الجدول وتحديث الأوقات', { icon: 'sparkles' });
   }
   return (
-    <div className={`card ${span} reveal d3`} id="day-map">
+    <div className={`card ${span} reveal`} id="day-map">
       <div className="card-hd">
-        <CardTitle icon={<CalendarDays size={18} />} color="blue" sub={list.length ? 'اسحب المهام لإعادة ترتيبها — الأوقات تتحدث تلقائيًا' : null}>
-          {title}
-        </CardTitle>
+        {title ? (
+          <CardTitle icon={<CalendarDays size={18} />} color="blue" sub={list.length ? 'اسحب المهام لإعادة ترتيبها — الأوقات تتحدث تلقائيًا' : null}>
+            {title}
+          </CardTitle>
+        ) : (
+          <span className="small muted">{list.length ? 'اسحب المهام لإعادة ترتيبها — الأوقات تتحدث تلقائيًا' : ''}</span>
+        )}
         <div className="row">
           <button className="btn btn-sm btn-ghost hide-mobile" onClick={() => navigate('schedule')}>
             الجدول الكامل
           </button>
-          <button className="icon-btn sm primary" onClick={() => open('task', { preset: { date } })} aria-label="إضافة مهمة">
+          <button className="icon-btn sm primary" onClick={() => open('task', { preset: { date } })} aria-label="إضافة مهمة لهذا اليوم">
             <Plus />
           </button>
         </div>
@@ -477,7 +520,7 @@ export function DayMap({ span = 'span-7', date = todayKey(), title = 'خريطة
           <SortableContext items={list.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <div className="timeline" ref={scroller} style={{ maxHeight: 560, overflowY: 'auto', paddingInlineEnd: 4 }}>
               {list.map((t) => (
-                <div className={`tl-row ${t.id === currentId ? 'now' : ''}`} key={t.id} data-next={t.id === list.find((x) => !x.done)?.id ? '1' : undefined}>
+                <div className={`tl-row ${t.id === currentId ? 'now' : ''}`} key={t.id} data-next={t.id === firstOpenId ? '1' : undefined}>
                   <div className="tl-time">{t.time || '—'}</div>
                   <SortableTask task={t} current={t.id === currentId} />
                 </div>
@@ -490,75 +533,15 @@ export function DayMap({ span = 'span-7', date = todayKey(), title = 'خريطة
   );
 }
 
-// ————— الأهداف + التحديات + العادات —————
-export function TrioWidget() {
-  const goals = useStore((s) => s.goals);
-  const tasks = useStore((s) => s.tasks);
+// ————— العادات + التحديات —————
+export function HabitsWidget() {
   const challenges = useStore((s) => s.challenges);
   const habits = useStore((s) => s.habits);
   const logHabit = useStore((s) => s.logHabit);
   const T = todayKey();
   return (
     <>
-      <div className="card span-4 r-6 reveal d1">
-        <div className="card-hd">
-          <CardTitle icon={<Target size={18} />}>أهدافي</CardTitle>
-          <button className="btn btn-xs btn-ghost" onClick={() => navigate('goals')}>
-            الكل <ArrowLeft />
-          </button>
-        </div>
-        {!goals.length ? (
-          <Empty icon={<Target />} title="ما الشيء الذي تريد الوصول إليه؟" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('goals?new=1')}>إنشاء هدف</button>} />
-        ) : (
-          <div className="col" style={{ gap: 16 }}>
-            {goals.slice(0, 3).map((g) => {
-              const p = goalProgress(g, tasks);
-              return (
-                <button key={g.id} className="col" style={{ gap: 6, textAlign: 'start' }} onClick={() => navigate('goals')}>
-                  <div className="row between">
-                    <span className="bold small ellipsis">
-                      {g.icon} {g.title}
-                    </span>
-                    <span className="purple xbold small num">{p}%</span>
-                  </div>
-                  <Bar value={p} />
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <div className="card span-4 r-6 reveal d2">
-        <div className="card-hd">
-          <CardTitle icon={<Swords size={18} />} color="gold">التحديات</CardTitle>
-          <button className="btn btn-xs btn-ghost" onClick={() => navigate('achievements?tab=challenges')}>
-            الكل <ArrowLeft />
-          </button>
-        </div>
-        {!challenges.length ? (
-          <Empty icon={<Trophy />} title="ابدأ تحديًا جديدًا" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('achievements?tab=challenges')}>تحدياتي</button>} />
-        ) : (
-          <div className="col" style={{ gap: 14 }}>
-            {challenges.slice(0, 3).map((c) => {
-              const d = Object.values(c.log).filter(Boolean).length;
-              return (
-                <div key={c.id} className="col" style={{ gap: 6 }}>
-                  <div className="row between">
-                    <span className="bold small ellipsis">
-                      {c.icon} {c.title}
-                    </span>
-                    <span className="tiny muted num">
-                      {Math.min(d, c.days)}/{c.days}
-                    </span>
-                  </div>
-                  <Bar value={(d / c.days) * 100} variant="gold" className="thin" />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <div className="card span-4 r-6 reveal d3">
+      <div className="card span-6 reveal">
         <div className="card-hd">
           <CardTitle icon={<Repeat size={18} />} color="green">العادات</CardTitle>
           <button className="btn btn-xs btn-ghost" onClick={() => navigate('habits')}>
@@ -569,22 +552,53 @@ export function TrioWidget() {
           <Empty icon={<Repeat />} title="ابنِ أول عادة" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('habits')}>عاداتي</button>} />
         ) : (
           <div className="col" style={{ gap: 10 }}>
-            {habits.slice(0, 4).map((h) => {
+            {habits.slice(0, 5).map((h) => {
               const v = h.log[T] || 0;
               const done = v >= h.target;
               return (
                 <div key={h.id} className="row">
-                  <span style={{ fontSize: '1.2rem' }}>{h.icon}</span>
+                  <IconTile name={h.icon} color={h.color} size={34} />
                   <div className="grow">
                     <div className="row between">
                       <span className="small bold">{h.title}</span>
                       <span className="tiny muted num">
-                        {h.target > 1 ? `${v}/${h.target}` : ''} 🔥{habitStreak(h)}
+                        {h.target > 1 ? `${v}/${h.target} · ` : ''}
+                        <Flame size={11} className="gold" style={{ verticalAlign: -1 }} /> {habitStreak(h)}
                       </span>
                     </div>
                     {h.target > 1 && <Bar value={(v / h.target) * 100} variant="blue" className="thin mt-s" />}
                   </div>
                   <CheckBox round on={done} onChange={() => logHabit(h.id, T, done ? -h.target : 1)} label={h.title} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div className="card span-6 reveal d1">
+        <div className="card-hd">
+          <CardTitle icon={<Swords size={18} />} color="gold">التحديات</CardTitle>
+          <button className="btn btn-xs btn-ghost" onClick={() => navigate('achievements?tab=challenges')}>
+            الكل <ArrowLeft />
+          </button>
+        </div>
+        {!challenges.length ? (
+          <Empty icon={<Swords />} title="ابدأ تحديًا جديدًا" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('achievements?tab=challenges')}>تحدياتي</button>} />
+        ) : (
+          <div className="col" style={{ gap: 14 }}>
+            {challenges.slice(0, 4).map((c) => {
+              const d = Object.values(c.log).filter(Boolean).length;
+              return (
+                <div key={c.id} className="col" style={{ gap: 6 }}>
+                  <div className="row between">
+                    <span className="bold small ellipsis row" style={{ gap: 6 }}>
+                      <Glyph name={c.icon} size={15} className="gold" /> {c.title}
+                    </span>
+                    <span className="tiny muted num">
+                      {Math.min(d, c.days)}/{c.days}
+                    </span>
+                  </div>
+                  <Bar value={(d / c.days) * 100} variant="gold" className="thin" />
                 </div>
               );
             })}
@@ -599,46 +613,36 @@ export function TrioWidget() {
 export function StatsWidget() {
   const tasks = useStore((s) => s.tasks);
   const focusLog = useStore((s) => s.focusLog);
-  const s = summary(tasks, focusLog, 7);
-  const bars = weekBars(tasks);
+  const s = useMemo(() => summary(tasks, focusLog, 7), [tasks, focusLog]);
+  const bars = useMemo(() => weekBars(tasks), [tasks]);
   return (
     <div className="card span-12 reveal">
       <div className="card-hd">
-        <CardTitle icon={<ChartColumn size={18} />} color="blue">إحصائياتك — آخر 7 أيام</CardTitle>
+        <CardTitle icon={<ChartColumn size={18} />} color="blue">آخر 7 أيام</CardTitle>
         <button className="btn btn-xs btn-ghost" onClick={() => navigate('stats')}>
           التفاصيل <ArrowLeft />
         </button>
       </div>
       <div className="dash" style={{ marginTop: 0, alignItems: 'center' }}>
-        <div className="span-3 r-6" style={{ display: 'grid', placeItems: 'center' }}>
-          <Ring value={s.rate} size={140} stroke={12} id="rateRing">
-            <div>
-              <div className="xbold" style={{ fontSize: '1.9rem' }}>
-                <Num value={s.rate} format={(n) => Math.round(n) + '%'} />
-              </div>
-              <div className="tiny muted">نسبة الإنجاز</div>
-            </div>
-          </Ring>
-        </div>
-        <div className="span-4 r-6 grid g2" style={{ gap: 10 }}>
-          <div className="mini-stat">
-            <div className="v purple"><Num value={s.total} /></div>
-            <div className="l">إجمالي المهام</div>
-          </div>
+        <div className="span-4 grid g2" style={{ gap: 10 }}>
           <div className="mini-stat">
             <div className="v green"><Num value={s.done} /></div>
-            <div className="l">مهام مكتملة</div>
+            <div className="l">مهمة أنجزتها</div>
           </div>
           <div className="mini-stat">
-            <div className="v num">{formatHM(s.focusToday)}</div>
-            <div className="l">ساعات التركيز اليوم</div>
+            <div className="v purple num">{s.rate}%</div>
+            <div className="l">نسبة الالتزام</div>
           </div>
           <div className="mini-stat">
-            <div className="v num" style={{ fontSize: '1.05rem', paddingTop: 6 }}>{s.bestWindow}</div>
-            <div className="l">أفضل وقت</div>
+            <div className="v num">{formatHM(s.focus)}</div>
+            <div className="l">ساعات تركيز</div>
+          </div>
+          <div className="mini-stat">
+            <div className="v num" style={{ fontSize: '1rem', paddingTop: 6 }}>{s.bestWindow}</div>
+            <div className="l">أفضل وقت لك</div>
           </div>
         </div>
-        <div className="span-5">
+        <div className="span-8">
           <Bars data={bars} />
         </div>
       </div>
@@ -646,70 +650,66 @@ export function StatsWidget() {
   );
 }
 
-// ————— XP + Streak + المكافآت —————
+// ————— المستوى + Streak + المكافآت (مختصر) —————
 export function XpWidget() {
   const user = useStore((s) => s.user);
   const streak = useStore((s) => s.streak);
   const rewards = useStore((s) => s.rewards);
-  const tasks = useStore((s) => s.tasks);
   const lv = levelInfo(user.totalXp);
   const T = todayKey();
-  const p = dayProgress(tasks.filter((t) => !t.template));
-  const atRisk = streak.lastDate !== T && new Date().getHours() >= 17 && p.total > 0;
+  const nextReward = useMemo(() => [...rewards].sort((a, b) => a.cost - b.cost).find((r) => r.cost > user.xp) || rewards[0], [rewards, user.xp]);
   return (
-    <>
-      <div className="card span-4 r-6 reveal">
-        <CardTitle icon={<Star size={18} />}>المستوى و XP</CardTitle>
-        <div className="row mt" style={{ gap: 18 }}>
-          <div className="lvl-ring num" style={{ width: 86, height: 86, fontSize: '1.9rem', margin: 0, flexShrink: 0 }}>{lv.level}</div>
+    <div className="card span-12 reveal">
+      <div className="xp-strip">
+        <div className="xp-cell">
+          <span className="lvl-ring sm num">{lv.level}</span>
           <div className="grow">
-            <div className="tiny muted bold" style={{ letterSpacing: 1 }}>LEVEL {lv.level}</div>
-            <div className="xbold" style={{ fontSize: '1.4rem' }}>
-              <Num value={user.totalXp} /> <span className="small muted">XP إجمالي</span>
-            </div>
+            <div className="tiny muted bold">المستوى {lv.level}</div>
             <Bar value={lv.pct} className="mt-s" />
             <div className="tiny muted mt-s">
               باقي <span className="num">{fmt(lv.need - lv.into)}</span> XP للمستوى {lv.level + 1}
             </div>
           </div>
         </div>
-        <div className="tiny muted mt">صغيرة +20 · متوسطة +50 · كبيرة +100 XP</div>
-      </div>
-      <div className="card span-4 r-6 reveal d1" style={atRisk ? { borderColor: 'rgba(251,191,36,.45)' } : {}}>
-        <CardTitle icon={<Flame size={18} />} color="gold">الـStreak</CardTitle>
-        <div className="row mt" style={{ gap: 14 }}>
-          <span style={{ fontSize: '3rem', filter: 'drop-shadow(0 0 16px #f97316)' }}>🔥</span>
-          <div>
-            <div className="xbold" style={{ fontSize: '2rem', lineHeight: 1 }}>
-              <Num value={streak.count} /> <span className="small muted">يوم متتالي</span>
+        <div className="xp-cell">
+          <IconTile name="flame" color="var(--gold)" size={44} />
+          <div className="grow">
+            <div className="tiny muted bold">الـStreak</div>
+            <div className="bold">
+              <span className="num">{streak.count}</span> يوم · الأفضل <span className="num">{streak.best || streak.count}</span>
             </div>
-            <div className="tiny muted mt-s">أفضل سلسلة: <span className="num">{streak.best || streak.count}</span> يوم</div>
+            <div className="week-dots mt-s">
+              {Array.from({ length: 7 }).map((_, i) => {
+                const d = addDays(T, i - 6);
+                const on = streak.days?.[d];
+                return (
+                  <div className="d" key={d}>
+                    <i className={on ? 'on' : ''} aria-label={`${d} ${on ? 'مكتمل' : ''}`}>{on ? <Check size={12} /> : ''}</i>
+                    {DAYS_SHORT[fromKey(d).getDay()].slice(0, 2)}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-        <StreakDots streak={streak} />
-        {atRisk && <div className="small gold mt bold">⚠️ أكمل مهام اليوم للحفاظ على الـStreak!</div>}
-        {streak.lastDate === T && <div className="small green mt bold">✓ حافظت على الـStreak اليوم</div>}
+        <button className="xp-cell" onClick={() => navigate('rewards')} aria-label="المكافآت">
+          <IconTile name="gift" color="var(--green)" size={44} />
+          <div className="grow" style={{ textAlign: 'start' }}>
+            <div className="tiny muted bold">رصيدك</div>
+            <div className="bold num">{fmt(user.xp)} XP</div>
+            {nextReward && (
+              <div className="tiny muted ellipsis">
+                {user.xp >= nextReward.cost ? `تقدر تستبدل: ${nextReward.title}` : `باقي ${fmt(nextReward.cost - user.xp)} لـ ${nextReward.title}`}
+              </div>
+            )}
+          </div>
+        </button>
       </div>
-      <div className="card span-4 r-6 reveal d2">
-        <div className="card-hd">
-          <CardTitle icon={<Gift size={18} />} color="green">المكافآت</CardTitle>
-          <span className="badge purple num">{fmt(user.xp)} XP</span>
-        </div>
-        <div className="grid g2" style={{ gap: 10 }}>
-          {rewards.slice(0, 4).map((r) => (
-            <button key={r.id} className="mini-stat" onClick={() => navigate('rewards')} style={{ opacity: user.xp >= r.cost ? 1 : 0.55 }}>
-              <div style={{ fontSize: '1.6rem' }}>{r.icon}</div>
-              <div className="small bold ellipsis">{r.title}</div>
-              <div className="tiny purple num">{fmt(r.cost)} XP</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
-// ————— مساعد هّمة الذكي —————
+// ————— مساعد التخطيط —————
 export function AIWidget() {
   const setDrawer = useStore((s) => s.setDrawer);
   const createStudyPlan = useStore((s) => s.createStudyPlan);
@@ -725,59 +725,57 @@ export function AIWidget() {
     setTimeout(() => {
       setPlan(studyPlan(text));
       setThinking(false);
-    }, 800);
+    }, 500);
   }
   return (
-    <div className="card span-12 reveal glow">
-      <div className="dash" style={{ marginTop: 0, alignItems: 'center' }}>
-        <div className="span-4 col" style={{ alignItems: 'center', textAlign: 'center' }}>
-          <div className="ai-orb">
-            <Bot />
+    <div className="card span-12 reveal">
+      <div className="card-hd">
+        <CardTitle icon={<Bot size={18} />} sub={`${say(persona, 'hi')} اكتب وضعك وأبني لك خطة.`}>
+          مساعد التخطيط
+        </CardTitle>
+        <button className="btn btn-sm btn-ghost" onClick={() => setDrawer('assistant')}>
+          <Sparkles /> اسأل هّمة
+        </button>
+      </div>
+      <form className="quick" style={{ maxWidth: 'none' }} onSubmit={(e) => (e.preventDefault(), build())}>
+        <Sparkles size={18} className="spark" aria-hidden />
+        <input value={text} onChange={(e) => setText(e.target.value)} aria-label="اكتب وضعك للمساعد" placeholder="عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول" />
+        <button className="btn btn-sm btn-primary">إنشاء الخطة</button>
+      </form>
+      {thinking && (
+        <div className="row mt">
+          <span className="typing">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="small muted">أبني خطتك…</span>
+        </div>
+      )}
+      {plan && !thinking && (
+        <div className="mt">
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
+            {plan.plan.map((d, i) => (
+              <div key={d.day} className="mini-stat reveal" style={{ textAlign: 'start', animationDelay: `${i * 0.05}s` }}>
+                <div className="tiny purple bold">اليوم {d.day}</div>
+                <div className="small bold">{d.title}</div>
+                <div className="tiny muted">{DAYS_SHORT[fromKey(d.date).getDay()]} · 18:00</div>
+              </div>
+            ))}
           </div>
-          <h3 style={{ fontSize: '1.3rem' }}>مساعد هّمة الذكي</h3>
-          <p className="muted small">{say(persona, 'hi')} اكتب وضعك وأنا أبني لك الخطة.</p>
-          <button className="btn btn-sm" onClick={() => setDrawer('assistant')}>
-            <Sparkles /> اسأل هّمة
+          <button className="btn btn-primary btn-sm mt" disabled={saved} onClick={() => (createStudyPlan(plan, plan.subject), setSaved(true))}>
+            {saved ? (
+              <>
+                <Check /> تمت الإضافة للجدول
+              </>
+            ) : (
+              <>
+                <Plus /> أضف الخطة لجدولي
+              </>
+            )}
           </button>
         </div>
-        <div className="span-8">
-          <div className="quick" style={{ maxWidth: 'none' }}>
-            <Sparkles size={18} className="spark" />
-            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && build()} aria-label="اكتب وضعك للمساعد" placeholder="عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول" />
-            <button className="btn btn-sm btn-primary" onClick={build}>
-              إنشاء الخطة
-            </button>
-          </div>
-          {thinking && (
-            <div className="row mt">
-              <span className="typing">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span className="small muted">أبني خطتك…</span>
-            </div>
-          )}
-          {plan && !thinking && (
-            <div className="mt onb-step">
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
-                {plan.plan.map((d, i) => (
-                  <div key={d.day} className="mini-stat reveal" style={{ textAlign: 'start', animationDelay: `${i * 0.07}s` }}>
-                    <div className="tiny purple bold">اليوم {d.day}</div>
-                    <div className="small bold">{d.title}</div>
-                    <div className="tiny muted">{DAYS_SHORT[fromKey(d.date).getDay()]} · 18:00</div>
-                  </div>
-                ))}
-              </div>
-              <div className="row mt">
-                <button className="btn btn-primary btn-sm" disabled={saved} onClick={() => (createStudyPlan(plan, plan.subject), setSaved(true))}>
-                  {saved ? <><Check /> تمت الإضافة للجدول</> : <><Plus /> أضف الخطة لجدولي</>}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -785,7 +783,7 @@ export function AIWidget() {
 // ————— توازن الحياة —————
 export function BalanceWidget({ span = 'span-6' }) {
   const tasks = useStore((s) => s.tasks);
-  const data = balance(tasks);
+  const data = useMemo(() => balance(tasks), [tasks]);
   return (
     <div className={`card ${span} reveal`}>
       <CardTitle icon={<ChartPie size={18} />} sub="توزيع وقتك على مجالات حياتك — آخر 30 يوم">
@@ -796,14 +794,14 @@ export function BalanceWidget({ span = 'span-6' }) {
         <div className="col grow" style={{ minWidth: 200, gap: 10 }}>
           {data.map((d) => (
             <div className="legend-row" key={d.key}>
-              <span className="swatch" style={{ background: d.color, boxShadow: `0 0 8px ${d.color}` }} />
-              <span className="small">
-                {d.emoji} {d.label}
+              <span className="swatch" style={{ background: d.color }} />
+              <span className="small row" style={{ gap: 6 }}>
+                <Glyph name={d.icon} size={14} /> {d.label}
               </span>
               <span className="small xbold num">{d.pct}%</span>
               <span />
               <div className="bar thin" style={{ gridColumn: '2 / 4' }}>
-                <i style={{ width: `${d.pct}%`, background: d.color, boxShadow: `0 0 10px ${d.color}` }} />
+                <i style={{ width: `${d.pct}%`, background: d.color, boxShadow: 'none' }} />
               </div>
             </div>
           ))}
@@ -816,19 +814,19 @@ export function BalanceWidget({ span = 'span-6' }) {
 // ————— آلة الزمن —————
 export function TimeMachineWidget({ span = 'span-6' }) {
   const tasks = useStore((s) => s.tasks);
-  const tm = timeMachine(tasks);
+  const tm = useMemo(() => timeMachine(tasks), [tasks]);
   return (
     <div className={`card ${span} reveal d1`}>
       <CardTitle icon={<Hourglass size={18} />} color="blue" sub="مستقبلك يبدأ من اليوم">
         آلة الزمن
       </CardTitle>
-      <div className="grid g3 mt" style={{ gap: 10, gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
+      <div className="grid mt" style={{ gap: 10, gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
         <div className="mini-stat">
           <div className="l">قبل 30 يوم</div>
           <div className="v"><Num value={tm.past30} /></div>
           <div className="l">مهمة</div>
         </div>
-        <div className="mini-stat" style={{ borderColor: 'rgba(var(--primary-rgb),.5)' }}>
+        <div className="mini-stat" style={{ borderColor: 'rgba(var(--primary-rgb),.45)' }}>
           <div className="l purple bold">اليوم</div>
           <div className="v"><Num value={tm.today} /></div>
           <div className="l">مهام</div>
@@ -843,9 +841,8 @@ export function TimeMachineWidget({ span = 'span-6' }) {
         <TimeLine series={tm.series} proj={tm.proj} />
       </div>
       <p className="tiny muted" style={{ textAlign: 'center' }}>
-        إذا استمريت بنفس المعدل (<span className="num">{tm.rate.toFixed(1)}</span> مهمة/يوم) ستصل إلى <b className="num">{tm.future}</b> مهمة مكتملة
+        بنفس معدلك (<span className="num">{tm.rate.toFixed(1)}</span> مهمة/يوم) ستصل إلى <b className="num">{tm.future}</b> مهمة مكتملة
       </p>
     </div>
   );
 }
-

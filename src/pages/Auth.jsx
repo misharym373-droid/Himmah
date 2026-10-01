@@ -3,6 +3,7 @@ import { Mail, KeyRound, Eye, EyeOff, User, Phone, ArrowLeft, Sparkles, Loader2,
 import { signIn, signUp, validateEmail, passwordStrength } from '../lib/auth.js';
 import { asset, Modal } from '../components/ui.jsx';
 import { TAGLINE } from '../config.js';
+import { Glyph } from '../components/Glyph.jsx';
 
 export default function Auth({ onLogin }) {
   const [mode, setMode] = useState('login'); // login | signup
@@ -13,13 +14,13 @@ export default function Auth({ onLogin }) {
         <div className="tagline">هّمة .. {TAGLINE}</div>
         <div className="hide-sm col" style={{ maxWidth: 380, marginTop: 20, gap: 12 }}>
           {[
-            ['✨', 'مهام ذكية تفهم كلامك وتجدول يومك'],
-            ['🎯', 'أهداف تتحول تلقائيًا لخطوات يومية'],
-            ['🔥', 'XP ومستويات وStreak تحفزك كل يوم'],
-            ['🤖', 'مساعد يقترح عليك وش تسوي الآن'],
+            ['sparkles', 'مهام ذكية تفهم كلامك وتجدول يومك'],
+            ['target', 'أهداف تتحول تلقائيًا لخطوات يومية'],
+            ['flame', 'XP ومستويات وStreak تحفزك كل يوم'],
+            ['brain', 'مساعد يقترح عليك وش تسوي الآن'],
           ].map(([e, t], i) => (
             <div key={t} className="row reveal" style={{ animationDelay: `${0.2 + i * 0.1}s`, padding: '10px 14px', borderRadius: 14, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)' }}>
-              <span style={{ fontSize: '1.2rem' }}>{e}</span>
+              <Glyph name={e} size={18} className="purple" />
               <span className="small" style={{ color: '#c7d2fe' }}>{t}</span>
             </div>
           ))}
@@ -72,7 +73,7 @@ function Login({ onLogin, toSignup }) {
   return (
     <form onSubmit={submit} className="col" style={{ gap: 16 }} noValidate>
       <div>
-        <h1>مرحبًا بعودتك 👋</h1>
+        <h1>مرحبًا بعودتك</h1>
         <p className="muted mt-s">سجّل دخولك للعودة إلى هّمة</p>
       </div>
       <label className="field">
@@ -153,7 +154,7 @@ function Signup({ onLogin, toLogin }) {
     <form onSubmit={submit} className="col" style={{ gap: 14 }} noValidate>
       <div>
         <h1>ابدأ رحلتك مع هّمة</h1>
-        <p className="muted mt-s">دقيقة واحدة ويصير يومك أوضح ✨</p>
+        <p className="muted mt-s">دقيقة واحدة ويصير يومك أوضح</p>
       </div>
       <label className="field">
         <span>الاسم</span>
