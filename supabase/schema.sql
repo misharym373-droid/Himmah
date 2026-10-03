@@ -1,5 +1,5 @@
 -- ============================================================
---  هّمة — مخطط قاعدة البيانات (Supabase / PostgreSQL)
+--  مسار — مخطط قاعدة البيانات (Supabase / PostgreSQL)
 --  شغّل هذا الملف مرة واحدة في Supabase SQL Editor
 --  كل الجداول محمية بـ Row Level Security: كل مستخدم يرى بياناته فقط
 -- ============================================================
@@ -119,7 +119,7 @@ create table if not exists public.habits (
   user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
   title      text not null check (char_length(title) between 1 and 120),
   icon       text not null default 'sparkles',
-  color      text not null default '#7C5CFF',
+  color      text not null default '#2E6B57',
   target     integer not null default 1 check (target between 1 and 100),
   unit       text not null default 'مرة',
   log        jsonb not null default '{}',
@@ -238,26 +238,20 @@ begin
 end;
 $$;
 
+-- المستخدمون الموجودون مسبقًا (من تطبيقات أخرى على نفس المشروع) يحصلون على صفوفهم أيضًا
+insert into public.profiles (user_id, name, email)
+  select id, left(coalesce(raw_user_meta_data ->> 'name', ''), 80), email from auth.users
+  on conflict (user_id) do nothing;
+insert into public.user_settings (user_id) select id from auth.users on conflict (user_id) do nothing;
+insert into public.user_progress (user_id) select id from auth.users on conflict (user_id) do nothing;
+
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ————— حذف الحساب: المستخدم يحذف حسابه هو فقط (وكل بياناته تُحذف بالـCascade) —————
-create or replace function public.delete_my_account()
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if auth.uid() is null then
-    raise exception 'not authenticated';
-  end if;
-  delete from auth.users where id = auth.uid();
-end;
-$$;
+-- ————— حذف الحساب —————
+-- التطبيق يحذف بيانات المستخدم في مسار جدولًا جدولًا عبر سياسات own_delete (RLS)،
+-- ولا يحذف حساب الدخول لأنه قد يكون مشتركًا مع تطبيقات أخرى على نفس المشروع.
 
-revoke all on function public.delete_my_account() from public, anon;
-grant execute on function public.delete_my_account() to authenticated;
 revoke all on function public.handle_new_user() from public, anon, authenticated;

@@ -3,8 +3,8 @@
 // لا تضع Service Role Key هنا أبدًا.
 import { createClient } from '@supabase/supabase-js';
 
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://whhdabigebhoyhuqblid.supabase.co';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_OuCU9tHt-HVbtqYq-eZUqw_ggOra6KC';
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://bcpxsrgfjvkkrynyjxkq.supabase.co';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_am-VqL0mY-5AG0SOIBcCLw_62llvpGb';
 
 // "تذكرني": الجلسة في localStorage، وإلا في sessionStorage (تنتهي بإغلاق المتصفح)
 const REMEMBER_KEY = 'himmah:remember';

@@ -108,7 +108,7 @@ function Account() {
       useStore.getState().abandonSession();
       requestLogout();
     } catch (e) {
-      useStore.getState().toast(e.message || 'تعذر حذف الحساب، حاول مرة أخرى.', { icon: 'clock' });
+      useStore.getState().toast(e.message || 'تعذر حذف البيانات، حاول مرة أخرى.', { icon: 'clock' });
       setDeleting(false);
     }
   };
@@ -138,21 +138,21 @@ function Account() {
         </button>
       </Row>
       {!isDemo && (
-        <Row t="حذف الحساب" d="حذف الحساب وكل بياناته نهائيًا">
+        <Row t="حذف بياناتي" d="حذف كل مهامك وأهدافك وعاداتك في مسار نهائيًا">
           <button
             className="btn btn-sm btn-danger"
             disabled={deleting}
             onClick={() =>
               confirm({
-                title: 'حذف الحساب نهائيًا',
-                body: 'سيتم حذف حسابك وكل مهامك وأهدافك وعاداتك نهائيًا. لا يمكن التراجع.',
+                title: 'حذف بياناتك نهائيًا',
+                body: 'سيتم حذف كل بياناتك في مسار وتسجيل خروجك. لا يمكن التراجع.',
                 danger: true,
                 confirmLabel: 'حذف نهائي',
                 onConfirm: removeAccount,
               })
             }
           >
-            <Trash2 /> حذف الحساب
+            <Trash2 /> حذف بياناتي
           </button>
         </Row>
       )}
