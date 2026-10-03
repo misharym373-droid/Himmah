@@ -101,7 +101,7 @@ export const rowToGoal = (r) => ({
 });
 
 export const habitToRow = (h, user_id) => ({
-  id: h.id, user_id, title: String(h.title || '').slice(0, 120) || 'عادة', icon: h.icon || 'sparkles', color: h.color || '#7C5CFF',
+  id: h.id, user_id, title: String(h.title || '').slice(0, 120) || 'عادة', icon: h.icon || 'sparkles', color: h.color || '#2E6B57',
   target: clamp(h.target, 1, 100, 1), unit: h.unit || 'مرة', log: h.log || {}, created_at: iso(h.createdAt) || undefined,
 });
 export const rowToHabit = (r) => ({ id: r.id, title: r.title, icon: r.icon, color: r.color, target: r.target, unit: r.unit, log: r.log || {}, createdAt: ms(r.created_at) });

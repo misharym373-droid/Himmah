@@ -7,10 +7,15 @@ import { IconTile } from './Glyph.jsx';
 const base = import.meta.env.BASE_URL;
 export const asset = (p) => base + p;
 
+// الشعار يُرسم كقناع (mask) فيأخذ لون النص الحالي — يتكيّف تلقائيًا مع الوضع الفاتح والداكن
+export function BrandMark({ className = '' }) {
+  return <span className={`brand-mark ${className}`} aria-hidden />;
+}
 export function Logo({ className = 'header-logo', onClick }) {
   return (
-    <button className={className} onClick={onClick} aria-label="هّمة — الرئيسية">
-      <img src={asset('brand/logo.webp')} alt="هّمة" width="564" height="254" />
+    <button className={className} onClick={onClick} aria-label="مسار — الرئيسية">
+      <span className="brand-mark" aria-hidden />
+      <span className="brand-name" aria-hidden />
     </button>
   );
 }
@@ -96,9 +101,9 @@ export function Ring({ value = 0, size = 160, stroke = 12, color = 'url(#ringGra
       <svg width={size} height={size}>
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--primary-soft)" />
+            <stop offset="0%" stopColor="var(--primary)" />
             <stop offset="55%" stopColor="var(--primary)" />
-            <stop offset="100%" stopColor="#3B82F6" />
+            <stop offset="100%" stopColor="var(--primary)" />
           </linearGradient>
         </defs>
         <circle className="track" cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} />

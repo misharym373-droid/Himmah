@@ -5,9 +5,9 @@ import { Modal, Bar, Empty, Avatar, useConfirm } from '../components/ui.jsx';
 import { Glyph } from '../components/Glyph.jsx';
 
 const STATUS = {
-  todo: { label: 'لم تبدأ', color: '#94A3B8' },
-  doing: { label: 'قيد التنفيذ', color: '#FBBF24' },
-  done: { label: 'مكتملة', color: '#34D399' },
+  todo: { label: 'لم تبدأ', color: '#8B9590' },
+  doing: { label: 'قيد التنفيذ', color: '#E8940C' },
+  done: { label: 'مكتملة', color: '#30A46C' },
 };
 
 export default function Shared() {
@@ -48,7 +48,7 @@ export default function Shared() {
         </>
       )}
       <p className="tiny dim mt row">
-        <Info size={14} /> المشاريع محفوظة على جهازك حاليًا. المزامنة الفعلية مع أعضاء الفريق تحتاج ربط هّمة بخادم (البنية جاهزة لذلك).
+        <Info size={14} /> المشاريع محفوظة على جهازك حاليًا. المزامنة الفعلية مع أعضاء الفريق تحتاج ربط مسار بخادم (البنية جاهزة لذلك).
       </p>
       {adding && <ProjectModal onClose={() => setAdding(false)} onCreated={(id) => setActive(id)} />}
     </>

@@ -523,7 +523,7 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— العادات —————
-  addHabit: (h) => set((s) => ({ habits: [...s.habits, { id: uid(), log: {}, target: 1, unit: 'مرة', color: '#7C5CFF', createdAt: Date.now(), ...h }] })),
+  addHabit: (h) => set((s) => ({ habits: [...s.habits, { id: uid(), log: {}, target: 1, unit: 'مرة', color: '#2E6B57', createdAt: Date.now(), ...h }] })),
   updateHabit: (id, patch) => set((s) => ({ habits: s.habits.map((h) => (h.id === id ? { ...h, ...patch } : h)) })),
   deleteHabit(id) {
     const h = get().habits.find((x) => x.id === id);
@@ -585,13 +585,13 @@ export const useStore = create((set, get) => ({
 
   // ————— المشاريع المشتركة —————
   addProject(name, icon = 'folder') {
-    const me = { id: 'me', name: get().profile.name || 'أنا', color: '#7C5CFF' };
+    const me = { id: 'me', name: get().profile.name || 'أنا', color: '#2E6B57' };
     set((s) => ({ projects: [...s.projects, { id: uid(), name, icon, members: [me], tasks: [], createdAt: Date.now() }] }));
     get().checkAchievements();
   },
   deleteProject: (id) => set((s) => ({ projects: s.projects.filter((p) => p.id !== id) })),
   addMember(pid, name) {
-    const colors = ['#3B82F6', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#22D3EE'];
+    const colors = ['#2F7CF6', '#30A46C', '#E8940C', '#D7264F', '#E5484D', '#0FA3B1'];
     set((s) => ({
       projects: s.projects.map((p) => (p.id === pid ? { ...p, members: [...p.members, { id: uid(), name, color: colors[p.members.length % colors.length] }] } : p)),
     }));

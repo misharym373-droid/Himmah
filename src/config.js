@@ -1,14 +1,14 @@
 // إعدادات عامة للموقع — عدّلها من هنا
-export const BRAND = 'هّمة';
-export const TAGLINE = 'نحو يوم أفضل';
+export const BRAND = 'مسار';
+export const TAGLINE = 'خطّط · نظّم · أنجز';
 
 // رابط موقع صُرّة لإدارة الأموال (يفتح في تبويب جديد)
 // ضع الرابط هنا — ويمكن للمستخدم أيضًا تعديله من الإعدادات
 export const SURRA_URL = 'https://misharym373-droid.github.io/sorra/';
 
 // مجالات الحياة
-// ألوان النظام: Primary بنفسجي · Success أخضر · Warning ذهبي · Danger أحمر · Info أزرق
-export const COLORS = { primary: '#7C5CFF', primarySoft: '#A78BFA', success: '#34D399', warning: '#FBBF24', danger: '#F87171', info: '#3B82F6', muted: '#94A3B8' };
+// ألوان النظام (مستوحاة من ألوان Apple الهادئة + أخضر مسار)
+export const COLORS = { primary: '#2E6B57', primarySoft: '#5FBF9C', success: '#30A46C', warning: '#E8940C', danger: '#E5484D', info: '#2F7CF6', muted: '#8B9590' };
 
 // مجالات الحياة (icon = مفتاح أيقونة lucide في Glyph.jsx)
 export const AREAS = {
@@ -28,11 +28,12 @@ export const PRIORITIES = {
 };
 
 export const ACCENTS = {
-  purple: { label: 'بنفسجي', color: '#7C5CFF', soft: '#A78BFA' },
-  blue: { label: 'أزرق', color: '#3B82F6', soft: '#60A5FA' },
-  green: { label: 'أخضر', color: '#10B981', soft: '#34D399' },
-  gold: { label: 'ذهبي', color: '#F59E0B', soft: '#FBBF24' },
-  pink: { label: 'وردي', color: '#EC4899', soft: '#F472B6' },
+  pine: { label: 'أخضر مسار', color: '#2E6B57', soft: '#5FBF9C' },
+  blue: { label: 'أزرق', color: '#0A6CFF', soft: '#4C9BFF' },
+  purple: { label: 'نيلي', color: '#5856D6', soft: '#8E8CF0' },
+  green: { label: 'أخضر', color: '#248A3D', soft: '#34C759' },
+  gold: { label: 'برتقالي', color: '#C25E00', soft: '#FF9F0A' },
+  pink: { label: 'وردي', color: '#D7264F', soft: '#FF5A7A' },
 };
 
 export const PERSONAS = {

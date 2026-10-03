@@ -147,11 +147,11 @@ const SUGGEST = [
   ['pray', 'أذكار الصباح', 1, 'مرة'],
   ['phoneoff', 'بدون جوال ساعة', 1, 'مرة'],
 ];
-const COLORS = ['#7C5CFF', '#3B82F6', '#34D399', '#FBBF24', '#F472B6', '#F87171'];
+const COLORS = ['#2E6B57', '#2F7CF6', '#30A46C', '#E8940C', '#D7264F', '#5856D6'];
 
 function HabitModal({ onClose }) {
   const addHabit = useStore((s) => s.addHabit);
-  const [f, setF] = useState({ icon: 'sparkles', title: '', target: 1, unit: 'مرة', color: '#7C5CFF' });
+  const [f, setF] = useState({ icon: 'sparkles', title: '', target: 1, unit: 'مرة', color: '#2E6B57' });
   function save() {
     if (!f.title.trim()) return;
     addHabit({ ...f, title: f.title.trim(), target: Math.max(1, +f.target || 1) });

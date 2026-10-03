@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Sparkles, Mic, BatteryLow, BatteryMedium, BatteryFull } from 'lucide-react';
 import { useStore } from '../store.js';
-import { asset } from '../components/ui.jsx';
 import { parseTasks, guessMeta } from '../lib/nlp.js';
 import { AREAS, TAGLINE } from '../config.js';
 import { todayKey } from '../lib/date.js';
@@ -49,9 +48,8 @@ export default function Onboarding() {
         <div className="onb-step" key={step}>
           {step === 0 && (
             <div style={{ textAlign: 'center' }} className="col">
-              <img src={asset('brand/logo.webp')} alt="هّمة" style={{ width: 'min(300px,80%)', margin: '0 auto', mixBlendMode: 'screen' }} />
-              <p className="muted">هّمة .. {TAGLINE}</p>
-              <h2 style={{ fontSize: '1.7rem', marginTop: 8 }}>مرحبًا بك في هّمة{name ? ` يا ${name}` : ''}</h2>
+              <span className="brand-full onb-logo" role="img" aria-label={`مسار — ${TAGLINE}`} />
+              <h2 style={{ fontSize: '1.7rem', marginTop: 8 }}>مرحبًا بك في مسار{name ? ` يا ${name}` : ''}</h2>
               <p className="muted">خلنا نجهز يومك في أقل من دقيقة، بخمس أسئلة بسيطة.</p>
               <button className="btn btn-primary btn-lg mt" onClick={next} style={{ alignSelf: 'center' }}>
                 يلا نبدأ <ArrowLeft />
@@ -128,7 +126,7 @@ export default function Onboarding() {
           {step === 5 && (
             <div className="col" style={{ gap: 16 }}>
               <h2>أضف أول مهمة</h2>
-              <p className="muted">اكتبها بطريقتك — هّمة يفهم الوقت والمدة تلقائيًا</p>
+              <p className="muted">اكتبها بطريقتك — مسار يفهم الوقت والمدة تلقائيًا</p>
               <div className="quick" style={{ maxWidth: 'none' }}>
                 <Sparkles size={18} className="spark" />
                 <input value={a.task} onChange={(e) => set('task', e.target.value)} placeholder="مذاكرة التفاضل الساعة 8 لمدة ساعة" autoFocus onKeyDown={(e) => e.key === 'Enter' && finish(false)} aria-label="أول مهمة" />
@@ -154,7 +152,7 @@ export default function Onboarding() {
               <div className="ai-orb">
                 <Sparkles />
               </div>
-              <h2>هّمة يبني يومك…</h2>
+              <h2>مسار يبني يومك…</h2>
               <div className="typing">
                 <i />
                 <i />

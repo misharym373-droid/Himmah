@@ -199,7 +199,7 @@ export default function Profile() {
 
           <div className="card reveal d3">
             <div className="row" style={{ gap: 12 }}>
-              <img src={asset('brand/icon.webp')} alt="" width="44" height="44" style={{ borderRadius: 13 }} />
+              <img src={asset('brand/icon.png')} alt="" width="44" height="44" style={{ borderRadius: 13 }} />
               <div className="grow">
                 <div className="bold">حسابك</div>
                 <div className="tiny muted ellipsis">{profile.email || 'حساب محلي على هذا الجهاز'}</div>

@@ -345,7 +345,7 @@ export function ImageModal() {
     close();
   }
   return (
-    <Modal title="أضف مهمة من صورة" sub="صوّر ورقة واجب أو قائمة مهام، وهّمة يستخرج المهام منها" onClose={close} size="wide">
+    <Modal title="أضف مهمة من صورة" sub="صوّر ورقة واجب أو قائمة مهام، ومسار يستخرج المهام منها" onClose={close} size="wide">
       <input ref={input} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.target.files[0])} />
       {!img ? (
         <button
@@ -740,7 +740,7 @@ export function InteractiveModal() {
       {step === 1 && (
         <div className="build-anim onb-step">
           <div className="spinner" />
-          <div className="bold">{say(persona, 'hi')} هّمة يبني يومك…</div>
+          <div className="bold">{say(persona, 'hi')} مسار يبني يومك…</div>
         </div>
       )}
       {step === 2 && (
@@ -780,7 +780,7 @@ export function ShortcutsModal() {
     ['/', 'الإدخال السريع'],
     ['V', 'إضافة بالصوت'],
     ['W', 'وش أسوي الآن؟'],
-    ['A', 'اسأل هّمة'],
+    ['A', 'اسأل مسار'],
     ['G ثم H', 'الرئيسية'],
     ['G ثم T', 'المهام'],
     ['G ثم S', 'الجدول'],

@@ -36,7 +36,7 @@ export default function Goals() {
       </div>
       {!goals.length ? (
         <div className="card">
-          <Empty icon={<Target />} title="ما الشيء الذي تريد الوصول إليه؟" text="اكتب هدفك، وهّمة يقسمه لخطة واضحة." action={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus /> إنشاء هدف</button>} />
+          <Empty icon={<Target />} title="ما الشيء الذي تريد الوصول إليه؟" text="اكتب هدفك، ومسار يقسمه لخطة واضحة." action={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus /> إنشاء هدف</button>} />
         </div>
       ) : (
         <div className="grid g2">
@@ -234,7 +234,7 @@ function GoalModal({ onClose }) {
   return (
     <Modal
       title="هدف جديد"
-      sub="اكتب هدفك الكبير، وهّمة يقسمه تلقائيًا"
+      sub="اكتب هدفك الكبير، ومسار يقسمه تلقائيًا"
       onClose={onClose}
       size="wide"
       footer={

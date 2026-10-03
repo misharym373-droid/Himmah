@@ -40,7 +40,7 @@ export default function Settings() {
             </span>
             الإعدادات
           </h1>
-          <p>خصّص هّمة ليناسبك — كل تغيير يُطبّق ويُحفظ فورًا</p>
+          <p>خصّص مسار ليناسبك — كل تغيير يُطبّق ويُحفظ فورًا</p>
         </div>
       </div>
       <div className="settings">
@@ -117,7 +117,7 @@ function Account() {
       <CardTitle icon={<User size={18} />}>الحساب</CardTitle>
       <Row t="الاسم" d={profile.name} />
       <Row t="البريد الإلكتروني" d={profile.email || '—'} />
-      <Row t="نوع الحساب" d={isDemo ? 'تجربة بدون حساب — البيانات محفوظة على هذا الجهاز فقط' : 'حساب هّمة — بياناتك محفوظة بأمان في السحابة ومتزامنة بين أجهزتك'} />
+      <Row t="نوع الحساب" d={isDemo ? 'تجربة بدون حساب — البيانات محفوظة على هذا الجهاز فقط' : 'حساب مسار — بياناتك محفوظة بأمان في السحابة ومتزامنة بين أجهزتك'} />
       <Row t="تسجيل الخروج" d={isDemo ? 'بيانات التجربة تبقى على هذا الجهاز' : 'بياناتك تبقى محفوظة في حسابك'}>
         <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => requestLogout() })}>
           <LogOut /> تسجيل الخروج
@@ -166,11 +166,11 @@ function Appearance() {
   return (
     <>
       <CardTitle icon={<Palette size={18} />} sub="كل تغيير يُطبّق فورًا">المظهر</CardTitle>
-      <Row t="المظهر" d="الوضع الافتراضي: الليلي">
+      <Row t="المظهر" d="الافتراضي: تلقائي حسب إعداد جهازك">
         {[
-          ['dark', 'الوضع الليلي', Moon],
-          ['light', 'الوضع النهاري', Sun],
-          ['auto', 'تلقائي حسب الجهاز', SunMoon],
+          ['auto', 'تلقائي', SunMoon],
+          ['light', 'فاتح', Sun],
+          ['dark', 'داكن', Moon],
         ].map(([k, l, I]) => (
           <button key={k} className={`chip ${s.theme === k ? 'on' : ''}`} onClick={() => set('theme', k)}>
             <I /> {l}
@@ -180,7 +180,7 @@ function Appearance() {
       <Row t="لون التمييز (Accent)" d="يتغير لون الأزرار والتقدم والعناصر النشطة">
         <div className="swatches">
           {Object.entries(ACCENTS).map(([k, a]) => (
-            <button key={k} className={`swatch-btn ${s.accent === k ? 'on' : ''}`} style={{ background: `linear-gradient(135deg, ${a.color}, ${a.soft})`, color: a.color }} onClick={() => set('accent', k)} aria-label={a.label} title={a.label}>
+            <button key={k} className={`swatch-btn ${s.accent === k ? 'on' : ''}`} style={{ background: a.color, color: a.color }} onClick={() => set('accent', k)} aria-label={a.label} title={a.label}>
               {s.accent === k && <Check size={18} color="#fff" />}
             </button>
           ))}
@@ -199,10 +199,9 @@ function Appearance() {
       </Row>
       <Row t="الخلفية">
         {[
-          ['neon', 'Neon'],
-          ['minimal', 'Minimal'],
-          ['stars', 'Stars'],
-          ['gradient', 'Gradient'],
+          ['neon', 'هادئة'],
+          ['gradient', 'دافئة'],
+          ['minimal', 'سادة'],
         ].map(([k, l]) => (
           <button key={k} className={`chip ${s.background === k ? 'on' : ''}`} onClick={() => set('background', k)}>
             {l}
@@ -275,7 +274,7 @@ function Assistant() {
   return (
     <>
       <CardTitle icon={<Sparkles size={18} />} sub="تتغير طريقة صياغة رسائل المساعد حسب الشخصية">
-        شخصية مساعد هّمة
+        شخصية مساعد مسار
       </CardTitle>
       <div className="grid g2 mt">
         {Object.entries(PERSONAS).map(([k, p]) => (
@@ -406,7 +405,7 @@ function Data() {
           <Upload /> استيراد
         </button>
       </Row>
-      <Row t="تحميل البيانات التجريبية" d="مهام وأهداف وعادات تجريبية لاستكشاف هّمة">
+      <Row t="تحميل البيانات التجريبية" d="مهام وأهداف وعادات تجريبية لاستكشاف مسار">
         <button className="btn btn-sm" onClick={() => confirm({ title: 'البيانات التجريبية', body: 'سيتم استبدال بياناتك الحالية ببيانات تجريبية.', confirmLabel: 'تحميل', onConfirm: () => st().resetData(true) })}>
           <Sparkles /> تحميل
         </button>

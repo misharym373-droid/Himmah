@@ -266,7 +266,7 @@ function useApplySettings(s) {
     const apply = () => {
       const dark = s.theme === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : s.theme !== 'light';
       html.dataset.theme = dark ? 'dark' : 'light';
-      document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#080B12' : '#EEF1F8');
+      document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#0B0D0C' : '#F4F2ED');
     };
     apply();
     html.dataset.accent = s.accent;

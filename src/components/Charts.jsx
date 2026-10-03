@@ -48,13 +48,13 @@ export function TimeLine({ series, proj, height = 150 }) {
           <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="tmLine" x1="1" y1="0" x2="0" y2="0">
-          <stop offset="0%" stopColor="var(--primary-soft)" />
-          <stop offset="100%" stopColor="#3B82F6" />
+          <stop offset="0%" stopColor="var(--primary)" />
+          <stop offset="100%" stopColor="var(--primary)" />
         </linearGradient>
       </defs>
       <path d={areaD} fill="url(#tmFill)" style={{ animation: 'fadeIn 1.2s ease both' }} />
       <path className="line" d={smooth(series)} fill="none" stroke="url(#tmLine)" strokeWidth="3" strokeLinecap="round" />
-      <path d={smooth(proj)} fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeDasharray="6 7" strokeLinecap="round" opacity=".85" style={{ animation: 'fadeIn 1s 1.2s ease both' }} />
+      <path d={smooth(proj)} fill="none" stroke="#2F7CF6" strokeWidth="2.5" strokeDasharray="6 7" strokeLinecap="round" opacity=".85" style={{ animation: 'fadeIn 1s 1.2s ease both' }} />
       {now && (
         <g style={{ animation: 'fadeIn .6s 1.4s ease both' }}>
           <circle cx={Xr(0)} cy={Y(now.y)} r="10" fill="var(--primary)" opacity=".25" />

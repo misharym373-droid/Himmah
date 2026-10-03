@@ -2,7 +2,7 @@ import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { Loader2, CloudOff, House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, X, Calendar, Clock, Timer, ImagePlus } from 'lucide-react';
 import { useStore } from '../store.js';
 import { navigate, useRoute } from '../router.js';
-import { Logo, Avatar, asset } from './ui.jsx';
+import { Logo, Avatar } from './ui.jsx';
 import { Glyph } from './Glyph.jsx';
 import { guessMeta } from '../lib/nlp.js';
 import { previewTasks, analyzeInput } from '../lib/smartInput.js';
@@ -28,12 +28,7 @@ const SECONDARY = NAV.filter((n) => !n.primary);
 
 export function Scene() {
   return (
-    <div className="scene" aria-hidden>
-      <div className="grid-lines" />
-      <div className="stars" />
-      <div className="blob b1" />
-      <div className="blob b2" />
-    </div>
+    <div className="scene" aria-hidden />
   );
 }
 
@@ -58,8 +53,9 @@ export function Rail() {
   const inMore = SECONDARY.some((n) => n.id === name);
   return (
     <aside className="rail" aria-label="القائمة الرئيسية">
-      <button onClick={() => navigate('home')} aria-label="هّمة — الرئيسية" className="rail-logo-btn">
-        <img className="rail-logo" src={asset('brand/icon.webp')} alt="" width="48" height="48" />
+      <button onClick={() => navigate('home')} aria-label="مسار — الرئيسية" className="rail-logo-btn">
+        <span className="brand-mark rail-logo" aria-hidden />
+        <span className="brand-name rail-name" aria-hidden />
       </button>
       <nav aria-label="الصفحات الأساسية">
         {PRIMARY.map(({ id, label, icon: Icon }) => (
@@ -89,8 +85,9 @@ export function Rail() {
         </div>
       </nav>
       <div className="rail-foot">
-        <button onClick={() => navigate('profile')} aria-label="الملف الشخصي">
+        <button className="rail-me" onClick={() => navigate('profile')} aria-label="الملف الشخصي">
           <Avatar name={profile.name} src={profile.avatar} size="sm" />
+          <span className="rail-me-name ellipsis">{profile.name || 'ملفي'}</span>
         </button>
       </div>
     </aside>
@@ -172,7 +169,7 @@ export function Header() {
         <button className="icon-btn hide-m" onClick={() => setDrawer('command')} aria-label="بحث وأوامر" title="بحث (Ctrl+K)">
           <Search />
         </button>
-        <button className="icon-btn" onClick={() => setDrawer('assistant')} aria-label="اسأل هّمة" title="اسأل هّمة (A)">
+        <button className="icon-btn" onClick={() => setDrawer('assistant')} aria-label="اسأل مسار" title="اسأل مسار (A)">
           <Sparkles />
         </button>
         <button className="icon-btn" onClick={() => setDrawer('notifications')} aria-label={`الإشعارات${unread ? ` (${unread} جديدة)` : ''}`}>
@@ -248,7 +245,7 @@ function MoreSheet({ onClose }) {
   const actions = [
     [Mic, 'بالصوت', () => open('voice')],
     [ImagePlus, 'من صورة', () => open('image')],
-    [Sparkles, 'اسأل هّمة', () => setDrawer('assistant')],
+    [Sparkles, 'اسأل مسار', () => setDrawer('assistant')],
     [Search, 'بحث', () => setDrawer('command')],
   ];
   return (
@@ -299,7 +296,7 @@ export function Footer() {
   return (
     <footer className="footer">
       <Logo className="header-logo" onClick={() => navigate('home')} />
-      <div className="tag">هّمة — {TAGLINE}</div>
+      <div className="tag">مسار — {TAGLINE}</div>
       <nav className="flinks" aria-label="روابط الموقع">
         {links.map(([id, l]) => (
           <button key={id} onClick={() => navigate(id)}>
@@ -308,7 +305,7 @@ export function Footer() {
         ))}
         <SurraLink url={surra} className="gold" />
       </nav>
-      <p className="tiny dim">© {new Date().getFullYear()} هّمة · صُنع بشغف لحياة أكثر تنظيمًا</p>
+      <p className="tiny dim">© {new Date().getFullYear()} مسار · صُنع بشغف لحياة أكثر تنظيمًا</p>
     </footer>
   );
 }

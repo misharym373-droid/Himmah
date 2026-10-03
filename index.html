@@ -1,31 +1,33 @@
 <!doctype html>
-<html lang="ar" dir="rtl" data-theme="dark">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>هّمة — نحو يوم أفضل</title>
-    <meta name="description" content="هّمة هو نظامك الشخصي لتنظيم يومك، إدارة مهامك، بناء عاداتك وتحقيق أهدافك." />
-    <meta name="theme-color" content="#080B12" />
-    <meta property="og:title" content="هّمة — نحو يوم أفضل" />
-    <meta property="og:description" content="هّمة هو نظامك الشخصي لتنظيم يومك، إدارة مهامك، بناء عاداتك وتحقيق أهدافك." />
-    <meta property="og:image" content="./brand/icon-192.png" />
+    <title>مسار — خطّط، نظّم، أنجز</title>
+    <meta name="description" content="مسار هو نظامك الشخصي لتنظيم يومك، إدارة مهامك، بناء عاداتك وتحقيق أهدافك." />
+    <meta name="theme-color" content="#F4F2ED" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B0D0C" media="(prefers-color-scheme: dark)" />
+    <meta property="og:title" content="مسار — خطّط، نظّم، أنجز" />
+    <meta property="og:description" content="مسار هو نظامك الشخصي لتنظيم يومك، إدارة مهامك، بناء عاداتك وتحقيق أهدافك." />
+    <meta property="og:image" content="./brand/icon-512.png" />
     <meta property="og:locale" content="ar_SA" />
     <link rel="icon" type="image/png" href="./brand/favicon.png" />
     <link rel="apple-touch-icon" href="./brand/apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       /* شاشة التحميل قبل تشغيل التطبيق */
-      html,body{margin:0;background:#080B12}
-      #boot{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(60% 50% at 50% 45%,rgba(124,92,255,.18),transparent 70%),#080B12;z-index:9999;transition:opacity .4s ease}
-      #boot img{width:96px;height:96px;border-radius:26px;animation:bootPulse 1.6s ease-in-out infinite;box-shadow:0 0 60px rgba(124,92,255,.45)}
-      @keyframes bootPulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.06);opacity:1}}
+      html,body{margin:0;background:#F4F2ED}
+      #boot{position:fixed;inset:0;display:grid;place-items:center;background:#F4F2ED;z-index:9999;transition:opacity .3s ease}
+      #boot span{width:64px;height:66px;background:#1F2B28;-webkit-mask:url(./brand/masar-mark.png) center/contain no-repeat;mask:url(./brand/masar-mark.png) center/contain no-repeat;animation:bootIn .6s cubic-bezier(.2,.8,.2,1) both}
+      @keyframes bootIn{from{opacity:0;transform:scale(.92)}}
+      @media (prefers-color-scheme:dark){html,body,#boot{background:#0B0D0C}#boot span{background:#F2F1EC}}
     </style>
   </head>
   <body>
-    <div id="boot"><img src="./brand/icon.webp" alt="هّمة" /></div>
+    <div id="boot" aria-label="مسار"><span></span></div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

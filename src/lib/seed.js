@@ -3,11 +3,11 @@ import { todayKey, addDays, fromMin, nowMin, roundUp5, uid, fromKey } from './da
 import { xpAtLevel } from './game.js';
 
 export const DEFAULT_SETTINGS = {
-  theme: 'dark', // dark | light | auto
-  accent: 'purple',
+  theme: 'auto', // auto | light | dark
+  accent: 'pine',
   scale: 'md', // sm | md | lg
   motion: 'full', // full | lite | off
-  background: 'neon', // neon | minimal | stars | gradient
+  background: 'neon', // neon = هادئة | gradient = دافئة | minimal = سادة
   vibration: true,
   sounds: true,
   persona: 'friend',
@@ -80,7 +80,7 @@ export function emptyData(user) {
     rewardHistory: [],
     achievements: {},
     notifications: [
-      { id: uid(), type: 'info', icon: 'sparkles', title: 'مرحبًا بك في هّمة', body: 'ابدأ بإضافة أول مهمة ليومك.', time: Date.now(), read: false },
+      { id: uid(), type: 'info', icon: 'sparkles', title: 'مرحبًا بك في مسار', body: 'ابدأ بإضافة أول مهمة ليومك.', time: Date.now(), read: false },
     ],
     projects: [],
     focusLog: [],
@@ -102,11 +102,11 @@ function defaultRewards() {
 
 function defaultHabits(withLogs) {
   const H = [
-    { icon: 'water', title: 'شرب الماء', target: 8, unit: 'أكواب', color: '#3B82F6', rate: 0.8 },
-    { icon: 'read', title: 'القراءة', target: 1, unit: 'مرة', color: '#7C5CFF', rate: 0.75 },
-    { icon: 'walk', title: 'المشي', target: 1, unit: 'مرة', color: '#34D399', rate: 0.7 },
-    { icon: 'sleep', title: 'النوم مبكرًا', target: 1, unit: 'مرة', color: '#FBBF24', rate: 0.55 },
-    { icon: 'meditation', title: 'التأمل', target: 1, unit: 'مرة', color: '#F472B6', rate: 0.5 },
+    { icon: 'water', title: 'شرب الماء', target: 8, unit: 'أكواب', color: '#2F7CF6', rate: 0.8 },
+    { icon: 'read', title: 'القراءة', target: 1, unit: 'مرة', color: '#2E6B57', rate: 0.75 },
+    { icon: 'walk', title: 'المشي', target: 1, unit: 'مرة', color: '#30A46C', rate: 0.7 },
+    { icon: 'sleep', title: 'النوم مبكرًا', target: 1, unit: 'مرة', color: '#E8940C', rate: 0.55 },
+    { icon: 'meditation', title: 'التأمل', target: 1, unit: 'مرة', color: '#D7264F', rate: 0.5 },
   ];
   return H.map((h, i) => {
     const log = {};
@@ -254,9 +254,9 @@ export function demoData() {
     {
       id: uid(), name: 'مشروع الجامعة', icon: 'study', createdAt: Date.now(),
       members: [
-        { id: 'me', name: 'مشاري', color: '#7C5CFF' },
-        { id: 'm2', name: 'أحمد', color: '#3B82F6' },
-        { id: 'm3', name: 'محمد', color: '#34D399' },
+        { id: 'me', name: 'مشاري', color: '#2E6B57' },
+        { id: 'm2', name: 'أحمد', color: '#2F7CF6' },
+        { id: 'm3', name: 'محمد', color: '#30A46C' },
       ],
       tasks: [
         { id: uid(), title: 'تحضير العرض التقديمي', assignee: 'm2', status: 'doing' },

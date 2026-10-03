@@ -181,7 +181,7 @@ export function FocusMode() {
             <button className="btn btn-lg btn-glass" onClick={another}>
               <RotateCw /> جلسة أخرى
             </button>
-            <button className="btn btn-lg btn-ghost" style={{ color: '#94a3b8' }} onClick={() => endFocus(false)}>
+            <button className="btn btn-lg btn-ghost" style={{ color: '#8B9590' }} onClick={() => endFocus(false)}>
               إنهاء
             </button>
           </>
@@ -213,7 +213,7 @@ export function FocusMode() {
               <Square /> إنهاء مبكرًا
             </button>
             {task && !task.done && (
-              <button className="btn btn-lg btn-ghost" style={{ color: '#94a3b8' }} onClick={() => (endFocus(false), openModal('reschedule', { id: task.id }))}>
+              <button className="btn btn-lg btn-ghost" style={{ color: '#8B9590' }} onClick={() => (endFocus(false), openModal('reschedule', { id: task.id }))}>
                 <Clock /> تأجيل
               </button>
             )}
@@ -241,7 +241,7 @@ export function CommandMenu() {
     { g: 'إجراءات', label: 'وش أسوي الآن؟', icon: Sparkles, run: () => open('whatNow'), k: 'W' },
     { g: 'إجراءات', label: 'أنقذ يومي', icon: Siren, run: () => open('rescue') },
     { g: 'إجراءات', label: 'عندي ساعة فقط', icon: Hourglass, run: () => open('oneHour') },
-    { g: 'إجراءات', label: 'اسأل هّمة', icon: Bot, run: () => setTimeout(() => setDrawer('assistant')), k: 'A' },
+    { g: 'إجراءات', label: 'اسأل مسار', icon: Bot, run: () => setTimeout(() => setDrawer('assistant')), k: 'A' },
     { g: 'إجراءات', label: 'اختصارات لوحة المفاتيح', icon: Keyboard, run: () => open('shortcuts'), k: '?' },
     ...NAV.map((n) => ({ g: 'الصفحات', label: n.label, icon: n.icon, run: () => navigate(n.id) })),
   ];
@@ -391,12 +391,12 @@ export function NotificationsDrawer() {
   );
 }
 
-// ————— اسأل هّمة (المساعد) —————
+// ————— اسأل مسار (المساعد) —————
 export function AssistantDrawer() {
   const setDrawer = useStore((s) => s.setDrawer);
   const persona = useStore((s) => s.settings.persona);
   const name = useStore((s) => s.profile.name);
-  const [msgs, setMsgs] = useState(() => [{ role: 'ai', text: `${say(persona, 'hi')} ${name ? name + '،' : ''} أنا مساعد هّمة. كيف أقدر أساعدك اليوم؟` }]);
+  const [msgs, setMsgs] = useState(() => [{ role: 'ai', text: `${say(persona, 'hi')} ${name ? name + '،' : ''} أنا مساعد مسار. كيف أقدر أساعدك اليوم؟` }]);
   const [v, setV] = useState('');
   const [typing, setTyping] = useState(false);
   const end = useRef(null);
@@ -429,7 +429,7 @@ export function AssistantDrawer() {
   }
   const prompts = ['رتب يومي', 'وش أسوي الآن؟', 'وش أقدر أنجز خلال ساعة؟', 'أنا متأخر اليوم، ساعدني', 'عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول', 'قسم لي هدف تعلم الإنجليزية خلال 6 أشهر'];
   return (
-    <Drawer title="اسأل هّمة" icon={<Sparkles size={18} />} onClose={() => setDrawer(null)} actions={<span className="badge purple"><Glyph name={PERSONAS[persona]?.icon} size={12} /> {PERSONAS[persona]?.label}</span>}>
+    <Drawer title="اسأل مسار" icon={<Sparkles size={18} />} onClose={() => setDrawer(null)} actions={<span className="badge purple"><Glyph name={PERSONAS[persona]?.icon} size={12} /> {PERSONAS[persona]?.label}</span>}>
       <div className="chat">
         {msgs.map((m, i) => (
           <div key={i} className={`msg ${m.role}`}>

@@ -64,7 +64,7 @@ function Badges() {
                 <Glyph name={hidden ? 'sparkles' : a.icon} size={34} />
               </div>
               <div className="bold">{hidden ? 'إنجاز سري' : a.title}</div>
-              <div className="tiny muted mt-s">{hidden ? 'استمر في استخدام هّمة لتكتشفه' : a.desc}</div>
+              <div className="tiny muted mt-s">{hidden ? 'استمر في استخدام مسار لتكتشفه' : a.desc}</div>
               {on && <div className="tiny gold mt-s">فُتح في {formatShort(toKey(new Date(achievements[a.id])))}</div>}
             </div>
           );

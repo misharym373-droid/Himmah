@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, KeyRound, Eye, EyeOff, User, Phone, ArrowLeft, Sparkles, Loader2, ShieldCheck, MailCheck, Info } from 'lucide-react';
 import { signIn, signUp, validateEmail, passwordStrength, sendPasswordReset, resendConfirmation } from '../lib/auth.js';
-import { asset, Modal } from '../components/ui.jsx';
+import { Modal } from '../components/ui.jsx';
 import { TAGLINE } from '../config.js';
 import { Glyph } from '../components/Glyph.jsx';
 
@@ -11,24 +11,23 @@ export default function Auth({ notice, onLoggedIn, onDemo }) {
   return (
     <div className="auth">
       <section className="auth-art">
-        <img className="logo-big" src={asset('brand/logo.webp')} alt="هّمة" width="564" height="254" />
-        <div className="tagline">هّمة .. {TAGLINE}</div>
-        <div className="hide-sm col" style={{ maxWidth: 380, marginTop: 20, gap: 12 }}>
+        <span className="brand-full logo-big" role="img" aria-label={`مسار — ${TAGLINE}`} />
+        <div className="hide-sm auth-points">
           {[
             ['sparkles', 'مهام ذكية تفهم كلامك وتجدول يومك'],
             ['target', 'أهداف تتحول تلقائيًا لخطوات يومية'],
             ['flame', 'XP ومستويات وStreak تحفزك كل يوم'],
             ['brain', 'مساعد يقترح عليك وش تسوي الآن'],
           ].map(([e, t], i) => (
-            <div key={t} className="row reveal" style={{ animationDelay: `${0.2 + i * 0.1}s`, padding: '10px 14px', borderRadius: 14, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)' }}>
-              <Glyph name={e} size={18} className="purple" />
-              <span className="small" style={{ color: '#c7d2fe' }}>{t}</span>
+            <div key={t} className="auth-point reveal" style={{ animationDelay: `${0.15 + i * 0.06}s` }}>
+              <span className="auth-point-ico"><Glyph name={e} size={17} /></span>
+              <span>{t}</span>
             </div>
           ))}
         </div>
       </section>
       <section className="auth-form">
-        <div className="auth-card card glow" key={mode} style={{ animation: 'modalIn .4s var(--spring) both' }}>
+        <div className="auth-card" key={mode}>
           {mode === 'login' && <Login notice={notice} onLoggedIn={onLoggedIn} onDemo={onDemo} toSignup={() => setMode('signup')} />}
           {mode === 'signup' && <Signup onLoggedIn={onLoggedIn} onNeedsConfirm={(email) => (setPendingEmail(email), setMode('confirm'))} toLogin={() => setMode('login')} />}
           {mode === 'confirm' && <ConfirmEmail email={pendingEmail} toLogin={() => setMode('login')} />}
@@ -77,7 +76,7 @@ function Login({ notice, onLoggedIn, onDemo, toSignup }) {
     <form onSubmit={submit} className="col" style={{ gap: 16 }} noValidate>
       <div>
         <h1>مرحبًا بعودتك</h1>
-        <p className="muted mt-s">سجّل دخولك للعودة إلى هّمة</p>
+        <p className="muted mt-s">سجّل دخولك للعودة إلى مسار</p>
       </div>
       {notice && (
         <div className="notice warn small" role="status">
@@ -110,7 +109,7 @@ function Login({ notice, onLoggedIn, onDemo, toSignup }) {
       </button>
       <div className="or">أو</div>
       <button type="button" className="btn btn-block" onClick={onDemo}>
-        <Sparkles /> جرّب هّمة بدون حساب
+        <Sparkles /> جرّب مسار بدون حساب
       </button>
       <p className="tiny dim" style={{ textAlign: 'center', marginTop: -8 }}>التجربة بدون حساب تحفظ البيانات على هذا الجهاز فقط</p>
       <p className="small muted" style={{ textAlign: 'center' }}>
@@ -131,7 +130,7 @@ function Signup({ onLoggedIn, onNeedsConfirm, toLogin }) {
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value ?? e });
   const strength = passwordStrength(f.password);
-  const colors = ['#F87171', '#F87171', '#FBBF24', '#34D399', '#34D399'];
+  const colors = ['#E5484D', '#E5484D', '#E8940C', '#30A46C', '#30A46C'];
   async function submit(e) {
     e.preventDefault();
     setErr('');
@@ -154,7 +153,7 @@ function Signup({ onLoggedIn, onNeedsConfirm, toLogin }) {
   return (
     <form onSubmit={submit} className="col" style={{ gap: 14 }} noValidate>
       <div>
-        <h1>ابدأ رحلتك مع هّمة</h1>
+        <h1>ابدأ رحلتك مع مسار</h1>
         <p className="muted mt-s">دقيقة واحدة ويصير يومك أوضح</p>
       </div>
       <label className="field">

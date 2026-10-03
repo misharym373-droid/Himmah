@@ -122,7 +122,7 @@ export function Greeting({ input }) {
                 )}
               </>
             ) : (
-              'يومك فاضي — اكتب ما عندك وهّمة يرتبه لك.'
+              'يومك فاضي — اكتب ما عندك ومسار يرتبه لك.'
             )}
           </p>
         </div>
@@ -735,7 +735,7 @@ export function AIWidget() {
           مساعد التخطيط
         </CardTitle>
         <button className="btn btn-sm btn-ghost" onClick={() => setDrawer('assistant')}>
-          <Sparkles /> اسأل هّمة
+          <Sparkles /> اسأل مسار
         </button>
       </div>
       <form className="quick" style={{ maxWidth: 'none' }} onSubmit={(e) => (e.preventDefault(), build())}>
