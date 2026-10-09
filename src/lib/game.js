@@ -1,8 +1,9 @@
 // نظام XP والمستويات والإنجازات
 import { todayKey, addDays, toMin } from './date.js';
 
-// XP المطلوب للانتقال من المستوى n إلى n+1
-export const xpForLevel = (n) => 100 + 20 * n;
+// XP المطلوب للانتقال من المستوى n إلى n+1 — منحنى متصاعد: كل مستوى أصعب بوضوح من اللي قبله
+// المستوى 2 = 800 · المستوى 3 = +2,450 · المستوى 5 = +7,450 تقريبًا · المستوى 10 = +27,000
+export const xpForLevel = (n) => Math.round((800 * Math.pow(n, 1.6)) / 50) * 50;
 
 export function levelInfo(totalXp) {
   let level = 1;

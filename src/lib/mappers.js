@@ -50,6 +50,7 @@ export function taskToRow(t, user_id) {
     reminder: t.reminder !== false,
     archived: !!t.archived,
     deleted_at: iso(t.deletedAt),
+    source: t.source || '',
     created_at: iso(t.createdAt) || undefined,
   };
 }
@@ -78,6 +79,7 @@ export function rowToTask(r) {
     archived: r.archived || undefined,
     ...(r.is_template ? { template: true } : {}),
     ...(r.series_id ? { seriesId: r.series_id } : {}),
+    ...(r.source ? { source: r.source } : {}),
   };
 }
 
@@ -93,11 +95,13 @@ export const goalToRow = (g, user_id) => ({
   milestones: g.milestones || [],
   daily: g.daily || [],
   last_activity: iso(g.lastActivity) || iso(Date.now()),
+  plan: g.plan || {},
   created_at: iso(g.createdAt) || undefined,
 });
 export const rowToGoal = (r) => ({
   id: r.id, title: r.title, area: r.area, icon: r.icon, deadline: r.deadline, months: r.months,
   milestones: r.milestones || [], daily: r.daily || [], createdAt: ms(r.created_at), lastActivity: ms(r.last_activity),
+  ...(r.plan && r.plan.startDate ? { plan: r.plan } : {}),
 });
 
 export const habitToRow = (h, user_id) => ({

@@ -3,7 +3,7 @@ import { useStore } from './store.js';
 import { useRoute, navigate } from './router.js';
 import { session } from './lib/storage.js';
 import { supabase } from './lib/supabase.js';
-import { signOut, updatePassword } from './lib/auth.js';
+import { signOut, updatePassword, forgetLocalSession } from './lib/auth.js';
 import { onLogoutRequest } from './lib/appSession.js';
 import { clearUserCache } from './lib/sync.js';
 import { Modal } from './components/ui.jsx';
@@ -39,6 +39,7 @@ export default function App() {
   const [recovery, setRecovery] = useState(false);
   const userRef = useRef(null);
   const manualLogout = useRef(false);
+  const loggingOut = useRef(false);
   const onboarded = useStore((s) => s.onboarded);
   const settings = useStore((s) => s.settings);
   const sessionExpired = useStore((s) => s.sessionExpired);
@@ -67,16 +68,22 @@ export default function App() {
       session.clear();
       return endSession();
     }
+    if (loggingOut.current) return;
+    loggingOut.current = true;
     manualLogout.current = true;
-    // نحاول رفع أي تغييرات معلقة قبل الخروج (التغييرات غير المرفوعة تبقى محفوظة لهذا الحساب)
-    const synced = await useStore.getState().waitForSync();
+    const within = (promise, ms, fallback) => Promise.race([promise, new Promise((r) => setTimeout(() => r(fallback), ms))]);
+    // نحاول رفع التغييرات المعلقة لثوانٍ قليلة فقط — وما لم يُرفع يبقى محفوظًا لهذا الحساب على الجهاز
+    const synced = await within(useStore.getState().waitForSync(), 3000, false);
     useStore.getState().closeSession();
     if (synced) clearUserCache(u.id);
     try {
-      await signOut();
+      await within(signOut(), 4000, null);
     } catch (e) {
-      useStore.getState().toast(e.message, { icon: 'clock' });
+      console.warn('[himmah:logout]', e?.message || e);
     }
+    // نضمن إزالة الجلسة محليًا حتى لو تعذر الوصول للخادم
+    forgetLocalSession();
+    loggingOut.current = false;
     endSession();
   }
 

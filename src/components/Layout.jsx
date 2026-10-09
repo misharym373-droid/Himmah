@@ -284,7 +284,6 @@ function MoreSheet({ onClose }) {
 }
 
 export function Footer() {
-  const surra = useStore((s) => s.settings.surraUrl);
   const links = [
     ['home', 'الرئيسية'],
     ['tasks', 'المهام'],
@@ -303,16 +302,16 @@ export function Footer() {
             {l}
           </button>
         ))}
-        <SurraLink url={surra} className="gold" />
+        <SurraLink className="gold" />
       </nav>
       <p className="tiny dim">© {new Date().getFullYear()} مسار · صُنع بشغف لحياة أكثر تنظيمًا</p>
     </footer>
   );
 }
 
-export function SurraLink({ url: custom, className = '', children }) {
+export function SurraLink({ className = '', children }) {
   const toast = useStore((s) => s.toast);
-  const url = custom || SURRA_URL;
+  const url = SURRA_URL;
   if (url)
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className={className}>

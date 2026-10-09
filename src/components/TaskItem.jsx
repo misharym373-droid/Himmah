@@ -95,15 +95,13 @@ function TaskItem({ task, showDate, dragHandle, current, compact, selectable, se
       <div className="grow">
         <div className="t-title ellipsis">{task.title}</div>
         <div className="t-meta">
-          {(showDate || task.time) && (
-            <span className={`meta-item ${overdue ? 'red' : ''}`}>
-              <Clock size={12} aria-hidden />
-              {showDate && relativeDay(task.date)}
-              {showDate && task.time && ' · '}
-              {task.time && <span className="num">{task.time}</span>}
-            </span>
-          )}
-          <span className="meta-item">{formatDuration(task.duration)}</span>
+          <span className={`meta-item ${overdue ? 'red' : ''}`}>
+            <Clock size={12} aria-hidden />
+            {showDate && relativeDay(task.date)}
+            {showDate && ' · '}
+            {task.time ? <span className="num">{task.time}</span> : 'طوال اليوم'}
+          </span>
+          {task.time && <span className="meta-item">{formatDuration(task.duration)}</span>}
           {!compact && (
             <span className="meta-item" style={{ color: area.color }}>
               <Glyph name={area.icon} size={12} /> {area.label}

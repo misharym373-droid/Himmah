@@ -1,5 +1,6 @@
 // مكونات واجهة أساسية قابلة لإعادة الاستخدام
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check } from 'lucide-react';
 import { useStore } from '../store.js';
 import { IconTile } from './Glyph.jsx';
@@ -36,7 +37,8 @@ export function Modal({ title, sub, onClose, children, footer, size = '', labell
       prev?.focus?.();
     };
   }, []);
-  return (
+  // النوافذ تُرسم مباشرة داخل body حتى لا يحجبها أو يزيحها أي عنصر أب
+  return createPortal(
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
       <div className={`modal ${size}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : labelledBy} ref={ref}>
         {(title || onClose) && (
@@ -55,7 +57,8 @@ export function Modal({ title, sub, onClose, children, footer, size = '', labell
         {children}
         {footer && <div className="modal-ft">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -67,7 +70,7 @@ export function Drawer({ title, icon, onClose, children, actions }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-  return (
+  return createPortal(
     <div className="drawer-wrap" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <aside className="drawer" role="dialog" aria-modal="true" aria-label={title}>
         <div className="drawer-hd">
@@ -84,7 +87,8 @@ export function Drawer({ title, icon, onClose, children, actions }) {
         </div>
         <div className="drawer-body">{children}</div>
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 }
 

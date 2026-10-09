@@ -1,6 +1,6 @@
 // النوافذ التفاعلية: الصوت، الصورة، التركيز، إعادة التخطيط، أنقذ يومي، عندي ساعة، وش أسوي الآن، التجربة التفاعلية
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Square, Check, X, ImagePlus, Loader2, Sparkles, Play, CalendarPlus, Trash2, ArrowLeft, Undo2, Keyboard, Calendar, Clock, Timer, Repeat, MicOff, RotateCcw, Pencil, Zap, Sun, CalendarArrowUp, CalendarDays, BatteryLow, BatteryMedium, BatteryFull, Siren, Hourglass } from 'lucide-react';
+import { Mic, Square, Check, X, ImagePlus, Camera, Loader2, Sparkles, Play, CalendarPlus, Trash2, ArrowLeft, Undo2, Keyboard, Calendar, Clock, Timer, Repeat, MicOff, RotateCcw, Pencil, Zap, Sun, CalendarArrowUp, CalendarDays, BatteryLow, BatteryMedium, BatteryFull, Siren, Hourglass } from 'lucide-react';
 import { useStore } from '../store.js';
 import { useAssistantState } from '../hooks.js';
 import { Modal, CheckBox } from './ui.jsx';
@@ -26,8 +26,8 @@ export function ParsedList({ items, onRemove, onOpen }) {
             <div className="bold">{t.title}</div>
             <div className="t-meta">
               <span className="meta-item"><Calendar size={12} /> {relativeDay(t.date)}</span>
-              <span className="meta-item num"><Clock size={12} /> {t.time || '—'}</span>
-              <span className="meta-item"><Timer size={12} /> {formatDuration(t.duration)}</span>
+              <span className="meta-item num"><Clock size={12} /> {t.time || 'طوال اليوم'}</span>
+              {t.time && <span className="meta-item"><Timer size={12} /> {formatDuration(t.duration)}</span>}
               {t.priority && t.priority !== 'med' && <span className="prio-tag" style={{ '--c': PRIORITIES[t.priority]?.color }}>{PRIORITIES[t.priority]?.label}</span>}
               {t.repeat?.type && t.repeat.type !== 'none' && <span className="meta-item"><Repeat size={12} /> متكررة</span>}
             </div>
@@ -66,7 +66,12 @@ export function ParsedEditor({ items, onChange }) {
               <input className="input" type="date" value={t.date} onChange={(e) => upd(i, { date: e.target.value })} />
             </label>
             <label className="field">
-              <span>الوقت</span>
+              <span className="row between">
+                الوقت
+                <button type="button" className={`chip chip-xs ${!t.time ? 'on' : ''}`} onClick={() => upd(i, { time: null })}>
+                  طوال اليوم
+                </button>
+              </span>
               <input className="input" type="time" value={t.time || ''} onChange={(e) => upd(i, { time: e.target.value || null })} />
             </label>
             <label className="field">
@@ -318,6 +323,16 @@ export function ImageModal() {
   const [err, setErr] = useState('');
   const [date, setDate] = useState(todayKey());
   const input = useRef(null);
+  const camera = useRef(null);
+  // لصق صورة مباشرة (Ctrl+V) على الكمبيوتر
+  useEffect(() => {
+    const onPaste = (e) => {
+      const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
+      if (file) onFile(file);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []); // eslint-disable-line
 
   async function onFile(file) {
     if (!file) return;
@@ -346,21 +361,30 @@ export function ImageModal() {
   }
   return (
     <Modal title="أضف مهمة من صورة" sub="صوّر ورقة واجب أو قائمة مهام، ومسار يستخرج المهام منها" onClose={close} size="wide">
-      <input ref={input} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.target.files[0])} />
+      {/* اختيار من المعرض/الملفات (يعمل على الجوال والكمبيوتر) + التقاط بالكاميرا على الجوال */}
+      <input ref={input} type="file" accept="image/*" hidden onChange={(e) => (onFile(e.target.files[0]), (e.target.value = ''))} />
+      <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => (onFile(e.target.files[0]), (e.target.value = ''))} />
       {!img ? (
-        <button
-          className="card"
-          style={{ width: '100%', borderStyle: 'dashed', borderWidth: 2, textAlign: 'center', padding: 40 }}
-          onClick={() => input.current.click()}
+        <div
+          className="drop-zone"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => (e.preventDefault(), onFile(e.dataTransfer.files[0]))}
         >
-          <div className="e-ico" style={{ margin: '0 auto 12px', width: 70, height: 70, borderRadius: 22, display: 'grid', placeItems: 'center', background: 'rgba(var(--primary-rgb),.14)', color: 'var(--primary-soft)' }}>
-            <ImagePlus size={32} />
+          <div className="drop-ico">
+            <ImagePlus size={30} />
           </div>
-          <div className="bold">اسحب صورة هنا أو اضغط للاختيار</div>
-          <div className="tiny muted mt-s">يدعم العربية والإنجليزية · الصورة تُعالج على جهازك</div>
-        </button>
+          <div className="bold">اختر صورة من جهازك أو صوّر ورقة</div>
+          <div className="tiny muted">أو اسحب الصورة هنا، أو الصقها (Ctrl+V)</div>
+          <div className="row wrap" style={{ justifyContent: 'center', marginTop: 6 }}>
+            <button className="btn btn-primary" onClick={() => input.current.click()}>
+              <ImagePlus /> اختيار صورة
+            </button>
+            <button className="btn show-mobile" onClick={() => camera.current.click()}>
+              <Camera /> التقاط صورة
+            </button>
+          </div>
+          <div className="tiny dim">يدعم العربية والإنجليزية · الصورة تُعالج على جهازك</div>
+        </div>
       ) : (
         <div className="grid g2" style={{ alignItems: 'start' }}>
           <div>

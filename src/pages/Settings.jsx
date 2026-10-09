@@ -7,7 +7,7 @@ import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import { Switch, CardTitle, useConfirm } from '../components/ui.jsx';
 import { DragHandle } from '../components/TaskItem.jsx';
-import { ACCENTS, PERSONAS, SURRA_URL } from '../config.js';
+import { ACCENTS, PERSONAS } from '../config.js';
 import { WIDGETS } from '../lib/seed.js';
 import { say } from '../lib/assistant.js';
 import { deleteAccount } from '../lib/auth.js';
@@ -94,9 +94,6 @@ const useSet = () => useStore((s) => s.setSetting);
 
 function Account() {
   const profile = useStore((s) => s.profile);
-  const surra = useStore((s) => s.settings.surraUrl);
-  const set = useSet();
-  const [url, setUrl] = useState(surra || SURRA_URL);
   const confirm = useConfirm();
   const isDemo = useStore((s) => s.sync.mode) === 'local';
   const [deleting, setDeleting] = useState(false);
@@ -121,20 +118,6 @@ function Account() {
       <Row t="تسجيل الخروج" d={isDemo ? 'بيانات التجربة تبقى على هذا الجهاز' : 'بياناتك تبقى محفوظة في حسابك'}>
         <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => requestLogout() })}>
           <LogOut /> تسجيل الخروج
-        </button>
-      </Row>
-      <Row t="رابط صُرّة لإدارة الأموال" d="يُستخدم لزر «فتح صُرّة» في الملف الشخصي والفوتر">
-        <input className="input" style={{ width: 260, maxWidth: '100%' }} dir="ltr" placeholder="https://…" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <button
-          className="btn btn-sm btn-primary"
-          onClick={() => {
-            const v = url.trim();
-            if (v && !/^https?:\/\//.test(v)) return useStore.getState().toast('الرابط يجب أن يبدأ بـ https://');
-            set('surraUrl', v);
-            useStore.getState().toast('تم حفظ الرابط', { icon: 'check' });
-          }}
-        >
-          حفظ
         </button>
       </Row>
       {!isDemo && (
@@ -307,12 +290,21 @@ function Language() {
 }
 
 function Privacy() {
-  const s = useStore((x) => x.settings);
+  const settings = useStore((x) => x.settings);
+  const isDemo = useStore((x) => x.sync.mode) === 'local';
+  const s = { ...settings, __demo: isDemo };
   const set = useSet();
   return (
     <>
       <CardTitle icon={<Shield size={18} />}>الخصوصية</CardTitle>
-      <Row t="أين تُحفظ بياناتي؟" d="كل بياناتك محفوظة على هذا الجهاز فقط (LocalStorage). لا يتم إرسال أي بيانات لأي خادم." />
+      <Row
+        t="أين تُحفظ بياناتي؟"
+        d={
+          s.__demo
+            ? 'في وضع التجربة بدون حساب: البيانات محفوظة على هذا الجهاز فقط ولا تُرسل لأي خادم.'
+            : 'بياناتك محفوظة في حسابك على خوادم آمنة (Supabase) ومشفّرة أثناء النقل، وكل مستخدم يرى بياناته فقط. ونحتفظ بنسخة مؤقتة على جهازك للعمل بدون إنترنت.'
+        }
+      />
       <Row t="إخفاء الإحصائيات من الرئيسية" d="مفيد عند مشاركة الشاشة">
         <Switch on={s.privacy?.hideStatsOnHome} onChange={(v) => set('privacy', { ...s.privacy, hideStatsOnHome: v })} label="إخفاء الإحصائيات" />
       </Row>

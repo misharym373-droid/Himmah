@@ -18,7 +18,6 @@ export default function Profile() {
   const profile = useStore((s) => s.profile);
   const user = useStore((s) => s.user);
   const streak = useStore((s) => s.streak);
-  const surra = useStore((s) => s.settings.surraUrl);
   const setProfile = useStore((s) => s.setProfile);
   const goals = useStore((s) => s.goals);
   const tasks = useStore((s) => s.tasks);
@@ -95,14 +94,19 @@ export default function Profile() {
         </div>
         <div style={{ minWidth: 220 }} className="grow">
           <div className="row between small">
-            <span className="muted">XP</span>
+            <span className="muted">
+              المستوى <span className="num">{lv.level}</span> ← <span className="num">{lv.level + 1}</span>
+            </span>
             <span className="bold">
-              <Num value={user.xp} /> رصيد · <span className="num">{fmt(user.totalXp)}</span> إجمالي
+              <span className="num">{fmt(lv.into)}</span> / <span className="num">{fmt(lv.need)}</span> XP
             </span>
           </div>
           <Bar value={lv.pct} className="mt-s" />
           <div className="tiny muted mt-s">
-            <span className="num">{fmt(lv.need - lv.into)}</span> XP للمستوى {lv.level + 1}
+            باقي <b className="num">{fmt(lv.need - lv.into)}</b> XP للمستوى <span className="num">{lv.level + 1}</span>
+          </div>
+          <div className="tiny dim mt-s">
+            إجمالي XP: <span className="num">{fmt(user.totalXp)}</span> · رصيد المكافآت: <span className="num">{fmt(user.xp)}</span>
           </div>
         </div>
       </div>
@@ -192,7 +196,7 @@ export default function Profile() {
               <div className="bold">صُرّة لإدارة الأموال</div>
               <div className="small muted">إدارة أموالك ومصروفاتك وأهدافك المالية في مكان واحد.</div>
             </div>
-            <SurraLink url={surra} className="btn btn-sm btn-primary">
+            <SurraLink className="btn btn-sm btn-primary">
               فتح صُرّة <ExternalLink />
             </SurraLink>
           </div>

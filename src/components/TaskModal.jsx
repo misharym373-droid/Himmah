@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Sparkles, Trash2, Plus, X, Wand2, Check, Timer } from 'lucide-react';
 import { useStore } from '../store.js';
-import { Modal } from './ui.jsx';
+import { Modal, Switch } from './ui.jsx';
 import { Glyph, IconPicker } from './Glyph.jsx';
 import { AREAS, PRIORITIES, TASK_ICONS } from '../config.js';
 import { DAYS_SHORT, todayKey } from '../lib/date.js';
@@ -24,6 +24,8 @@ export default function TaskModal({ task, preset = {} }) {
     repeat: { type: 'none', days: [] }, goalId: '', subtasks: [], ...preset, ...(task || {}),
   }));
   const [iconTouched, setIconTouched] = useState(editing);
+  // بدون وقت = طوال اليوم (افتراضي للمهمة الجديدة إذا لم يُحدد وقت)
+  const [allDay, setAllDay] = useState(() => !(task?.time || preset.time));
   const [newSub, setNewSub] = useState('');
   const [showBreak, setShowBreak] = useState(false);
   const [err, setErr] = useState('');
@@ -42,11 +44,12 @@ export default function TaskModal({ task, preset = {} }) {
   function smartParse() {
     const [p] = parseTasks(f.title, { base: f.date || todayKey() });
     if (!p) return;
+    if (p.time) setAllDay(false);
     setF((x) => ({ ...x, title: p.title, time: p.time || x.time, duration: p.duration, date: p.date, area: p.area, icon: p.icon, repeat: p.repeat.type !== 'none' ? p.repeat : x.repeat }));
   }
   function save() {
     if (!f.title.trim()) return setErr('اكتب اسم المهمة');
-    const data = { ...f, title: f.title.trim(), time: f.time || null, duration: Number(f.duration) || 30, goalId: f.goalId || null };
+    const data = { ...f, title: f.title.trim(), time: allDay ? null : f.time || null, duration: Number(f.duration) || 30, goalId: f.goalId || null };
     if (editing) updateTask(task.id, data);
     else addTask(data);
     useStore.getState().toast(editing ? 'تم حفظ التعديلات' : `تمت إضافة "${data.title}"`, { icon: 'check' });
@@ -108,19 +111,30 @@ export default function TaskModal({ task, preset = {} }) {
           <IconPicker value={f.icon} options={TASK_ICONS} onChange={(i) => (set('icon', i), setIconTouched(true))} />
         </div>
 
-        <div className="grid g3">
+        <div className="set-row" style={{ padding: '4px 0', borderBottom: 0 }}>
+          <div className="grow">
+            <div className="t">طوال اليوم</div>
+            <div className="d">بدون وقت محدد — تنجزها في أي وقت خلال اليوم وتعلّمها «تم» متى ما خلصت</div>
+          </div>
+          <Switch on={allDay} onChange={(v) => (setAllDay(v), v ? set('time', '') : set('time', f.time || '09:00'))} label="طوال اليوم" />
+        </div>
+        <div className={`grid ${allDay ? 'g1' : 'g3'}`}>
           <label className="field">
             <span>التاريخ</span>
             <input className="input" type="date" value={f.date} onChange={(e) => set('date', e.target.value)} />
           </label>
-          <label className="field">
-            <span>الوقت</span>
-            <input className="input" type="time" value={f.time || ''} onChange={(e) => set('time', e.target.value)} />
-          </label>
-          <label className="field">
-            <span>المدة (دقيقة)</span>
-            <input className="input" type="number" min="5" step="5" value={f.duration} onChange={(e) => set('duration', e.target.value)} />
-          </label>
+          {!allDay && (
+            <>
+              <label className="field">
+                <span>الوقت</span>
+                <input className="input" type="time" value={f.time || ''} onChange={(e) => set('time', e.target.value)} />
+              </label>
+              <label className="field">
+                <span>المدة (دقيقة)</span>
+                <input className="input" type="number" min="5" step="5" value={f.duration} onChange={(e) => set('duration', e.target.value)} />
+              </label>
+            </>
+          )}
         </div>
         <div className="chips">
           {DURS.map((d) => (

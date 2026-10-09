@@ -140,7 +140,7 @@ export function demoData() {
     interests: ['التقنية', 'الرياضة', 'القراءة'], personalGoals: ['تحسين الدراسة', 'زيادة اللياقة', 'تنظيم الوقت'],
     mainGoal: 'التفوق في الجامعة',
   };
-  d.user = { totalXp: xpAtLevel(14) + 285, xp: 2840 };
+  d.user = { totalXp: xpAtLevel(4) + 1850, xp: 2840 };
 
   // مهام اليوم — 82% مكتملة (بالوزن حسب المدة)
   const done = [

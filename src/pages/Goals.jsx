@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Target, Plus, Sparkles, Trash2, Minus, Check, ChevronDown, CalendarDays, Clock, ListChecks, Wand2, ArrowLeft } from 'lucide-react';
+import { Target, Plus, Trash2, Minus, Check, ChevronDown, CalendarDays, Clock, ListChecks, ArrowLeft } from 'lucide-react';
 import { useStore, goalProgress } from '../store.js';
 import { useRoute, navigate } from '../router.js';
-import { Modal, Bar, Ring, Empty, CardTitle, useConfirm } from '../components/ui.jsx';
+import { Bar, Ring, Empty, CardTitle, useConfirm } from '../components/ui.jsx';
 import TaskItem from '../components/TaskItem.jsx';
-import { goalBreakdown, monthsFromText } from '../lib/assistant.js';
-import { AREAS, GOAL_ICONS } from '../config.js';
-import { todayKey, addDays, formatShort, diffDays, timeAgo } from '../lib/date.js';
-import { Glyph, IconTile } from '../components/Glyph.jsx';
+import { AREAS } from '../config.js';
+import { todayKey, formatShort, diffDays, timeAgo } from '../lib/date.js';
+import { IconTile } from '../components/Glyph.jsx';
+import { GoalPlanModal, PlanGoalCard } from '../components/GoalPlan.jsx';
 
 export default function Goals() {
   const { params } = useRoute();
@@ -28,7 +28,7 @@ export default function Goals() {
             </span>
             أهدافي
           </h1>
-          <p>كل هدف يتحول إلى مراحل، ثم أسابيع، ثم مهام يومية — وتقدمك يُحسب تلقائيًا</p>
+          <p>كل هدف يتحول إلى خطة: مراحل، ثم أسابيع بتواريخها، ثم جلسة مفصلة لكل يوم — وتقدمك يُحسب تلقائيًا</p>
         </div>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
           <Plus /> هدف جديد
@@ -40,12 +40,13 @@ export default function Goals() {
         </div>
       ) : (
         <div className="grid g2">
-          {goals.map((g, i) => (
-            <GoalCard key={g.id} g={g} tasks={tasks} open={openId === g.id} onToggle={() => setOpenId(openId === g.id ? null : g.id)} delay={i} />
-          ))}
+          {goals.map((g, i) => {
+            const Card = g.plan?.startDate ? PlanGoalCard : GoalCard;
+            return <Card key={g.id} g={g} tasks={tasks} open={openId === g.id} onToggle={() => setOpenId(openId === g.id ? null : g.id)} delay={i} />;
+          })}
         </div>
       )}
-      {creating && <GoalModal onClose={() => setCreating(false)} />}
+      {creating && <GoalPlanModal onClose={(g) => (setCreating(false), g && setOpenId(g.id))} />}
     </>
   );
 }
@@ -198,126 +199,13 @@ function GoalCard({ g, tasks, open, onToggle, delay }) {
             </div>
           </div>
           <div className="row mt" style={{ justifyContent: 'flex-end' }}>
-            <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'حذف الهدف', body: `هل تريد حذف "${g.title}"؟ المهام المرتبطة ستبقى.`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteGoal(g.id) })}>
+            <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'حذف الهدف', body: `سيتم حذف "${g.title}" وكل مهامه المرتبطة. تقدر تتراجع مباشرة بعد الحذف.`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteGoal(g.id) })}>
               <Trash2 /> حذف الهدف
             </button>
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-const G_ICONS = GOAL_ICONS;
-
-function GoalModal({ onClose }) {
-  const addGoal = useStore((s) => s.addGoal);
-  const [title, setTitle] = useState('');
-  const [months, setMonths] = useState(6);
-  const [area, setArea] = useState('study');
-  const [icon, setIcon] = useState('target');
-  const [preview, setPreview] = useState(null);
-  const [addDaily, setAddDaily] = useState(true);
-  function gen() {
-    if (!title.trim()) return;
-    const m = /شهر|سنة|سنه|عام/.test(title) ? monthsFromText(title) : months;
-    setMonths(m);
-    setPreview(goalBreakdown(title, m));
-  }
-  function save() {
-    if (!title.trim()) return;
-    const b = preview || goalBreakdown(title, months);
-    addGoal({ title: title.trim(), months, area, icon, breakdown: b, addDaily, deadline: addDays(todayKey(), months * 30) });
-    useStore.getState().toast('تم إنشاء الهدف مع خطته', { icon: 'sparkles' });
-    onClose();
-  }
-  return (
-    <Modal
-      title="هدف جديد"
-      sub="اكتب هدفك الكبير، ومسار يقسمه تلقائيًا"
-      onClose={onClose}
-      size="wide"
-      footer={
-        <>
-          <button className="btn btn-ghost" onClick={onClose}>
-            إلغاء
-          </button>
-          <button className="btn btn-primary" onClick={save} disabled={!title.trim()}>
-            <Check /> إنشاء الهدف
-          </button>
-        </>
-      }
-    >
-      <div className="col" style={{ gap: 16 }}>
-        <label className="field">
-          <span>الهدف</span>
-          <div className="row">
-            <input className="input" value={title} onChange={(e) => (setTitle(e.target.value), setPreview(null))} placeholder="تعلم الإنجليزية خلال 6 أشهر" autoFocus onKeyDown={(e) => e.key === 'Enter' && gen()} />
-            <button className="btn" onClick={gen} disabled={!title.trim()}>
-              <Wand2 /> قسّم الهدف
-            </button>
-          </div>
-        </label>
-        <div className="grid g2">
-          <div className="field">
-            <span>المدة</span>
-            <div className="chips">
-              {[1, 3, 6, 12].map((m) => (
-                <button key={m} className={`chip ${months === m ? 'on' : ''}`} onClick={() => (setMonths(m), preview && setPreview(goalBreakdown(title, m)))}>
-                  {m === 12 ? 'سنة' : m === 1 ? 'شهر' : <><span className="num">{m}</span> أشهر</>}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="field">
-            <span>المجال</span>
-            <select className="select" value={area} onChange={(e) => setArea(e.target.value)}>
-              {Object.entries(AREAS).map(([k, a]) => (
-                <option key={k} value={k}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="field">
-          <span>الأيقونة</span>
-          <div className="chips">
-            {G_ICONS.map((i) => (
-              <button key={i} className={`chip icon-chip ${icon === i ? 'on' : ''}`} onClick={() => setIcon(i)} aria-label={i}>
-                <Glyph name={i} size={17} />
-              </button>
-            ))}
-          </div>
-        </div>
-        {preview && (
-          <div className="card tight glow onb-step">
-            <div className="row mb">
-              <Sparkles className="purple" size={18} />
-              <span className="bold">الخطة المقترحة</span>
-            </div>
-            <div className="col" style={{ gap: 8 }}>
-              <div className="small">
-                <b>الهدف:</b> {title}
-              </div>
-              {preview.months.map((m, i) => (
-                <div key={i} style={{ paddingInlineStart: 14, borderInlineStart: '2px solid rgba(var(--primary-rgb),.4)' }}>
-                  <div className="small bold">{m.title}</div>
-                  <div className="tiny muted">{m.weeks.slice(0, 3).join(' · ')}…</div>
-                </div>
-              ))}
-              <div className="small mt-s">
-                <b>مهام يومية:</b> {preview.daily.join('، ')}
-              </div>
-              <label className="row small mt-s" style={{ cursor: 'pointer' }}>
-                <input type="checkbox" checked={addDaily} onChange={(e) => setAddDaily(e.target.checked)} style={{ width: 17, height: 17, accentColor: 'var(--primary)' }} />
-                أضف المهام اليومية إلى يومي الآن
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-    </Modal>
   );
 }
 

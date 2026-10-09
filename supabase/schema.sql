@@ -75,6 +75,7 @@ create table if not exists public.goals (
   milestones    jsonb not null default '[]',
   daily         jsonb not null default '[]',
   last_activity timestamptz not null default now(),
+  plan          jsonb not null default '{}',
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
@@ -109,6 +110,7 @@ create table if not exists public.tasks (
   reminder        boolean not null default true,
   archived        boolean not null default false,
   deleted_at      timestamptz,
+  source          text not null default '' check (char_length(source) <= 20),
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );

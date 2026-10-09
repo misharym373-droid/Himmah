@@ -60,6 +60,17 @@ export async function signOut() {
   if (error && errorKind(error) !== 'network') throw new Error(authError(error));
 }
 
+// إزالة جلسة الدخول من هذا الجهاز مباشرة (احتياط إذا تعذر الوصول للخادم أثناء الخروج)
+export function forgetLocalSession() {
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      Object.keys(store).filter((k) => k.startsWith('himmah-auth')).forEach((k) => store.removeItem(k));
+    } catch (e) {
+      console.warn('[himmah:session]', e?.message || e);
+    }
+  }
+}
+
 export async function sendPasswordReset(email) {
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: redirectTo() });
   if (error) throw new Error(authError(error));

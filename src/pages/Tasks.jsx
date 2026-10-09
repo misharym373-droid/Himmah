@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ListChecks, Plus, Search, Trash2, RotateCcw, CheckCheck, CalendarClock, X, Repeat, SquareCheck } from 'lucide-react';
+import { ListChecks, Plus, Search, Trash2, RotateCcw, CheckCheck, CalendarClock, X, Repeat, SquareCheck, ImagePlus } from 'lucide-react';
 import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import TaskItem from '../components/TaskItem.jsx';
@@ -91,6 +91,9 @@ export default function Tasks() {
         <div className="row">
           <button className={`btn ${selecting ? 'btn-primary' : ''}`} onClick={() => (setSelecting(!selecting), setSel([]))}>
             <SquareCheck /> {selecting ? 'إلغاء التحديد' : 'تحديد'}
+          </button>
+          <button className="btn" onClick={() => open('image')}>
+            <ImagePlus /> من صورة
           </button>
           <button className="btn btn-primary" onClick={() => open('task')}>
             <Plus /> مهمة جديدة

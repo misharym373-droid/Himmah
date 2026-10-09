@@ -522,7 +522,7 @@ export function DayMap({ span = 'span-7', date = todayKey(), title = 'خريطة
             <div className="timeline" ref={scroller} style={{ maxHeight: 560, overflowY: 'auto', paddingInlineEnd: 4 }}>
               {list.map((t) => (
                 <div className={`tl-row ${t.id === currentId ? 'now' : ''}`} key={t.id} data-next={t.id === firstOpenId ? '1' : undefined}>
-                  <div className="tl-time">{t.time || '—'}</div>
+                  <div className="tl-time">{t.time || <span className="tl-allday">طوال اليوم</span>}</div>
                   <SortableTask task={t} current={t.id === currentId} />
                 </div>
               ))}

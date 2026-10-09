@@ -7,6 +7,7 @@ import { levelInfo, taskXp, ACHIEVEMENTS, dayProgress } from './lib/game.js';
 import { emptyData, demoData, makeTask, WIDGETS, DEFAULT_SETTINGS } from './lib/seed.js';
 import { playSound, vibrate } from './lib/fx.js';
 import { remapIds } from './lib/migrate.js';
+import { planSessions } from './lib/goalPlan.js';
 
 const PERSIST_KEYS = [
   'version', 'onboarded', 'user', 'profile', 'settings', 'dashboard', 'tasks', 'goals', 'habits', 'challenges', 'rewards',
@@ -474,7 +475,15 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— الأهداف —————
-  addGoal({ title, deadline, area = 'study', icon = 'target', months = 6, breakdown, addDaily = true }) {
+  addGoal({ title, deadline, area = 'study', icon = 'target', months = 6, breakdown, addDaily = true, plan }) {
+    // هدف بخطة كاملة: مهمة مفصلة لكل يوم عمل طوال المدة
+    if (plan) {
+      const g = { id: uid(), title, area, icon, deadline: plan.endDate, months, milestones: [], daily: [], plan, createdAt: Date.now(), lastActivity: Date.now() };
+      const created = planSessions(plan, title).map((p) => makeTask({ ...p, goalId: g.id, area, icon, priority: 'med', source: 'plan', repeat: { type: 'none', days: [] } }));
+      set((s) => ({ goals: [...s.goals, g], tasks: [...s.tasks, ...created] }));
+      get().checkAchievements();
+      return g;
+    }
     const milestones = breakdown
       ? breakdown.months.map((m) => ({ id: uid(), title: m.title.replace(/^الشهر \d+: /, ''), level: 'month', total: m.weeks.length, done: 0, weeks: m.weeks }))
       : [];
@@ -491,11 +500,27 @@ export const useStore = create((set, get) => ({
     get().checkAchievements();
     return g;
   },
+  // تعديل الجدول الأسبوعي/الوقت: يُطبَّق على كل الأيام القادمة (المهام المنجزة والمضافة يدويًا تبقى كما هي)
+  replanGoal(goalId, { weekly, time }) {
+    const g = get().goals.find((x) => x.id === goalId);
+    if (!g?.plan) return 0;
+    const T = todayKey();
+    const plan = { ...g.plan, weekly, time: time ?? g.plan.time, restDays: weekly.filter((d) => d.rest).map((d) => d.dow) };
+    const keep = (t) => !(t.goalId === goalId && t.source === 'plan' && !t.done && t.date >= T);
+    const created = planSessions(plan, g.title, T).map((p) => makeTask({ ...p, goalId, area: g.area, icon: g.icon, priority: 'med', source: 'plan', repeat: { type: 'none', days: [] } }));
+    set((s) => ({ goals: s.goals.map((x) => (x.id === goalId ? { ...x, plan, lastActivity: Date.now() } : x)), tasks: [...s.tasks.filter(keep), ...created] }));
+    return created.length;
+  },
   updateGoal: (id, patch) => set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, ...patch, lastActivity: Date.now() } : g)) })),
+  // حذف الهدف يحذف كل مهامه (مع إمكانية التراجع)
   deleteGoal(id) {
     const g = get().goals.find((x) => x.id === id);
-    set((s) => ({ goals: s.goals.filter((x) => x.id !== id), tasks: s.tasks.map((t) => (t.goalId === id ? { ...t, goalId: null } : t)) }));
-    if (g) get().toast(`تم حذف الهدف "${g.title}"`, { action: { label: 'تراجع', run: () => set((s) => ({ goals: [...s.goals, g] })) } });
+    const removed = get().tasks.filter((t) => t.goalId === id);
+    set((s) => ({ goals: s.goals.filter((x) => x.id !== id), tasks: s.tasks.filter((t) => t.goalId !== id) }));
+    if (g)
+      get().toast(`تم حذف الهدف "${g.title}" و${removed.length} من مهامه`, {
+        action: { label: 'تراجع', run: () => set((s) => ({ goals: [...s.goals, g], tasks: [...s.tasks, ...removed] })) },
+      });
   },
   stepMilestone(goalId, msId, delta) {
     set((s) => ({
@@ -666,6 +691,11 @@ export function repeatMatches(tpl, date) {
   return false;
 }
 export function goalProgress(g, tasks = []) {
+  // الأهداف ذات الخطة: التقدم = المهام المنجزة من كل مهام الخطة
+  if (g.plan?.startDate) {
+    const gt = tasks.filter((t) => t.goalId === g.id && !t.deletedAt && !t.template);
+    return gt.length ? Math.round((gt.filter((t) => t.done).length / gt.length) * 100) : 0;
+  }
   const total = g.milestones.reduce((a, m) => a + m.total, 0);
   const done = g.milestones.reduce((a, m) => a + m.done, 0);
   const gt = tasks.filter((t) => t.goalId === g.id && !t.deletedAt && !t.template);

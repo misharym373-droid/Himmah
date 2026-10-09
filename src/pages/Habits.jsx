@@ -3,7 +3,7 @@ import { Repeat, Plus, Minus, Trash2, Check, Flame } from 'lucide-react';
 import { useStore } from '../store.js';
 import { Modal, Bar, Ring, Empty, useConfirm } from '../components/ui.jsx';
 import { habitStreak, habitRate } from '../lib/game.js';
-import { todayKey, addDays, fromKey, DAYS_SHORT } from '../lib/date.js';
+import { todayKey, addDays, fromKey, DAYS_SHORT, formatShort, formatLong } from '../lib/date.js';
 import { Glyph, IconTile, IconPicker } from '../components/Glyph.jsx';
 
 export default function Habits() {
@@ -98,6 +98,12 @@ function HabitCard({ h, delay }) {
         )}
       </div>
       <div className="mt">
+        <div className="row between tiny muted mb">
+          <span>آخر 5 أسابيع</span>
+          <span>
+            {formatShort(cells[0])} ← {formatShort(cells[cells.length - 1])}
+          </span>
+        </div>
         <div className="heat mb" style={{ gap: 5 }}>
           {DAYS_SHORT.map((d) => (
             <span key={d} className="tiny dim" style={{ textAlign: 'center' }}>
@@ -113,13 +119,13 @@ function HabitCard({ h, delay }) {
               <button
                 key={d}
                 className={`c ${lvl} ${d === T ? 'today' : ''}`}
-                title={`${d}: ${val}/${h.target}`}
-                aria-label={`${d}: ${val >= h.target ? 'مكتمل' : 'غير مكتمل'}`}
+                title={`${formatLong(d)}: ${val}/${h.target}`}
+                aria-label={`${formatLong(d)}: ${val >= h.target ? 'مكتمل' : 'غير مكتمل'}`}
                 disabled={d > T}
                 onClick={() => logHabit(h.id, d, val >= h.target ? -h.target : h.target - val)}
                 style={{ opacity: d > T ? 0.25 : 1 }}
               >
-                {val >= h.target ? <Check size={11} /> : ''}
+                <span className="num">{fromKey(d).getDate()}</span>
               </button>
             );
           })}
