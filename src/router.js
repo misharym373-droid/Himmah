@@ -1,7 +1,7 @@
 // موجّه بسيط يعتمد على الـHash (يعمل على GitHub Pages بدون إعدادات خادم)
 import { useSyncExternalStore } from 'react';
 
-export const ROUTES = ['home', 'tasks', 'schedule', 'goals', 'habits', 'stats', 'achievements', 'rewards', 'shared', 'profile', 'settings'];
+export const ROUTES = ['home', 'tasks', 'schedule', 'goals', 'habits', 'stats', 'achievements', 'rewards', 'shared', 'profile', 'settings', 'prayer'];
 
 function read() {
   const h = window.location.hash.replace(/^#\/?/, '');

@@ -128,6 +128,15 @@ export const rowToProject = (r) => ({ id: r.id, name: r.name, icon: r.icon, memb
 export const focusToRow = (f, user_id) => ({ id: f.id, user_id, date: f.date, minutes: clamp(f.minutes, 0, 1440, 0), task_id: f.taskId || null });
 export const rowToFocus = (r) => ({ id: r.id, date: r.date, minutes: r.minutes, taskId: r.task_id });
 
+// ————— سجل الصلاة (صف لكل يوم) —————
+const PSTATUS = ['ontime', 'late'];
+export const prayerToRow = (p, user_id) => ({
+  id: p.id, user_id, date: p.date,
+  fajr: PSTATUS.includes(p.fajr) ? p.fajr : null, dhuhr: PSTATUS.includes(p.dhuhr) ? p.dhuhr : null, asr: PSTATUS.includes(p.asr) ? p.asr : null,
+  maghrib: PSTATUS.includes(p.maghrib) ? p.maghrib : null, isha: PSTATUS.includes(p.isha) ? p.isha : null,
+});
+export const rowToPrayer = (r) => ({ id: r.id, date: r.date, fajr: r.fajr, dhuhr: r.dhuhr, asr: r.asr, maghrib: r.maghrib, isha: r.isha });
+
 // ————— المستندات الفردية (صف واحد لكل مستخدم) —————
 export const profileToRow = (p, user_id) => ({
   user_id,
@@ -191,6 +200,7 @@ export const COLLECTIONS = [
   { key: 'rewards', table: 'rewards', toRow: rewardToRow, fromRow: rowToReward },
   { key: 'projects', table: 'projects', toRow: projectToRow, fromRow: rowToProject },
   { key: 'focusLog', table: 'focus_sessions', toRow: focusToRow, fromRow: rowToFocus },
+  { key: 'prayers', table: 'prayer_log', toRow: prayerToRow, fromRow: rowToPrayer },
 ];
 // المستندات الفردية: أي تغيير في أحد مفاتيحها يرفع الصف كاملًا
 export const DOCS = [
@@ -198,4 +208,4 @@ export const DOCS = [
   { table: 'user_settings', keys: ['settings', 'dashboard', 'onboarded', 'energy', 'flags', 'notifications', 'dismissedInsights'], toRow: settingsToRow, fromRow: rowToSettings },
   { table: 'user_progress', keys: ['user', 'streak', 'achievements', 'rewardHistory'], toRow: progressToRow, fromRow: rowToProgress },
 ];
-export const TABLE_ORDER = ['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions'];
+export const TABLE_ORDER = ['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions', 'prayer_log'];

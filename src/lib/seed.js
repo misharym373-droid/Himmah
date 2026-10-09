@@ -14,9 +14,10 @@ export const DEFAULT_SETTINGS = {
   persona: 'friend',
   language: 'ar',
   browserNotifications: false,
-  notif: { upcoming: true, overdue: true, streak: true, endOfDay: true, focus: true, goals: true, achievements: true, assistant: true },
+  notif: { upcoming: true, overdue: true, streak: true, endOfDay: true, focus: true, goals: true, achievements: true, assistant: true, prayer: true },
   privacy: { hideStatsOnHome: false, analytics: false },
   surraUrl: '',
+  prayer: { city: 'yanbu', remind: true, before: 10 },
 };
 
 // بطاقات الرئيسية: core = الأساسية (أعلى الصفحة بترتيب ثابت)، more = أقسام قابلة للطي أسفل الصفحة
@@ -24,6 +25,7 @@ export const WIDGETS = [
   { id: 'summary', label: 'ملخص اليوم', section: 'core' },
   { id: 'top3', label: 'أهم 3 مهام اليوم', section: 'core' },
   { id: 'next', label: 'المهمة القادمة', section: 'core' },
+  { id: 'prayer', label: 'صلوات اليوم', section: 'core' },
   { id: 'goals', label: 'اختصار الأهداف', section: 'core' },
   { id: 'focus', label: 'التركيز', section: 'core' },
   { id: 'dayMap', label: 'خريطة اليوم', section: 'more' },
@@ -85,6 +87,7 @@ export function emptyData(user) {
     ],
     projects: [],
     focusLog: [],
+    prayers: [],
     energy: {},
     streak: { count: 0, best: 0, lastDate: null, days: {} },
     flags: {},

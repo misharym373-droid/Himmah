@@ -11,6 +11,7 @@ import { Modal } from './components/ui.jsx';
 import { MigrationBanner } from './components/Migration.jsx';
 import { todayKey, toMin, nowMin } from './lib/date.js';
 import { isOverdue } from './lib/game.js';
+import { prayerTimes, cityOf, PRAYERS, fmtTime } from './lib/prayer.js';
 import { Scene, Rail, Header, BottomNav, Footer, QuickInput } from './components/Layout.jsx';
 import { Toasts, FxLayer, FocusMode, ModalRoot } from './components/Overlays.jsx';
 import Auth from './pages/Auth.jsx';
@@ -28,7 +29,8 @@ const Rewards = lazy(() => import('./pages/Rewards.jsx'));
 const Shared = lazy(() => import('./pages/Shared.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
-const PAGES = { tasks: Tasks, schedule: Schedule, goals: Goals, habits: Habits, stats: Stats, achievements: Achievements, rewards: Rewards, shared: Shared, profile: Profile, settings: Settings };
+const Prayer = lazy(() => import('./pages/Prayer.jsx'));
+const PAGES = { tasks: Tasks, schedule: Schedule, goals: Goals, habits: Habits, stats: Stats, achievements: Achievements, rewards: Rewards, shared: Shared, profile: Profile, settings: Settings, prayer: Prayer };
 
 const DEMO_USER = { id: 'demo', name: 'مشاري', email: 'demo@himmah.app', demo: true };
 const toUser = (u) => ({ id: u.id, email: u.email, name: u.user_metadata?.name || '', phone: u.user_metadata?.phone || '' });
@@ -376,6 +378,20 @@ function useReminders() {
       if (open.length && now >= sleep - 60 && now < sleep && notified.endOfDay !== T) {
         st.notify('endOfDay', 'sunset', tr('قارب يومك على الانتهاء'), trf('باقي {n} مهام — انقل غير الضروري لبكرة وارتح', { n: open.length }));
         mark('endOfDay');
+      }
+      // 5) تذكير الصلاة قبل الأذان (مرة لكل صلاة في اليوم)
+      if (st.settings.prayer?.remind !== false && st.settings.notif?.prayer !== false) {
+        const before = st.settings.prayer?.before ?? 10;
+        const times = prayerTimes(T, cityOf(st.settings));
+        const row = st.prayers.find((p) => p.date === T);
+        for (const p of PRAYERS) {
+          const diff = times[p.key] - now;
+          const k = 'prayer-' + p.key;
+          if (!row?.[p.key] && diff > 0 && diff <= before && notified[k] !== T) {
+            st.notify('prayer', 'bell', trf('اقترب أذان {name}', { name: tr(p.label) }), trf('بعد {n} دقيقة — {time}', { n: diff, time: fmtTime(times[p.key]) }), { force: true });
+            mark(k);
+          }
+        }
       }
       // تنظيف المعرفات القديمة
       if (Object.keys(upd).length > 200) for (const k of Object.keys(upd).slice(0, 100)) delete upd[k];

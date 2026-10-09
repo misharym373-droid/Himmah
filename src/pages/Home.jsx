@@ -4,6 +4,7 @@ import { navigate } from '../router.js';
 import { QuickInput } from '../components/Layout.jsx';
 import { WIDGETS } from '../lib/seed.js';
 import { tr } from '../i18n/index.js';
+import { PrayerStrip } from './Prayer.jsx';
 import {
   Greeting, SummaryStrip, Insights, TopThree, NextTask, GoalsShortcut, FocusCard, Collapsible, DayMap, HabitsWidget, StatsWidget, XpWidget, AIWidget,
   BalanceWidget, TimeMachineWidget,
@@ -36,6 +37,7 @@ export default function Home() {
       <div className="dash home">
         <Greeting input={<QuickInput id="home-input" big />} />
         {shown('summary') && <SummaryStrip />}
+        {shown('prayer') && <PrayerStrip />}
         <Insights />
         {shown('top3') && <TopThree span={topSpan} />}
         {shown('next') && <NextTask span={nextSpan} />}

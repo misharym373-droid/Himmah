@@ -213,6 +213,7 @@ function Notifications() {
   const set = useSet();
   const [perm, setPerm] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
   const types = [
+    ['prayer', 'تذكير الصلاة', 'تنبيه قبل الأذان — الوقت والمدينة من صفحة «صلاتي»'],
     ['upcoming', 'المهمة القادمة', 'تذكير قبل بدء المهمة بـ 15 دقيقة'],
     ['overdue', 'المهام المتأخرة', 'تنبيه واحد يوميًا يجمع المهام المتأخرة'],
     ['streak', 'تذكير الـStreak', 'مساءً، إذا كان يومك غير مكتمل'],

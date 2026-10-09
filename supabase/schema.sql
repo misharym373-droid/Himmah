@@ -176,6 +176,21 @@ create table if not exists public.focus_sessions (
   created_at timestamptz not null default now()
 );
 
+-- ————— سجل الصلاة: صف لكل يوم (في وقتها / قضاء) —————
+create table if not exists public.prayer_log (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  date       date not null,
+  fajr       text check (fajr in ('ontime', 'late')),
+  dhuhr      text check (dhuhr in ('ontime', 'late')),
+  asr        text check (asr in ('ontime', 'late')),
+  maghrib    text check (maghrib in ('ontime', 'late')),
+  isha       text check (isha in ('ontime', 'late')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, date)
+);
+
 -- ————— الفهارس —————
 create index if not exists tasks_user_date_idx on public.tasks (user_id, date);
 create index if not exists tasks_user_template_idx on public.tasks (user_id) where is_template;
@@ -193,7 +208,7 @@ create index if not exists focus_task_idx on public.focus_sessions (task_id) whe
 do $$
 declare t text;
 begin
-  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects']
+  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'prayer_log']
   loop
     execute format('drop trigger if exists set_updated_at on public.%I', t);
     execute format('create trigger set_updated_at before update on public.%I for each row execute function public.set_updated_at()', t);
@@ -204,7 +219,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions']
+  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions', 'prayer_log']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "own_select" on public.%I', t);

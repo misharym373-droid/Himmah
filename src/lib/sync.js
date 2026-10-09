@@ -49,6 +49,7 @@ export async function fetchRemote() {
     ...COLLECTIONS.map((c) => {
       if (c.table === 'tasks') return selectAll(() => supabase.from('tasks').select('*').or(`date.gte.${since},is_template.eq.true`).order('date'));
       if (c.table === 'focus_sessions') return selectAll(() => supabase.from('focus_sessions').select('*').gte('date', since).order('date'));
+      if (c.table === 'prayer_log') return selectAll(() => supabase.from('prayer_log').select('*').gte('date', since).order('date'));
       return selectAll(() => supabase.from(c.table).select('*').order('created_at'));
     }),
   ]);

@@ -8,11 +8,12 @@ import { emptyData, demoData, makeTask, WIDGETS, DEFAULT_SETTINGS } from './lib/
 import { playSound, vibrate } from './lib/fx.js';
 import { remapIds } from './lib/migrate.js';
 import { planSessions } from './lib/goalPlan.js';
+import { prayerDayId } from './lib/prayer.js';
 import { tr, trf, isEn } from './i18n/index.js';
 
 const PERSIST_KEYS = [
   'version', 'onboarded', 'user', 'profile', 'settings', 'dashboard', 'tasks', 'goals', 'habits', 'challenges', 'rewards',
-  'rewardHistory', 'achievements', 'notifications', 'projects', 'focusLog', 'energy', 'streak', 'flags', 'dismissedInsights',
+  'rewardHistory', 'achievements', 'notifications', 'projects', 'focusLog', 'prayers', 'energy', 'streak', 'flags', 'dismissedInsights',
 ];
 
 // وضع الحفظ: 'remote' = حساب Supabase (المصدر الأساسي قاعدة البيانات)، 'local' = التجربة بدون حساب
@@ -33,6 +34,8 @@ function normalize(data) {
   const dash = data.dashboard && Array.isArray(data.dashboard.order) ? data.dashboard : { order: ids, hidden: [] };
   data.dashboard = { hidden: dash.hidden || [], order: [...dash.order.filter((i) => ids.includes(i)), ...ids.filter((i) => !dash.order.includes(i))] };
   data.focusLog = (data.focusLog || []).map((f) => (f.id ? f : { ...f, id: uid() }));
+  data.prayers = Array.isArray(data.prayers) ? data.prayers : [];
+  data.settings.prayer = { ...DEFAULT_SETTINGS.prayer, ...(data.settings.prayer || {}) };
   return data;
 }
 
@@ -547,6 +550,24 @@ export const useStore = create((set, get) => ({
   },
   removeMilestone(goalId, msId) {
     set((s) => ({ goals: s.goals.map((g) => (g.id === goalId ? { ...g, milestones: g.milestones.filter((m) => m.id !== msId) } : g)) }));
+  },
+
+  // ————— الصلاة —————
+  // status: 'ontime' | 'late' | null — الضغط على نفس الحالة يلغيها
+  markPrayer(date, key, status) {
+    const s = get();
+    const row = s.prayers.find((p) => p.date === date);
+    const prev = row?.[key] || null;
+    const next = prev === status ? null : status;
+    const xpOf = (v) => (v === 'ontime' ? 10 : v === 'late' ? 4 : 0);
+    const delta = xpOf(next) - xpOf(prev);
+    const updated = row ? { ...row, [key]: next } : { id: prayerDayId(currentUserId, date, uid), date, fajr: null, dhuhr: null, asr: null, maghrib: null, isha: null, [key]: next };
+    set((st) => ({
+      prayers: row ? st.prayers.map((p) => (p.date === date ? updated : p)) : [...st.prayers, updated],
+      user: delta ? { totalXp: Math.max(0, st.user.totalXp + delta), xp: Math.max(0, st.user.xp + delta) } : st.user,
+    }));
+    if (delta > 0) get().pushFx({ type: 'xp', amount: delta });
+    if (next && s.settings.vibration) vibrate(20);
   },
 
   // ————— العادات —————

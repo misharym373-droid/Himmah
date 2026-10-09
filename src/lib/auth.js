@@ -89,7 +89,7 @@ export async function resendConfirmation(email) {
 
 // حذف بيانات المستخدم في مسار: كل جدول على حدة، وRLS تضمن أن المستخدم يحذف صفوفه هو فقط.
 // لا نحذف حساب الدخول نفسه لأنه مشترك مع تطبيقات أخرى على نفس مشروع Supabase.
-const USER_TABLES = ['focus_sessions', 'tasks', 'goals', 'habits', 'challenges', 'rewards', 'projects', 'user_progress', 'user_settings', 'profiles'];
+const USER_TABLES = ['prayer_log', 'focus_sessions', 'tasks', 'goals', 'habits', 'challenges', 'rewards', 'projects', 'user_progress', 'user_settings', 'profiles'];
 export async function deleteAccount() {
   const { data, error: userError } = await supabase.auth.getUser();
   if (userError || !data.user) throw new Error(authError(userError || { code: 'session_not_found' }));

@@ -1093,3 +1093,31 @@ div.scene-media iframe { position: absolute; top: 50%; left: 50%; width: 177.78v
 }
 .focus-mode .badge { background: rgba(255, 255, 255, 0.14); color: #fff; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .focus-mode .muted { color: rgba(242, 241, 236, 0.75); }
+
+/* صلاتي */
+.prayer-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--card-2); border: 1.5px solid transparent; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.prayer-row.next { border-color: rgba(var(--primary-rgb), 0.45); }
+.prayer-row.ontime { background: rgba(48, 164, 108, 0.1); }
+.prayer-row.late { background: rgba(232, 148, 12, 0.1); }
+.prayer-ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--tint); color: var(--primary-soft); flex-shrink: 0; }
+.prayer-row.ontime .prayer-ico { background: #30a46c; color: #fff; }
+.prayer-row.late .prayer-ico { background: #e8940c; color: #fff; }
+.prayer-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.prayer-actions .chip.on { background: #30a46c; color: #fff; }
+.prayer-actions .chip.late.on { background: #e8940c; color: #fff; }
+.prayer-actions .chip:disabled { opacity: 0.45; }
+.prayer-pills { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.prayer-pill { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; background: var(--card-2); border: 1.5px solid transparent; transition: background-color 0.15s ease, transform 0.12s ease-out; }
+.prayer-pill:active:not(:disabled) { transform: scale(0.96); }
+.prayer-pill:disabled { opacity: 0.55; cursor: default; }
+.prayer-pill.next { border-color: rgba(var(--primary-rgb), 0.45); }
+.prayer-pill.ontime { background: rgba(48, 164, 108, 0.14); }
+.prayer-pill.late { background: rgba(232, 148, 12, 0.14); }
+.pp-check { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--dim); margin-bottom: 2px; }
+.prayer-pill.ontime .pp-check { background: #30a46c; border-color: #30a46c; color: #fff; }
+.prayer-pill.late .pp-check { background: #e8940c; border-color: #e8940c; color: #fff; }
+@media (max-width: 760px) {
+  .prayer-pills { gap: 6px; }
+  .prayer-pill { padding: 8px 2px; }
+  .prayer-actions .chip { height: 34px; padding: 0 10px; font-size: 0.8rem; }
+}
