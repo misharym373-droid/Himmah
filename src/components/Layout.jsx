@@ -6,7 +6,7 @@ import { Logo, Avatar } from './ui.jsx';
 import { Glyph } from './Glyph.jsx';
 import { guessMeta } from '../lib/nlp.js';
 import { previewTasks, analyzeInput } from '../lib/smartInput.js';
-import { relativeDay, formatDuration } from '../lib/date.js';
+import { relativeDay, formatDuration, clock12 } from '../lib/date.js';
 import { TAGLINE, SURRA_URL, AREAS, PRIORITIES } from '../config.js';
 import { tr, trf } from '../i18n/index.js';
 
@@ -145,7 +145,7 @@ export function QuickInput({ className = 'quick', id, big }) {
               <Glyph name={t.icon} size={16} className="purple" />
               <span className="bold grow ellipsis">{t.title}</span>
               <span className="qp-chip"><Calendar size={12} /> {relativeDay(t.date)}</span>
-              {t.time && <span className="qp-chip num"><Clock size={12} /> {t.time}</span>}
+              {t.time && <span className="qp-chip num"><Clock size={12} /> {clock12(t.time)}</span>}
               <span className="qp-chip"><Timer size={12} /> {formatDuration(t.duration)}</span>
               {t.priority !== 'med' && <span className="prio-tag" style={{ '--c': PRIORITIES[t.priority].color }}>{tr(PRIORITIES[t.priority].label)}</span>}
               <span className="qp-chip hide-mobile" style={{ color: AREAS[t.area]?.color }}>{tr(AREAS[t.area]?.label)}</span>

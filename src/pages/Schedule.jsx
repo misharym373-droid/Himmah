@@ -3,7 +3,7 @@ import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDragg
 import { CalendarDays, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import { useStore } from '../store.js';
 import { DayMap } from '../components/Widgets.jsx';
-import { todayKey, addDays, fromKey, toKey, DAYS_SHORT, dayName, dayShort, monthName, formatLong, formatShort, toMin } from '../lib/date.js';
+import { todayKey, addDays, fromKey, toKey, DAYS_SHORT, dayName, dayShort, monthName, formatLong, formatShort, toMin, clock12 } from '../lib/date.js';
 import { Glyph } from '../components/Glyph.jsx';
 import { tr, trf } from '../i18n/index.js';
 
@@ -147,7 +147,7 @@ function DraggableTask({ t }) {
       <div className="bold ellipsis">
         <Glyph name={t.icon} size={13} /> {t.title}
       </div>
-      {t.time && <div className="tiny muted num">{t.time}</div>}
+      {t.time && <div className="tiny muted num">{clock12(t.time)}</div>}
     </div>
   );
 }

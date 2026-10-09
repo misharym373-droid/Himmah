@@ -4,7 +4,7 @@ import { useStore } from '../store.js';
 import { CheckBox } from './ui.jsx';
 import { Glyph } from './Glyph.jsx';
 import { AREAS, PRIORITIES } from '../config.js';
-import { formatDuration, relativeDay } from '../lib/date.js';
+import { formatDuration, relativeDay, clock12 } from '../lib/date.js';
 import { isOverdue, taskXp } from '../lib/game.js';
 import { tr, trf } from '../i18n/index.js';
 
@@ -73,7 +73,7 @@ function TaskItem({ task, showDate, dragHandle, current, compact, selectable, se
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && openTask()}
-      aria-label={`${task.title}${task.time ? ' — ' + task.time : ''}${task.done ? ' — ' + tr('مكتملة') : ''}`}
+      aria-label={`${task.title}${task.time ? ' — ' + clock12(task.time) : ''}${task.done ? ' — ' + tr('مكتملة') : ''}`}
     >
       {dragHandle}
       {selectable && (
@@ -100,7 +100,7 @@ function TaskItem({ task, showDate, dragHandle, current, compact, selectable, se
             <Clock size={12} aria-hidden />
             {showDate && relativeDay(task.date)}
             {showDate && ' · '}
-            {task.time ? <span className="num">{task.time}</span> : tr('طوال اليوم')}
+            {task.time ? <span className="num">{clock12(task.time)}</span> : tr('طوال اليوم')}
           </span>
           {task.time && <span className="meta-item">{formatDuration(task.duration)}</span>}
           {!compact && (

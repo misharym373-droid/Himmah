@@ -5,7 +5,7 @@ import { Ring, Num, CardTitle } from '../components/ui.jsx';
 import { Bars } from '../components/Charts.jsx';
 import { BalanceWidget, TimeMachineWidget } from '../components/Widgets.jsx';
 import { summary, weekBars } from '../lib/stats.js';
-import { formatHM, dayShort, formatDuration } from '../lib/date.js';
+import { formatHM, dayShort, formatDuration, clock12 } from '../lib/date.js';
 import { tr, trf, isEn } from '../i18n/index.js';
 
 // كل بطاقة تجيب عن سؤال واحد واضح
@@ -36,7 +36,7 @@ export default function Stats() {
   const lastWeekDone = prev ? prev.done - s.done : null;
   const days = range === Infinity ? 30 : range;
   const bars = useMemo(() => weekBars(tasks, days).map((b, i, a) => ({ ...b, label: days === 7 ? tr(b.label) : i % 5 === 0 || i === a.length - 1 ? b.date.slice(8) : '' })), [tasks, days]);
-  const hours = useMemo(() => s.hours.map((v, h) => ({ label: h % 3 === 0 ? String(h).padStart(2, '0') : '', done: v })).slice(5, 24), [s.hours]);
+  const hours = useMemo(() => s.hours.map((v, h) => ({ label: h % 3 === 0 ? clock12(h * 60).replace(':00', '') : '', done: v })).slice(5, 24), [s.hours]);
   const weekdays = useMemo(() => s.byDay.map((v, i) => ({ label: dayShort(i), done: v })), [s.byDay]);
   const period = range === 7 ? tr('هذا الأسبوع') : range === 30 ? tr('هذا الشهر') : tr('منذ البداية');
   const diff = lastWeekDone != null ? s.done - lastWeekDone : null;

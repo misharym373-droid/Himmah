@@ -1,6 +1,6 @@
 // صلاتي: الصلوات الخمس لليوم بأوقاتها + تسجيل (في وقتها / قضاء) + السجل والإحصائيات
 import { useMemo, useState } from 'react';
-import { Check, Clock, MapPin, LocateFixed, Flame, Bell, Sunrise, Sun, CloudSun, Sunset, Moon } from 'lucide-react';
+import { Check, Clock, MapPin, LocateFixed, Flame, Bell, Sunrise, Sun, CloudSun, Sunset, Moon, ChevronDown } from 'lucide-react';
 import { useStore } from '../store.js';
 import { navigate } from '../router.js';
 import { useNow } from '../hooks.js';
@@ -28,12 +28,52 @@ export function prayerStreak(prayers, T = todayKey()) {
   return n;
 }
 
-export function PrayerRow({ p, time, status, date, compact, isNext }) {
+// أذكار ما بعد الصلاة (مختصرة)
+const ADHKAR = [
+  'أستغفر الله (ثلاثًا)',
+  'اللهم أنت السلام ومنك السلام، تباركت يا ذا الجلال والإكرام',
+  'لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير',
+  'سبحان الله ٣٣، الحمد لله ٣٣، الله أكبر ٣٣، وتمام المئة: لا إله إلا الله وحده لا شريك له',
+  'آية الكرسي',
+  'الإخلاص والمعوذتان (ثلاثًا بعد الفجر والمغرب، ومرة بعد بقية الصلوات)',
+];
+
+// المهمة الصغيرة تحت الصلاة: أذكار ما بعد الصلاة
+export function AdhkarRow({ date, pkey, done }) {
+  const toggle = useStore((s) => s.toggleAdhkar);
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`adhkar ${done ? 'done' : ''}`}>
+      <span className="adhkar-line" aria-hidden="true" />
+      <div className="grow" style={{ minWidth: 0 }}>
+        <div className="row" style={{ gap: 8 }}>
+          <button className={`adhkar-check ${done ? 'on' : ''}`} onClick={() => toggle(date, pkey)} aria-pressed={done} aria-label={tr('أذكار ما بعد الصلاة')}>
+            {done && <Check size={12} strokeWidth={3} />}
+          </button>
+          <span className="small grow adhkar-title">{tr('أذكار ما بعد الصلاة')}</span>
+          <button className="btn btn-xs btn-ghost" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+            {tr('ماذا أقول؟')} <ChevronDown size={13} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+          </button>
+        </div>
+        {open && (
+          <ul className="adhkar-list">
+            {ADHKAR.map((a) => (
+              <li key={a}>{tr(a)}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function PrayerRow({ p, time, status, date, compact, isNext, adhkarDone }) {
   const mark = useStore((s) => s.markPrayer);
   const Icon = ICONS[p.key];
   const T = todayKey();
   const future = date === T && time > nowMin();
   return (
+    <div className="prayer-item">
     <div className={`prayer-row ${status || ''} ${isNext ? 'next' : ''}`}>
       <span className="prayer-ico">
         <Icon size={compact ? 16 : 19} />
@@ -52,6 +92,8 @@ export function PrayerRow({ p, time, status, date, compact, isNext }) {
           </button>
         )}
       </div>
+    </div>
+    {status && <AdhkarRow date={date} pkey={p.key} done={!!adhkarDone} />}
     </div>
   );
 }
@@ -150,7 +192,7 @@ export default function Prayer() {
           </div>
           <div className="col" style={{ gap: 8 }}>
             {PRAYERS.map((p) => (
-              <PrayerRow key={p.key} p={p} time={times[p.key]} status={row?.[p.key]} date={day} isNext={day === T && next?.key === p.key} />
+              <PrayerRow key={p.key} p={p} time={times[p.key]} status={row?.[p.key]} date={day} isNext={day === T && next?.key === p.key} adhkarDone={(row?.adhkar || []).includes(p.key)} />
             ))}
           </div>
           <div className="row tiny muted mt" style={{ gap: 14 }}>
@@ -247,6 +289,7 @@ export function PrayerStrip({ span = 'span-12' }) {
   const settings = useStore((s) => s.settings);
   const prayers = useStore((s) => s.prayers);
   const mark = useStore((s) => s.markPrayer);
+  const toggleAdhkar = useStore((s) => s.toggleAdhkar);
   const T = todayKey();
   const city = cityOf(settings);
   const times = useMemo(() => prayerTimes(T, city), [T, city.lat, city.lng, city.tz]); // eslint-disable-line
@@ -275,12 +318,21 @@ export function PrayerStrip({ span = 'span-12' }) {
         {PRAYERS.map((p) => {
           const st = row?.[p.key];
           const future = times[p.key] > now;
+          const ad = (row?.adhkar || []).includes(p.key);
           return (
-            <button key={p.key} className={`prayer-pill ${st || ''} ${next?.key === p.key ? 'next' : ''}`} disabled={future && !st} onClick={() => mark(T, p.key, st === 'late' ? 'late' : 'ontime')} aria-pressed={!!st}>
-              <span className="pp-check">{st ? <Check size={13} /> : null}</span>
-              <span className="bold small">{tr(p.label)}</span>
-              <span className="tiny muted num">{fmtTime(times[p.key])}</span>
-            </button>
+            <div key={p.key} className="pp-col">
+              <button className={`prayer-pill ${st || ''} ${next?.key === p.key ? 'next' : ''}`} disabled={future && !st} onClick={() => mark(T, p.key, st === 'late' ? 'late' : 'ontime')} aria-pressed={!!st}>
+                <span className="pp-check">{st ? <Check size={13} /> : null}</span>
+                <span className="bold small">{tr(p.label)}</span>
+                <span className="tiny muted num">{fmtTime(times[p.key])}</span>
+              </button>
+              {st && (
+                <button className={`pp-adhkar ${ad ? 'on' : ''}`} onClick={() => toggleAdhkar(T, p.key)} aria-pressed={ad}>
+                  <span className="adhkar-check sm">{ad && <Check size={10} strokeWidth={3} />}</span>
+                  {tr('الأذكار')}
+                </button>
+              )}
+            </div>
           );
         })}
       </div>

@@ -15,7 +15,7 @@ import { Ring, Bar, Num, CardTitle, Empty, CheckBox } from './ui.jsx';
 import { Glyph, IconTile } from './Glyph.jsx';
 import TaskItem, { DragHandle, PostponeMenu } from './TaskItem.jsx';
 import { Bars, TimeLine, Donut } from './Charts.jsx';
-import { formatLong, todayKey, formatDuration, formatHM, nowMin, toMin, fmt, addDays, dayShort, fromKey, formatClock } from '../lib/date.js';
+import { formatLong, todayKey, formatDuration, formatHM, nowMin, toMin, fmt, addDays, dayShort, fromKey, formatClock, clock12 } from '../lib/date.js';
 import { levelInfo, habitStreak, isOverdue } from '../lib/game.js';
 import { scoreTask, studyPlan, postponeInsights, say } from '../lib/assistant.js';
 import { weekBars, summary, balance, timeMachine } from '../lib/stats.js';
@@ -322,14 +322,14 @@ export function NextTask({ span = 'span-5' }) {
     <div className={`card ${span} reveal d3 next-card ${isNow ? 'is-now' : ''}`}>
       <div className="card-hd">
         <CardTitle icon={<Clock size={18} />} color="blue">{isNow ? tr('جارية الآن') : tr('المهمة القادمة')}</CardTitle>
-        <span className={`badge ${isNow ? 'green' : 'blue'}`}>{isNow ? <><span className="pulse-dot" /> {tr('الآن')}</> : <span className="num">{task.time}</span>}</span>
+        <span className={`badge ${isNow ? 'green' : 'blue'}`}>{isNow ? <><span className="pulse-dot" /> {tr('الآن')}</> : <span className="num">{clock12(task.time)}</span>}</span>
       </div>
       <div className="row" style={{ gap: 14 }}>
         <IconTile name={task.icon} color={area.color} size={56} />
         <div className="grow" style={{ minWidth: 0 }}>
           <h3 className="ellipsis" style={{ fontSize: '1.25rem' }}>{task.title}</h3>
           <div className="small muted">
-            <span className="num">{task.time}</span> · {formatDuration(task.duration)} · {tr(area.label)}
+            <span className="num">{clock12(task.time)}</span> · {formatDuration(task.duration)} · {tr(area.label)}
           </div>
         </div>
       </div>
@@ -539,7 +539,7 @@ export function DayMap({ span = 'span-7', date = todayKey(), title = 'خريطة
             <div className="timeline" ref={scroller} style={{ maxHeight: 560, overflowY: 'auto', paddingInlineEnd: 4 }}>
               {list.map((t) => (
                 <div className={`tl-row ${t.id === currentId ? 'now' : ''}`} key={t.id} data-next={t.id === firstOpenId ? '1' : undefined}>
-                  <div className="tl-time">{t.time || <span className="tl-allday">{tr('طوال اليوم')}</span>}</div>
+                  <div className="tl-time">{(t.time && clock12(t.time)) || <span className="tl-allday">{tr('طوال اليوم')}</span>}</div>
                   <SortableTask task={t} current={t.id === currentId} />
                 </div>
               ))}

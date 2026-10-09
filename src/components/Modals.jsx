@@ -10,7 +10,7 @@ import { extractText } from '../lib/ocr.js';
 import { filterOcrLines, linesToItems, nextDateFor } from '../lib/scheduleOcr.js';
 import { ScenePicker, useSceneSettings, useCustomMedia } from './FocusScene.jsx';
 import { rescuePlan, fitInTime, suggestNow, say } from '../lib/assistant.js';
-import { formatDuration, relativeDay, todayKey, addDays, formatLong, formatShort, dayName, toMin } from '../lib/date.js';
+import { formatDuration, relativeDay, todayKey, addDays, formatLong, formatShort, dayName, toMin, clock12 } from '../lib/date.js';
 import { AREAS, PRIORITIES } from '../config.js';
 import { tr, trf, isEn } from '../i18n/index.js';
 
@@ -29,7 +29,7 @@ export function ParsedList({ items, onRemove, onOpen }) {
             <div className="bold">{t.title}</div>
             <div className="t-meta">
               <span className="meta-item"><Calendar size={12} /> {relativeDay(t.date)}</span>
-              <span className="meta-item num"><Clock size={12} /> {t.time || tr('طوال اليوم')}</span>
+              <span className="meta-item num"><Clock size={12} /> {t.time ? clock12(t.time) : tr('طوال اليوم')}</span>
               {t.time && <span className="meta-item"><Timer size={12} /> {formatDuration(t.duration)}</span>}
               {t.priority && t.priority !== 'med' && <span className="prio-tag" style={{ '--c': PRIORITIES[t.priority]?.color }}>{tr(PRIORITIES[t.priority]?.label)}</span>}
               {t.repeat?.type && t.repeat.type !== 'none' && <span className="meta-item"><Repeat size={12} /> {tr('متكررة')}</span>}
@@ -728,7 +728,7 @@ export function WhatNowModal() {
               <div className="grow">
                 <div className="t-title">{r.task.title}</div>
                 <div className="t-meta">
-                  {r.task.time && <span className="num">{r.task.time}</span>} · {formatDuration(r.task.duration)}
+                  {r.task.time && <span className="num">{clock12(r.task.time)}</span>} · {formatDuration(r.task.duration)}
                 </div>
               </div>
             </div>

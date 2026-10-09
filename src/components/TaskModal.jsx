@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Sparkles, Trash2, Plus, X, Wand2, Check, Timer } from 'lucide-react';
-import { useStore } from '../store.js';
+import { useStore, repeatMatches } from '../store.js';
 import { Modal, Switch } from './ui.jsx';
 import { Glyph, IconPicker } from './Glyph.jsx';
 import { AREAS, PRIORITIES, TASK_ICONS } from '../config.js';
-import { DAYS_SHORT, dayShort, todayKey } from '../lib/date.js';
+import { DAYS_SHORT, dayShort, todayKey, addMonths, addDays, formatLong } from '../lib/date.js';
 import { guessMeta, parseTasks, looksLikeSchedule } from '../lib/nlp.js';
 import { breakdownTask, isBigTask } from '../lib/assistant.js';
 import { taskXp, taskSize } from '../lib/game.js';
 import { tr, trf } from '../i18n/index.js';
 
 const DURS = [15, 30, 45, 60, 90, 120];
+
+const SPANS = [0, 1, 3, 6, 12];
 
 export default function TaskModal({ task, preset = {} }) {
   const close = useStore((s) => s.closeModal);
@@ -27,6 +29,20 @@ export default function TaskModal({ task, preset = {} }) {
   const [iconTouched, setIconTouched] = useState(editing);
   // بدون وقت = طوال اليوم (افتراضي للمهمة الجديدة إذا لم يُحدد وقت)
   const [allDay, setAllDay] = useState(() => !(task?.time || preset.time));
+  // مدة التكرار: 0 = بدون نهاية، رقم = عدد الشهور من تاريخ البداية، 'custom' = تاريخ محدد
+  const [span, setSpan] = useState(() => {
+    const u = f.repeat?.until;
+    if (!u) return 0;
+    return SPANS.find((n) => n && addMonths(f.date || todayKey(), n) === u) || 'custom';
+  });
+  const until = f.repeat.type === 'none' ? null : span === 'custom' ? f.repeat.until || null : span ? addMonths(f.date || todayKey(), span) : null;
+  const occurrences = useMemo(() => {
+    if (!until || f.repeat.type === 'none') return 0;
+    let n = 0;
+    const tpl = { date: f.date || todayKey(), repeat: { ...f.repeat, until } };
+    for (let d = tpl.date; d <= until && n < 2000; d = addDays(d, 1)) if (repeatMatches(tpl, d)) n++;
+    return n;
+  }, [until, f.repeat, f.date]);
   const [newSub, setNewSub] = useState('');
   const [showBreak, setShowBreak] = useState(false);
   const [err, setErr] = useState('');
@@ -47,10 +63,13 @@ export default function TaskModal({ task, preset = {} }) {
     if (!p) return;
     if (p.time) setAllDay(false);
     setF((x) => ({ ...x, title: p.title, time: p.time || x.time, duration: p.duration, date: p.date, area: p.area, icon: p.icon, repeat: p.repeat.type !== 'none' ? p.repeat : x.repeat }));
+    if (p.repeat.until) setSpan(SPANS.find((n) => n && addMonths(p.date, n) === p.repeat.until) || 'custom');
   }
   function save() {
     if (!f.title.trim()) return setErr(tr('اكتب اسم المهمة'));
-    const data = { ...f, title: f.title.trim(), time: allDay ? null : f.time || null, duration: Number(f.duration) || 30, goalId: f.goalId || null };
+    if (f.repeat.type === 'days' && !f.repeat.days.length) return setErr(tr('اختر يومًا واحدًا على الأقل للتكرار'));
+    if (until && until < (f.date || todayKey())) return setErr(tr('تاريخ نهاية التكرار قبل تاريخ البداية'));
+    const data = { ...f, repeat: { ...f.repeat, until }, title: f.title.trim(), time: allDay ? null : f.time || null, duration: Number(f.duration) || 30, goalId: f.goalId || null };
     if (editing) updateTask(task.id, data);
     else addTask(data);
     useStore.getState().toast(editing ? tr('تم حفظ التعديلات') : trf('تمت إضافة "{title}"', { title: data.title }), { icon: 'check' });
@@ -196,6 +215,25 @@ export default function TaskModal({ task, preset = {} }) {
                   {dayShort(i)}
                 </button>
               ))}
+            </div>
+          )}
+          {f.repeat.type !== 'none' && !(editing && task.seriesId) && (
+            <div className="mt-s">
+              <span className="tiny muted">{tr('لمدة')}</span>
+              <div className="chips mt-s">
+                {SPANS.map((n) => (
+                  <button key={n} className={`chip ${span === n ? 'on' : ''}`} onClick={() => setSpan(n)}>
+                    {n === 0 ? tr('بدون نهاية') : n === 12 ? tr('سنة') : n === 1 ? tr('شهر') : trf('{n} شهور', { n })}
+                  </button>
+                ))}
+                <button className={`chip ${span === 'custom' ? 'on' : ''}`} onClick={() => (setSpan('custom'), !f.repeat.until && set('repeat', { ...f.repeat, until: addMonths(f.date || todayKey(), 3) }))}>
+                  {tr('حتى تاريخ')}
+                </button>
+              </div>
+              {span === 'custom' && (
+                <input className="input mt-s" type="date" min={f.date || todayKey()} value={f.repeat.until || ''} onChange={(e) => set('repeat', { ...f.repeat, until: e.target.value || null })} aria-label={tr('حتى تاريخ')} style={{ maxWidth: 200 }} />
+              )}
+              {until && <div className="tiny dim mt-s">{trf('تنتهي {date} · {n} مرة', { date: formatLong(until), n: occurrences })}</div>}
             </div>
           )}
           {editing && task.seriesId && <span className="tiny dim">{tr('هذه نسخة من مهمة متكررة — التعديل يخص هذا اليوم فقط.')}</span>}

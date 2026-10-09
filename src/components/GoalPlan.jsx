@@ -5,7 +5,7 @@ import { useStore, goalProgress } from '../store.js';
 import { Modal, Bar, Ring, Switch, useConfirm } from './ui.jsx';
 import { IconTile, Glyph } from './Glyph.jsx';
 import { AREAS, GOAL_ICONS } from '../config.js';
-import { DAYS, dayName, todayKey, addDays, formatShort, diffDays, fromKey } from '../lib/date.js';
+import { DAYS, dayName, todayKey, addDays, formatShort, diffDays, fromKey, clock12 } from '../lib/date.js';
 import { buildGoalPlan, planSessions, detectKind, defaultRestDays, weekOf } from '../lib/goalPlan.js';
 import { monthsFromText } from '../lib/assistant.js';
 import { tr, trf, isEn } from '../i18n/index.js';
@@ -266,7 +266,7 @@ export function PlanGoalCard({ g, tasks, open, onToggle, delay }) {
             </span>
             {g.plan.time && (
               <span className="meta-item">
-                <Clock size={13} /> <span className="num">{g.plan.time}</span>
+                <Clock size={13} /> <span className="num">{clock12(g.plan.time)}</span>
               </span>
             )}
           </div>

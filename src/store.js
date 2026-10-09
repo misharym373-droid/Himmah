@@ -560,14 +560,34 @@ export const useStore = create((set, get) => ({
     const prev = row?.[key] || null;
     const next = prev === status ? null : status;
     const xpOf = (v) => (v === 'ontime' ? 10 : v === 'late' ? 4 : 0);
-    const delta = xpOf(next) - xpOf(prev);
-    const updated = row ? { ...row, [key]: next } : { id: prayerDayId(currentUserId, date, uid), date, fajr: null, dhuhr: null, asr: null, maghrib: null, isha: null, [key]: next };
+    // إلغاء الصلاة يلغي أذكارها أيضًا (ونسحب نقاطها)
+    const hadAdhkar = !next && (row?.adhkar || []).includes(key);
+    const delta = xpOf(next) - xpOf(prev) - (hadAdhkar ? ADHKAR_XP : 0);
+    const base = row ? { ...row, [key]: next } : { id: prayerDayId(currentUserId, date, uid), date, fajr: null, dhuhr: null, asr: null, maghrib: null, isha: null, adhkar: [], [key]: next };
+    const updated = hadAdhkar ? { ...base, adhkar: base.adhkar.filter((k) => k !== key) } : base;
     set((st) => ({
       prayers: row ? st.prayers.map((p) => (p.date === date ? updated : p)) : [...st.prayers, updated],
       user: delta ? { totalXp: Math.max(0, st.user.totalXp + delta), xp: Math.max(0, st.user.xp + delta) } : st.user,
     }));
     if (delta > 0) get().pushFx({ type: 'xp', amount: delta });
     if (next && s.settings.vibration) vibrate(20);
+  },
+  // أذكار ما بعد الصلاة (تظهر بعد تسجيل الصلاة)
+  toggleAdhkar(date, key) {
+    const s = get();
+    const row = s.prayers.find((p) => p.date === date);
+    if (!row?.[key]) return;
+    const list = row.adhkar || [];
+    const on = !list.includes(key);
+    const delta = on ? ADHKAR_XP : -ADHKAR_XP;
+    set((st) => ({
+      prayers: st.prayers.map((p) => (p.date === date ? { ...p, adhkar: on ? [...list, key] : list.filter((k) => k !== key) } : p)),
+      user: { totalXp: Math.max(0, st.user.totalXp + delta), xp: Math.max(0, st.user.xp + delta) },
+    }));
+    if (on) {
+      get().pushFx({ type: 'xp', amount: delta });
+      if (s.settings.vibration) vibrate(15);
+    }
   },
 
   // ————— العادات —————
@@ -703,10 +723,13 @@ function weekendOffset() {
   const toThu = (4 - d + 7) % 7;
   return toThu === 0 ? 7 : Math.max(2, toThu);
 }
+const ADHKAR_XP = 3;
+
 export function repeatMatches(tpl, date) {
   const r = tpl.repeat || {};
   const d = fromKey(date);
   const base = fromKey(tpl.date);
+  if (r.until && date > r.until) return false;
   if (r.type === 'daily') return true;
   if (r.type === 'weekly') return d.getDay() === base.getDay();
   if (r.type === 'monthly') return d.getDate() === base.getDate();

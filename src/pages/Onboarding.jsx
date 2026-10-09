@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Sparkles, Mic, BatteryLow, BatteryMedium, Batter
 import { useStore } from '../store.js';
 import { parseTasks, guessMeta } from '../lib/nlp.js';
 import { AREAS, TAGLINE } from '../config.js';
-import { todayKey } from '../lib/date.js';
+import { todayKey, clock12 } from '../lib/date.js';
 import { Glyph } from '../components/Glyph.jsx';
 import { tr, trf } from '../i18n/index.js';
 
@@ -140,7 +140,7 @@ export default function Onboarding() {
                       <Glyph name={t.icon} size={16} />
                       <span className="bold">{t.title}</span>
                       <span className="tiny muted num">
-                        {t.time || '—'} · {trf('{n}د', { n: t.duration })}
+                        {t.time ? clock12(t.time) : '—'} · {trf('{n}د', { n: t.duration })}
                       </span>
                     </div>
                   ))}

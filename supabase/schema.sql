@@ -101,6 +101,7 @@ create table if not exists public.tasks (
   recurring       boolean not null default false,
   recurrence_type text not null default 'none' check (recurrence_type in ('none', 'daily', 'weekly', 'monthly', 'days')),
   recurrence_days smallint[] not null default '{}',
+  recurrence_until date,
   is_template     boolean not null default false,
   series_id       uuid,
   goal_id         uuid references public.goals (id) on delete set null,
@@ -186,6 +187,7 @@ create table if not exists public.prayer_log (
   asr        text check (asr in ('ontime', 'late')),
   maghrib    text check (maghrib in ('ontime', 'late')),
   isha       text check (isha in ('ontime', 'late')),
+  adhkar     text[] not null default '{}' check (adhkar <@ array['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']::text[]),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, date)

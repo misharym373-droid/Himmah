@@ -41,6 +41,7 @@ export function taskToRow(t, user_id) {
     recurring: repeatType !== 'none',
     recurrence_type: repeatType,
     recurrence_days: (t.repeat?.days || []).filter((d) => d >= 0 && d <= 6),
+    recurrence_until: repeatType !== 'none' && /^\d{4}-\d{2}-\d{2}$/.test(t.repeat?.until || '') ? t.repeat.until : null,
     is_template: !!t.template,
     series_id: t.seriesId || null,
     goal_id: t.goalId || null,
@@ -66,7 +67,7 @@ export function rowToTask(r) {
     priority: r.priority,
     area: r.category,
     icon: r.icon,
-    repeat: { type: r.recurrence_type || 'none', days: r.recurrence_days || [] },
+    repeat: { type: r.recurrence_type || 'none', days: r.recurrence_days || [], until: r.recurrence_until || null },
     goalId: r.goal_id,
     subtasks: r.subtasks || [],
     done: r.completed,
@@ -130,12 +131,14 @@ export const rowToFocus = (r) => ({ id: r.id, date: r.date, minutes: r.minutes, 
 
 // ————— سجل الصلاة (صف لكل يوم) —————
 const PSTATUS = ['ontime', 'late'];
+const PKEYS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 export const prayerToRow = (p, user_id) => ({
   id: p.id, user_id, date: p.date,
   fajr: PSTATUS.includes(p.fajr) ? p.fajr : null, dhuhr: PSTATUS.includes(p.dhuhr) ? p.dhuhr : null, asr: PSTATUS.includes(p.asr) ? p.asr : null,
   maghrib: PSTATUS.includes(p.maghrib) ? p.maghrib : null, isha: PSTATUS.includes(p.isha) ? p.isha : null,
+  adhkar: [...new Set((p.adhkar || []).filter((k) => PKEYS.includes(k)))],
 });
-export const rowToPrayer = (r) => ({ id: r.id, date: r.date, fajr: r.fajr, dhuhr: r.dhuhr, asr: r.asr, maghrib: r.maghrib, isha: r.isha });
+export const rowToPrayer = (r) => ({ id: r.id, date: r.date, fajr: r.fajr, dhuhr: r.dhuhr, asr: r.asr, maghrib: r.maghrib, isha: r.isha, adhkar: r.adhkar || [] });
 
 // ————— المستندات الفردية (صف واحد لكل مستخدم) —————
 export const profileToRow = (p, user_id) => ({

@@ -1,5 +1,5 @@
 // حسابات الإحصائيات — كلها مشتقة من البيانات الحقيقية للمستخدم
-import { todayKey, addDays, fromKey, dayName, dayShort, toMin } from './date.js';
+import { todayKey, addDays, fromKey, dayName, dayShort, toMin, clock12 } from './date.js';
 import { AREAS } from '../config.js';
 
 const real = (tasks) => tasks.filter((t) => !t.deletedAt && !t.template);
@@ -59,7 +59,7 @@ export function summary(tasks, focusLog = [], range = 7) {
     focus,
     focusToday,
     avgDur,
-    bestWindow: `${String(bestH).padStart(2, '0')}:00 - ${String(bestH + 2).padStart(2, '0')}:00`,
+    bestWindow: `${clock12(bestH * 60)} - ${clock12((bestH + 2) * 60)}`,
     hours,
     topDay: Math.max(...byDay) > 0 ? dayName(topDay) : '—',
     byDay,

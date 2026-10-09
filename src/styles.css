@@ -1121,3 +1121,20 @@ div.scene-media iframe { position: absolute; top: 50%; left: 50%; width: 177.78v
   .prayer-pill { padding: 8px 2px; }
   .prayer-actions .chip { height: 34px; padding: 0 10px; font-size: 0.8rem; }
 }
+
+/* أذكار ما بعد الصلاة: خط صغير ومهمة فرعية تحت الصلاة */
+.prayer-item { display: flex; flex-direction: column; }
+.adhkar { display: flex; align-items: flex-start; gap: 8px; padding: 6px 12px 2px; padding-inline-start: 28px; animation: adhkarIn 0.22s ease-out backwards; }
+.adhkar-line { width: 14px; height: 18px; flex: none; border-inline-start: 2px solid var(--dim); border-bottom: 2px solid var(--dim); border-end-start-radius: 8px; margin-top: -8px; }
+.adhkar-check { width: 20px; height: 20px; flex: none; border-radius: 6px; border: 1.5px solid var(--dim); display: inline-grid; place-items: center; color: #fff; background: transparent; transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease-out; }
+.adhkar-check:active { transform: scale(0.9); }
+.adhkar-check.on, .pp-adhkar.on .adhkar-check { background: #30a46c; border-color: #30a46c; }
+.adhkar-check.sm { width: 14px; height: 14px; border-radius: 4px; }
+.adhkar.done .adhkar-title { color: var(--muted); text-decoration: line-through; }
+.adhkar-list { margin: 6px 0 4px; padding-inline-start: 18px; display: grid; gap: 4px; font-size: 0.82rem; color: var(--muted); line-height: 1.7; }
+.pp-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pp-col > .prayer-pill { flex: 1; }
+.pp-adhkar { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.72rem; padding: 4px 2px; border-radius: 9px; background: var(--card-2); color: var(--muted); }
+.pp-adhkar.on { color: #30a46c; }
+@keyframes adhkarIn { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .adhkar { animation: none; } }

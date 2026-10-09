@@ -1,6 +1,6 @@
 // أوقات الصلاة — حساب فلكي على الجهاز (بدون إنترنت) بطريقة أم القرى:
 // الفجر 18.5°، العشاء بعد المغرب بـ 90 دقيقة (120 في رمضان)، العصر على المذهب الشافعي (ظل المثل)
-import { todayKey, fromKey, fromMin } from './date.js';
+import { todayKey, fromKey, clock12 } from './date.js';
 
 export const PRAYERS = [
   { key: 'fajr', label: 'الفجر' },
@@ -95,7 +95,7 @@ export function prayerTimes(dateKey = todayKey(), { lat, lng, tz }) {
   return out;
 }
 
-export const fmtTime = (min) => fromMin(((min % 1440) + 1440) % 1440);
+export const fmtTime = (min) => clock12(min);
 
 // موقع المستخدم الحالي (يتطلب إذن المتصفح)
 export function locate() {

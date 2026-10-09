@@ -8,7 +8,7 @@ import { Drawer, Modal, ConfirmModal } from './ui.jsx';
 import { NAV } from './Layout.jsx';
 import TaskModal from './TaskModal.jsx';
 import { VoiceModal, CreatedModal, ImageModal, RescheduleModal, RescueModal, OneHourModal, WhatNowModal, InteractiveModal, ShortcutsModal, FocusStartModal } from './Modals.jsx';
-import { formatClock, timeAgo, relativeDay } from '../lib/date.js';
+import { formatClock, timeAgo, relativeDay, clock12 } from '../lib/date.js';
 import { chat, say } from '../lib/assistant.js';
 import { PERSONAS } from '../config.js';
 import { tr, trf, isEn } from '../i18n/index.js';
@@ -282,7 +282,7 @@ export function CommandMenu() {
     const t = tasks
       .filter((x) => !x.deletedAt && !x.template && x.title.includes(ql))
       .slice(0, 8)
-      .map((x) => ({ g: tr('المهام'), label: x.title, sub: `${relativeDay(x.date)}${x.time ? ' · ' + x.time : ''}`, icon: CheckCheck, run: () => open('task', { task: x }) }));
+      .map((x) => ({ g: tr('المهام'), label: x.title, sub: `${relativeDay(x.date)}${x.time ? ' · ' + clock12(x.time) : ''}`, icon: CheckCheck, run: () => open('task', { task: x }) }));
     const gs = goals.filter((x) => x.title.includes(ql)).map((x) => ({ g: tr('الأهداف'), label: x.title, icon: Target, run: () => navigate('goals') }));
     const hs = habits.filter((x) => x.title.includes(ql)).map((x) => ({ g: tr('العادات'), label: x.title, icon: Flame, run: () => navigate('habits') }));
     return [...t, ...gs, ...hs, ...a];
@@ -470,7 +470,7 @@ export function AssistantDrawer() {
                   <div key={t.id} className="row small" style={{ padding: '6px 10px', borderRadius: 10, background: 'rgba(var(--primary-rgb),.1)' }}>
                     <Glyph name={t.icon} size={15} />
                     <span className="grow bold">{t.title}</span>
-                    <span className="num tiny">{t.newTime || t.time || ''}</span>
+                    <span className="num tiny">{clock12(t.newTime || t.time)}</span>
                   </div>
                 ))}
               </div>
@@ -497,7 +497,7 @@ export function AssistantDrawer() {
               <div className="col mt-s" style={{ gap: 4 }}>
                 {m.parsed.map((p, k) => (
                   <div key={k} className="small">
-                    <Glyph name={p.icon} size={14} /> <span className="num">{p.time || '—'}</span> — {p.title} — <span className="num">{p.duration}</span> {tr('دقيقة')}
+                    <Glyph name={p.icon} size={14} /> <span className="num">{p.time ? clock12(p.time) : '—'}</span> — {p.title} — <span className="num">{p.duration}</span> {tr('دقيقة')}
                   </div>
                 ))}
               </div>

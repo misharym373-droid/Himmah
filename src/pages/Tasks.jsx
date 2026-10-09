@@ -5,7 +5,7 @@ import { useRoute } from '../router.js';
 import TaskItem from '../components/TaskItem.jsx';
 import { Empty, useConfirm } from '../components/ui.jsx';
 import { AREAS, PRIORITIES } from '../config.js';
-import { todayKey, addDays, toMin, relativeDay, timeAgo, dayShort } from '../lib/date.js';
+import { todayKey, addDays, toMin, relativeDay, timeAgo, dayShort, clock12, formatShort } from '../lib/date.js';
 import { isOverdue } from '../lib/game.js';
 import { Glyph } from '../components/Glyph.jsx';
 import { tr, trf, isEn } from '../i18n/index.js';
@@ -280,7 +280,8 @@ function RecurringRow({ t }) {
       <div className="grow">
         <div className="t-title">{t.title}</div>
         <div className="t-meta">
-          <Repeat size={12} /> {label} {t.time && <span className="num">· {t.time}</span>} · {trf('{n} دقيقة', { n: t.duration })}
+          <Repeat size={12} /> {label} {t.time && <span className="num">· {clock12(t.time)}</span>} · {trf('{n} دقيقة', { n: t.duration })}
+          {r.until && <span className="num"> · {r.until < todayKey() ? tr('انتهى التكرار') : trf('حتى {date}', { date: formatShort(r.until) })}</span>}
         </div>
       </div>
       <button

@@ -1,7 +1,7 @@
 // محلل نصوص عربي محلي (بدون AI): يحوّل الكلام الطبيعي إلى مهام
 // يستخرج: العنوان، التاريخ، الوقت، المدة، الأولوية، المجال، التكرار
 // مثال: "عندي اختبار رياضيات الخميس الساعة 7 وأبغى أذاكر ساعتين"
-import { todayKey, addDays, fromKey, fromMin, toMin, nowMin } from './date.js';
+import { todayKey, addDays, fromKey, fromMin, toMin, nowMin, clock12, addMonths } from './date.js';
 import { tr, trf } from '../i18n/index.js';
 
 const AR_DIGITS = { '٠': 0, '١': 1, '٢': 2, '٣': 3, '٤': 4, '٥': 5, '٦': 6, '٧': 7, '٨': 8, '٩': 9 };
@@ -144,6 +144,12 @@ const WEEKDAYS = [
   [/الأحد|الاحد/, 0], [/الاثنين|الإثنين|الاثنين/, 1], [/الثلاثاء|الثلاثا/, 2], [/الأربعاء|الاربعاء|الاربعا/, 3],
   [/الخميس/, 4], [/الجمعة|الجمعه/, 5], [/السبت/, 6],
 ];
+// داخل "كل ..." نقبل الصيغ العامية بدون "ال": كل احد وثلوث
+const W = (alt) => new RegExp(`(^|[^\\u0600-\\u06FF])و?(ال)?(${alt})(?![\\u0600-\\u06FF])`);
+const WEEKDAYS_LOOSE = [
+  [new RegExp('(^|[^\\u0600-\\u06FF])(و?ال)?(أحد|احد)(?![\\u0600-\\u06FF])'), 0], [W('اثنين|إثنين|اثنينه|ثنين'), 1], [W('ثلاثاء|ثلاثا|ثلوث|ثلاثه'), 2],
+  [W('أربعاء|اربعاء|اربعا|ربوع'), 3], [W('خميس'), 4], [W('جمعة|جمعه'), 5], [W('سبت'), 6],
+];
 
 function parseDate(s, base) {
   if (/بعد\s*(بكرة|بكره|غد)/.test(s)) return { date: addDays(base, 2), raw: s.match(/بعد\s*(بكرة|بكره|غدٍ?)/)[0] };
@@ -170,7 +176,7 @@ function parseRepeat(s) {
   if (/كل\s*(أسبوع|اسبوع)|أسبوعيا|اسبوعيا|أسبوعيًا/.test(s)) return { type: 'weekly', days: [], raw: s.match(/كل\s*(أسبوع|اسبوع)|أسبوعيا|اسبوعيا|أسبوعيًا/)[0] };
   if (/كل\s*شهر|شهريا|شهريًا/.test(s)) return { type: 'monthly', days: [], raw: s.match(/كل\s*شهر|شهريا|شهريًا/)[0] };
   if (/كل\s/.test(s)) {
-    const days = WEEKDAYS.filter(([re]) => re.test(s)).map(([, d]) => d);
+    const days = WEEKDAYS_LOOSE.filter(([re]) => re.test(s)).map(([, d]) => d);
     if (days.length) {
       const m = s.match(/كل\s[^0-9]*?(?=\s*(الساعة|لمدة|$))/);
       return { type: 'days', days, raw: m ? m[0] : '' };
@@ -178,6 +184,20 @@ function parseRepeat(s) {
   }
   return null;
 }
+
+// "لمدة 3 شهور" / "لمدة سنة" / "لمدة أسبوعين" => مدة التكرار
+const NUM_WORDS = { واحد: 1, شهر: 1, اثنين: 2, ثنين: 2, ثلاث: 3, ثلاثة: 3, أربع: 4, اربع: 4, أربعة: 4, اربعة: 4, خمس: 5, خمسة: 5, ست: 6, ستة: 6, سبع: 7, ثمان: 8, ثمانية: 8, تسع: 9, عشر: 10, عشرة: 10 };
+function parseSpan(s) {
+  const m = s.match(/(?:لمدة|لمده|مدة|مده|طوال)\s*(\d+|[\u0600-\u06FF]+)?\s*(شهرين|شهور|أشهر|اشهر|شهر|سنتين|سنة|سنه|أسبوعين|اسبوعين|أسابيع|اسابيع|أسبوع|اسبوع)/);
+  if (!m) return null;
+  let n = /^\d+$/.test(m[1] || '') ? +m[1] : NUM_WORDS[m[1]] || 1;
+  const u = m[2];
+  if (/ين$/.test(u)) n = 2;
+  const months = /سن/.test(u) ? n * 12 : /شه/.test(u) ? n : 0;
+  const weeks = months ? 0 : n;
+  return { months, weeks, raw: m[0] };
+}
+export const spanUntil = (start, sp) => (sp.months ? addMonths(start, sp.months) : addDays(start, sp.weeks * 7 - 1));
 
 /**
  * يحلل نصًا ويعيد قائمة مهام مقترحة
@@ -199,6 +219,8 @@ export function parseTasks(input, { base = todayKey() } = {}) {
     let seg = ' ' + p + ' ';
     const rep = parseRepeat(seg);
     if (rep?.raw) seg = seg.replace(rep.raw, ' ');
+    const span = rep ? parseSpan(seg) : null;
+    if (span) seg = seg.replace(span.raw, ' ');
     const date = parseDate(seg, base);
     if (date) seg = seg.replace(date.raw, ' ');
     const dur = parseDuration(seg);
@@ -227,7 +249,7 @@ export function parseTasks(input, { base = todayKey() } = {}) {
       priority: prep ? 'high' : inferPriority(p),
       area: meta.area,
       icon: meta.icon,
-      repeat: rep ? { type: rep.type, days: rep.days } : { type: 'none', days: [] },
+      repeat: rep ? { type: rep.type, days: rep.days, until: span ? spanUntil(d, span) : null } : { type: 'none', days: [] },
     });
     cursor = start != null ? start + duration : null;
     lastDate = prep ? lastDate : d;
@@ -236,7 +258,7 @@ export function parseTasks(input, { base = todayKey() } = {}) {
 }
 
 export function describeParsed(t) {
-  return trf('{time} — {title} — {n} دقيقة', { time: t.time || tr('بدون وقت'), title: t.title, n: t.duration });
+  return trf('{time} — {title} — {n} دقيقة', { time: t.time ? clock12(t.time) : tr('بدون وقت'), title: t.title, n: t.duration });
 }
 
 // هل النص يحتوي معلومات جدولة (وقت/مدة)؟
@@ -386,6 +408,14 @@ function parseRepeatEn(s) {
   return null;
 }
 
+function parseSpanEn(s) {
+  const m = s.match(/\b(?:for|during)\s+(?:the\s+next\s+)?(\d+|a|an|one|two|three|four|five|six|twelve)?\s*(months?|years?|weeks?)\b/i);
+  if (!m) return null;
+  const n = /^\d+$/.test(m[1] || '') ? +m[1] : { two: 2, three: 3, four: 4, five: 5, six: 6, twelve: 12 }[(m[1] || '').toLowerCase()] || 1;
+  const u = m[2].toLowerCase();
+  return u.startsWith('year') ? { months: n * 12, weeks: 0, raw: m[0] } : u.startsWith('month') ? { months: n, weeks: 0, raw: m[0] } : { months: 0, weeks: n, raw: m[0] };
+}
+
 function parseTasksEn(input, base) {
   const text = normalizeEn(String(input || '').replace(/\s*\n+\s*/g, '\n').replace(/[ \t]+/g, ' ').trim());
   const parts = text
@@ -399,6 +429,8 @@ function parseTasksEn(input, base) {
     let seg = ' ' + p + ' ';
     const rep = parseRepeatEn(seg);
     if (rep?.raw) seg = seg.replace(rep.raw, ' ');
+    const span = rep ? parseSpanEn(seg) : null;
+    if (span) seg = seg.replace(span.raw, ' ');
     const date = parseDateEn(seg, base);
     if (date) seg = seg.replace(date.raw, ' ');
     const dur = parseDurationEn(seg);
@@ -421,7 +453,7 @@ function parseTasksEn(input, base) {
       priority: inferPriority(p),
       area: meta.area,
       icon: meta.icon,
-      repeat: rep ? { type: rep.type, days: rep.days } : { type: 'none', days: [] },
+      repeat: rep ? { type: rep.type, days: rep.days, until: span ? spanUntil(d, span) : null } : { type: 'none', days: [] },
     });
     cursor = start != null ? start + duration : null;
     lastDate = d;

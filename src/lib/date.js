@@ -19,6 +19,15 @@ export function addDays(key, n) {
   d.setDate(d.getDate() + n);
   return toKey(d);
 }
+// تاريخ بعد n شهر (ناقص يوم: "لمدة 3 شهور" من 9 أكتوبر = حتى 8 يناير)
+export function addMonths(key, n) {
+  const d = fromKey(key);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + n);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return addDays(toKey(d), -1);
+}
 export function diffDays(a, b) {
   return Math.round((fromKey(a) - fromKey(b)) / 86400000);
 }
@@ -51,6 +60,15 @@ export function toMin(hhmm) {
 export function fromMin(min) {
   min = Math.max(0, Math.min(23 * 60 + 59, Math.round(min)));
   return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
+}
+// عرض الوقت بنظام 12 ساعة: "5:30 م" / "5:30 PM" (القيم المخزنة تبقى HH:MM)
+export function clock12(v) {
+  const m = typeof v === 'number' ? ((Math.round(v) % 1440) + 1440) % 1440 : toMin(v);
+  if (m == null || Number.isNaN(m)) return '';
+  const h = Math.floor(m / 60);
+  const h12 = h % 12 || 12;
+  const pm = h >= 12;
+  return `${h12}:${pad(m % 60)} ${isEn() ? (pm ? 'PM' : 'AM') : pm ? 'م' : 'ص'}`;
 }
 export function nowMin() {
   const d = new Date();
