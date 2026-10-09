@@ -46,7 +46,7 @@ export default {
   'كاملة': 'Full',
   'خفيفة': 'Light',
   'إيقاف': 'Off',
-  'المهمة القادمة': 'Upcoming task',
+  'المهمة القادمة': 'Up next',
   'تذكير قبل بدء المهمة بـ 15 دقيقة': 'A reminder 15 minutes before a task starts',
   'المهام المتأخرة': 'Overdue tasks',
   'تنبيه واحد يوميًا يجمع المهام المتأخرة': 'One daily alert that rounds up overdue tasks',
@@ -106,7 +106,7 @@ export default {
   'مسح كل البيانات': 'Erase all data',
   'البدء من جديد بصفحة فارغة (الإعدادات تبقى)': 'Start fresh with a blank slate (settings are kept)',
   'سيتم حذف كل المهام والأهداف والعادات والإنجازات. لا يمكن التراجع.': 'All tasks, goals, habits and achievements will be deleted. This can’t be undone.',
-  'مسح الكل': 'Erase all',
+  'مسح الكل': 'Clear all',
   'تم مسح البيانات': 'Data erased',
   'مسح': 'Erase',
 
@@ -170,7 +170,7 @@ export default {
   'وقت الاستيقاظ': 'Wake time',
   'وقت النوم': 'Bedtime',
   'الاهتمامات': 'Interests',
-  'تراجع': 'Revert',
+  'تراجع': 'Undo',
   'حفظ': 'Save',
 
   // ── Auth

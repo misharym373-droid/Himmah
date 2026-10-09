@@ -28,7 +28,7 @@ export default {
   'تحديد الكل': 'Select all',
   'محدد:': 'Selected:',
   'استرجاع': 'Restore',
-  'حذف نهائي': 'Delete forever',
+  'حذف نهائي': 'Delete permanently',
   'سيتم حذف {n} مهام نهائيًا ولا يمكن استرجاعها.': '{n} tasks will be permanently deleted. This can’t be undone.',
   'تم إكمال {n} مهام': '{n} tasks completed',
   'إكمال': 'Complete',
@@ -203,7 +203,7 @@ export default {
   // Shared
   'لم تبدأ': 'To do',
   'قيد التنفيذ': 'In progress',
-  'مكتملة': 'Done',
+  'مكتملة': 'Completed',
   'المهام المشتركة': 'Shared tasks',
   'نظّم مشاريع الفريق ووزع المهام على الأعضاء': 'Organize team projects and assign tasks to members',
   'مشروع جديد': 'New project',
@@ -226,7 +226,7 @@ export default {
   'اسم المشروع': 'Project name',
   'مثال: مشروع الجامعة': 'e.g. University project',
   // Stats
-  'هذا الأسبوع': 'this week',
+  'هذا الأسبوع': 'This week',
   'هذا الشهر': 'this month',
   'منذ البداية': 'since the start',
   'إحصائياتي': 'My stats',

@@ -1,5 +1,5 @@
 // حسابات الإحصائيات — كلها مشتقة من البيانات الحقيقية للمستخدم
-import { todayKey, addDays, fromKey, DAYS, DAYS_SHORT, toMin } from './date.js';
+import { todayKey, addDays, fromKey, dayName, dayShort, toMin } from './date.js';
 import { AREAS } from '../config.js';
 
 const real = (tasks) => tasks.filter((t) => !t.deletedAt && !t.template);
@@ -11,7 +11,7 @@ export function weekBars(tasks, days = 7) {
   for (let i = days - 1; i >= 0; i--) {
     const d = addDays(T, -i);
     const day = list.filter((t) => t.date === d);
-    out.push({ date: d, label: DAYS_SHORT[fromKey(d).getDay()], done: day.filter((t) => t.done).length, total: day.length, today: i === 0 });
+    out.push({ date: d, label: dayShort(fromKey(d).getDay()), done: day.filter((t) => t.done).length, total: day.length, today: i === 0 });
   }
   return out;
 }
@@ -61,7 +61,7 @@ export function summary(tasks, focusLog = [], range = 7) {
     avgDur,
     bestWindow: `${String(bestH).padStart(2, '0')}:00 - ${String(bestH + 2).padStart(2, '0')}:00`,
     hours,
-    topDay: Math.max(...byDay) > 0 ? DAYS[topDay] : '—',
+    topDay: Math.max(...byDay) > 0 ? dayName(topDay) : '—',
     byDay,
     mostPostponed: topPost ? AREAS[topPost[0]]?.label : '—',
     mostPostponedCount: topPost ? topPost[1] : 0,

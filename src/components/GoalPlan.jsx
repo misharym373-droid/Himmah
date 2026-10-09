@@ -30,6 +30,10 @@ export function GoalPlanModal({ onClose }) {
   function onTitle(v) {
     setTitle(v);
     if (/شهر|اشهر|أشهر|شهور|سنة|سنه|عام/.test(v)) setMonths(Math.max(1, Math.min(12, monthsFromText(v))));
+    // English: "in 3 months", "for 6 months", "a year", "12 weeks"
+    const en = v.toLowerCase().match(/(\d+)\s*(months?|weeks?|years?)\b/);
+    if (en) setMonths(Math.max(1, Math.min(12, en[2].startsWith('year') ? 12 * +en[1] : en[2].startsWith('week') ? Math.round(+en[1] / 4.3) || 1 : +en[1])));
+    else if (/\b(a|one) year\b/i.test(v)) setMonths(12);
   }
   function toggleRest(d) {
     const cur = restDays.includes(d) ? restDays.filter((x) => x !== d) : [...restDays, d];
@@ -38,7 +42,7 @@ export function GoalPlanModal({ onClose }) {
   }
   function save() {
     if (!plan) return;
-    const g = addGoal({ title: title.trim().replace(/\s*(خلال|لمدة)\s.*$/, '') || title.trim(), months, area: plan.area, icon: icon || plan.icon, plan });
+    const g = addGoal({ title: title.trim().replace(/\s*(خلال|لمدة|in|for|within)\s+\d.*$/i, '').replace(/\s*(خلال|لمدة)\s.*$/, '') || title.trim(), months, area: plan.area, icon: icon || plan.icon, plan });
     useStore.getState().toast(trf('تم إنشاء الهدف وخطته: {n} جلسة حتى {date}', { n: sessions.length, date: formatShort(plan.endDate) }), { icon: 'sparkles' });
     onClose(g);
   }

@@ -10,7 +10,7 @@ import { extractText, textToTasks } from '../lib/ocr.js';
 import { rescuePlan, fitInTime, suggestNow, say } from '../lib/assistant.js';
 import { formatDuration, relativeDay, todayKey, addDays, formatLong } from '../lib/date.js';
 import { AREAS, PRIORITIES } from '../config.js';
-import { tr, trf } from '../i18n/index.js';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 const SR = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
 
@@ -129,7 +129,7 @@ export function VoiceModal() {
     if (!SR) return setStatus('unsupported');
     try {
       const r = new SR();
-      r.lang = 'ar-SA';
+      r.lang = isEn() ? 'en-US' : 'ar-SA';
       r.interimResults = true;
       r.continuous = false;
       r.onresult = (e) => {
@@ -184,7 +184,7 @@ export function VoiceModal() {
     s.toast(list.length > 1 ? trf('تمت إضافة {n} مهام إلى يومك', { n: list.length }) : trf('تمت إضافة "{title}" إلى يومك', { title: list[0].title }), { icon: 'check' });
     close();
   }
-  const example = 'ذكرني بكرة الساعة 8 أذاكر التفاضل لمدة ساعة';
+  const example = isEn() ? 'Remind me tomorrow at 8pm to study calculus for an hour' : 'ذكرني بكرة الساعة 8 أذاكر التفاضل لمدة ساعة';
   const listening = status === 'listening';
   const label = { idle: tr('اضغط على المايك وتكلم'), listening: tr('أسمعك الآن… تكلم براحتك'), review: items.length ? tr('راجع المهام قبل الحفظ') : tr('ما فهمت مهام واضحة — عدّل النص'), unsupported: tr('التعرف على الصوت غير مدعوم في هذا المتصفح') }[status];
 
