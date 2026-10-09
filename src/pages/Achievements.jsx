@@ -4,8 +4,9 @@ import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import { Modal, Bar, Empty, useConfirm } from '../components/ui.jsx';
 import { ACHIEVEMENTS, levelInfo } from '../lib/game.js';
-import { todayKey, addDays, diffDays, formatShort, fromKey, toKey, DAYS_SHORT } from '../lib/date.js';
+import { todayKey, addDays, diffDays, formatShort, fromKey, toKey, dayShort } from '../lib/date.js';
 import { Glyph, IconTile, IconPicker } from '../components/Glyph.jsx';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 export default function Achievements() {
   const { params } = useRoute();
@@ -21,18 +22,26 @@ export default function Achievements() {
             <span className="ico">
               <Trophy />
             </span>
-            {tab === 'badges' ? 'الإنجازات' : 'تحدياتي'}
+            {tab === 'badges' ? tr('الإنجازات') : tr('تحدياتي')}
           </h1>
           <p>
-            فتحت <span className="num bold">{unlocked}</span> من <span className="num">{ACHIEVEMENTS.length}</span> إنجازات · المستوى <span className="num">{levelInfo(user.totalXp).level}</span>
+            {isEn() ? (
+              <>
+                Unlocked <span className="num bold">{unlocked}</span> of <span className="num">{ACHIEVEMENTS.length}</span> achievements · Level <span className="num">{levelInfo(user.totalXp).level}</span>
+              </>
+            ) : (
+              <>
+                فتحت <span className="num bold">{unlocked}</span> من <span className="num">{ACHIEVEMENTS.length}</span> إنجازات · المستوى <span className="num">{levelInfo(user.totalXp).level}</span>
+              </>
+            )}
           </p>
         </div>
         <div className="tabs">
           <button className={`tab ${tab === 'badges' ? 'on' : ''}`} onClick={() => setTab('badges')}>
-            <Trophy size={16} /> الإنجازات
+            <Trophy size={16} /> {tr('الإنجازات')}
           </button>
           <button className={`tab ${tab === 'challenges' ? 'on' : ''}`} onClick={() => setTab('challenges')}>
-            <Swords size={16} /> التحديات
+            <Swords size={16} /> {tr('التحديات')}
           </button>
         </div>
       </div>
@@ -48,7 +57,7 @@ function Badges() {
     <>
       <div className="card tight mb">
         <div className="row between mb">
-          <span className="bold">تقدم الإنجازات</span>
+          <span className="bold">{tr('تقدم الإنجازات')}</span>
           <span className="num purple xbold">{pct}%</span>
         </div>
         <Bar value={pct} variant="gold" />
@@ -63,9 +72,9 @@ function Badges() {
               <div className="em">
                 <Glyph name={hidden ? 'sparkles' : a.icon} size={34} />
               </div>
-              <div className="bold">{hidden ? 'إنجاز سري' : a.title}</div>
-              <div className="tiny muted mt-s">{hidden ? 'استمر في استخدام مسار لتكتشفه' : a.desc}</div>
-              {on && <div className="tiny gold mt-s">فُتح في {formatShort(toKey(new Date(achievements[a.id])))}</div>}
+              <div className="bold">{hidden ? tr('إنجاز سري') : tr(a.title)}</div>
+              <div className="tiny muted mt-s">{hidden ? tr('استمر في استخدام مسار لتكتشفه') : tr(a.desc)}</div>
+              {on && <div className="tiny gold mt-s">{trf('فُتح في {date}', { date: formatShort(toKey(new Date(achievements[a.id]))) })}</div>}
             </div>
           );
         })}
@@ -83,14 +92,14 @@ function Challenges() {
   return (
     <>
       <div className="row between mb">
-        <p className="muted small">كل يوم تنجزه في التحدي = +20 XP، وإكمال التحدي = +100 XP</p>
+        <p className="muted small">{tr('كل يوم تنجزه في التحدي = +20 XP، وإكمال التحدي = +100 XP')}</p>
         <button className="btn btn-primary" onClick={() => setAdding(true)}>
-          <Plus /> تحدي جديد
+          <Plus /> {tr('تحدي جديد')}
         </button>
       </div>
       {!challenges.length ? (
         <div className="card">
-          <Empty icon={<Swords />} title="لا توجد تحديات" text="ابدأ تحديًا صغيرًا واكسب XP إضافي." action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Plus /> تحدي جديد</button>} />
+          <Empty icon={<Swords />} title={tr('لا توجد تحديات')} text={tr('ابدأ تحديًا صغيرًا واكسب XP إضافي.')} action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Plus /> {tr('تحدي جديد')}</button>} />
         </div>
       ) : (
         <div className="grid g2">
@@ -112,10 +121,10 @@ function Challenges() {
                 <Bar value={pct} variant="gold" className="mt" />
                 <div className="row between small muted mt-s">
                   <span>
-                    المدة: <span className="num">{c.days}</span> أيام
+                    {isEn() ? <>Duration: <span className="num">{c.days}</span> days</> : <>المدة: <span className="num">{c.days}</span> أيام</>}
                   </span>
                   <span>
-                    اليوم <span className="num">{Math.max(1, dayN)}</span> · أنجزت <span className="num">{done}</span>
+                    {isEn() ? <>Day <span className="num">{Math.max(1, dayN)}</span> · Done <span className="num">{done}</span></> : <>اليوم <span className="num">{Math.max(1, dayN)}</span> · أنجزت <span className="num">{done}</span></>}
                   </span>
                 </div>
                 <div className="week-dots mt" style={{ flexWrap: 'wrap' }}>
@@ -124,11 +133,11 @@ function Challenges() {
                     const on = c.log[d];
                     const future = d > T;
                     return (
-                      <button key={d} className="d" style={{ minWidth: 30 }} disabled={future} onClick={() => checkChallenge(c.id, d)} aria-label={`${d} ${on ? 'منجز' : ''}`}>
+                      <button key={d} className="d" style={{ minWidth: 30 }} disabled={future} onClick={() => checkChallenge(c.id, d)} aria-label={`${d} ${on ? tr('منجز') : ''}`}>
                         <i className={on ? (d === T ? 'fire' : 'on') : d < T ? 'miss' : ''} style={{ opacity: future ? 0.35 : 1 }}>
                           {on ? <Check size={13} /> : d < T ? '–' : k + 1}
                         </i>
-                        {DAYS_SHORT[fromKey(d).getDay()].slice(0, 2)}
+                        {dayShort(fromKey(d).getDay()).slice(0, 2)}
                       </button>
                     );
                   })}
@@ -136,16 +145,16 @@ function Challenges() {
                 <div className="row mt">
                   {c.log[T] ? (
                     <button className="btn btn-green grow" onClick={() => checkChallenge(c.id, T)}>
-                      <Check /> تم اليوم
+                      <Check /> {tr('تم اليوم')}
                     </button>
                   ) : T <= addDays(c.start, c.days - 1) && T >= c.start ? (
                     <button className="btn btn-primary grow" onClick={() => checkChallenge(c.id, T)}>
-                      <Check /> أنجزت اليوم
+                      <Check /> {tr('أنجزت اليوم')}
                     </button>
                   ) : (
-                    <span className="small muted grow">{complete ? 'تحدي مكتمل' : T < c.start ? 'يبدأ قريبًا' : 'انتهت مدة التحدي'}</span>
+                    <span className="small muted grow">{complete ? tr('تحدي مكتمل') : T < c.start ? tr('يبدأ قريبًا') : tr('انتهت مدة التحدي')}</span>
                   )}
-                  <button className="icon-btn" aria-label="حذف التحدي" onClick={() => confirm({ title: 'حذف التحدي', body: `هل تريد حذف "${c.title}"؟`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteChallenge(c.id) })}>
+                  <button className="icon-btn" aria-label={tr('حذف التحدي')} onClick={() => confirm({ title: tr('حذف التحدي'), body: trf('هل تريد حذف "{title}"؟', { title: c.title }), danger: true, confirmLabel: tr('حذف'), onConfirm: () => deleteChallenge(c.id) })}>
                     <Trash2 />
                   </button>
                 </div>
@@ -174,20 +183,20 @@ function ChallengeModal({ onClose }) {
   function save() {
     if (!f.title.trim()) return;
     add({ ...f, days: Math.max(1, Math.min(365, +f.days || 7)) });
-    useStore.getState().toast('بدأ التحدي', { icon: 'sparkles' });
+    useStore.getState().toast(tr('بدأ التحدي'), { icon: 'sparkles' });
     onClose();
   }
   return (
     <Modal
-      title="تحدي جديد"
+      title={tr('تحدي جديد')}
       onClose={onClose}
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>
-            إلغاء
+            {tr('إلغاء')}
           </button>
           <button className="btn btn-primary" onClick={save} disabled={!f.title.trim()}>
-            ابدأ التحدي
+            {tr('ابدأ التحدي')}
           </button>
         </>
       }
@@ -195,26 +204,26 @@ function ChallengeModal({ onClose }) {
       <div className="col" style={{ gap: 14 }}>
         <div className="chips">
           {PRESETS.map(([icon, title, desc, days]) => (
-            <button key={title} className={`chip ${f.title === title ? 'on' : ''}`} onClick={() => setF({ icon, title, desc, days })}>
-              <Glyph name={icon} size={15} /> {title}
+            <button key={title} className={`chip ${f.title === tr(title) ? 'on' : ''}`} onClick={() => setF({ icon, title: tr(title), desc: tr(desc), days })}>
+              <Glyph name={icon} size={15} /> {tr(title)}
             </button>
           ))}
         </div>
         <label className="field">
-          <span>اسم التحدي</span>
-          <input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="مثال: 10 أيام بدون سكر" />
+          <span>{tr('اسم التحدي')}</span>
+          <input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={tr('مثال: 10 أيام بدون سكر')} />
         </label>
         <label className="field">
-          <span>الوصف / المهام المطلوبة</span>
+          <span>{tr('الوصف / المهام المطلوبة')}</span>
           <input className="input" value={f.desc} onChange={(e) => setF({ ...f, desc: e.target.value })} />
         </label>
         <div className="grid" style={{ gridTemplateColumns: '90px 1fr', gap: 10 }}>
           <label className="field">
-            <span>الرمز</span>
+            <span>{tr('الرمز')}</span>
             <IconPicker value={f.icon} options={['flame', 'read', 'sunrise', 'dumbbell', 'phoneoff', 'water', 'meditation', 'target']} onChange={(icon) => setF({ ...f, icon })} />
           </label>
           <label className="field">
-            <span>المدة (أيام)</span>
+            <span>{tr('المدة (أيام)')}</span>
             <input className="input" type="number" min="1" max="365" value={f.days} onChange={(e) => setF({ ...f, days: e.target.value })} />
           </label>
         </div>

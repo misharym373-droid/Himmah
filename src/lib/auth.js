@@ -1,25 +1,26 @@
 // المصادقة عبر Supabase Auth (حسابات حقيقية: إنشاء، دخول، خروج، استعادة كلمة المرور، حذف الحساب)
 import { supabase, errorKind, setRemember } from './supabase.js';
+import { tr } from '../i18n/index.js';
 
 const redirectTo = () => window.location.origin + window.location.pathname;
 
 // رسائل عربية واضحة بدل رسائل الخادم التقنية
 export function authError(err) {
   if (!err) return '';
-  if (errorKind(err) === 'network') return 'تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.';
+  if (errorKind(err) === 'network') return tr('تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
   const m = String(err.message || '').toLowerCase();
   const code = err.code || '';
-  if (code === 'invalid_credentials' || m.includes('invalid login credentials')) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
-  if (code === 'email_not_confirmed' || m.includes('email not confirmed')) return 'لم يتم تأكيد بريدك بعد. افتح رابط التأكيد الذي أرسلناه إلى بريدك.';
-  if (code === 'user_already_exists' || m.includes('already registered')) return 'هذا البريد مسجّل مسبقًا. جرّب تسجيل الدخول.';
-  if (code === 'weak_password' || m.includes('password should')) return 'كلمة المرور ضعيفة. استخدم 8 أحرف على الأقل مع أرقام وحروف.';
+  if (code === 'invalid_credentials' || m.includes('invalid login credentials')) return tr('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+  if (code === 'email_not_confirmed' || m.includes('email not confirmed')) return tr('لم يتم تأكيد بريدك بعد. افتح رابط التأكيد الذي أرسلناه إلى بريدك.');
+  if (code === 'user_already_exists' || m.includes('already registered')) return tr('هذا البريد مسجّل مسبقًا. جرّب تسجيل الدخول.');
+  if (code === 'weak_password' || m.includes('password should')) return tr('كلمة المرور ضعيفة. استخدم 8 أحرف على الأقل مع أرقام وحروف.');
   if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || err.status === 429 || m.includes('rate limit') || m.includes('for security purposes'))
-    return 'محاولات كثيرة خلال وقت قصير. انتظر دقيقة ثم حاول مرة أخرى.';
-  if (code === 'signup_disabled' || m.includes('signups not allowed')) return 'إنشاء الحسابات متوقف حاليًا.';
-  if (code === 'email_address_invalid' || m.includes('invalid') && m.includes('email')) return 'البريد الإلكتروني غير صالح.';
-  if (code === 'same_password') return 'كلمة المرور الجديدة مطابقة للقديمة.';
-  if (code === 'session_not_found' || code === 'refresh_token_not_found' || m.includes('session')) return 'انتهت الجلسة. سجّل دخولك مرة أخرى.';
-  return 'حدث خطأ، حاول مرة أخرى.';
+    return tr('محاولات كثيرة خلال وقت قصير. انتظر دقيقة ثم حاول مرة أخرى.');
+  if (code === 'signup_disabled' || m.includes('signups not allowed')) return tr('إنشاء الحسابات متوقف حاليًا.');
+  if (code === 'email_address_invalid' || m.includes('invalid') && m.includes('email')) return tr('البريد الإلكتروني غير صالح.');
+  if (code === 'same_password') return tr('كلمة المرور الجديدة مطابقة للقديمة.');
+  if (code === 'session_not_found' || code === 'refresh_token_not_found' || m.includes('session')) return tr('انتهت الجلسة. سجّل دخولك مرة أخرى.');
+  return tr('حدث خطأ، حاول مرة أخرى.');
 }
 
 export function validateEmail(email) {
@@ -44,7 +45,7 @@ export async function signUp({ name, email, phone, password }) {
   });
   if (error) throw new Error(authError(error));
   // Supabase لا يرجع خطأ عند تكرار بريد مؤكد (حماية من كشف الحسابات) — نكتشفها من identities الفارغة
-  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) throw new Error('هذا البريد مسجّل مسبقًا. جرّب تسجيل الدخول.');
+  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) throw new Error(tr('هذا البريد مسجّل مسبقًا. جرّب تسجيل الدخول.'));
   return { user: data.user, needsConfirm: !data.session };
 }
 

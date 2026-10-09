@@ -1,4 +1,6 @@
 // استخراج النص من الصور (OCR) — يتم تحميل Tesseract.js عند الحاجة فقط (Lazy Loading)
+import { tr } from '../i18n/index.js';
+
 let loading;
 function loadTesseract() {
   if (window.Tesseract) return Promise.resolve(window.Tesseract);
@@ -10,7 +12,7 @@ function loadTesseract() {
     s.onload = () => resolve(window.Tesseract);
     s.onerror = () => {
       loading = null;
-      reject(new Error('تعذر تحميل محرك قراءة الصور. تأكد من اتصالك بالإنترنت.'));
+      reject(new Error(tr('تعذر تحميل محرك قراءة الصور. تأكد من اتصالك بالإنترنت.')));
     };
     document.head.appendChild(s);
   });

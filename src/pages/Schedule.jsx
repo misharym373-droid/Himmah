@@ -3,8 +3,9 @@ import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDragg
 import { CalendarDays, ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import { useStore } from '../store.js';
 import { DayMap } from '../components/Widgets.jsx';
-import { todayKey, addDays, fromKey, toKey, DAYS, DAYS_SHORT, MONTHS, formatLong, toMin } from '../lib/date.js';
+import { todayKey, addDays, fromKey, toKey, DAYS_SHORT, dayName, dayShort, monthName, formatLong, formatShort, toMin } from '../lib/date.js';
 import { Glyph } from '../components/Glyph.jsx';
+import { tr, trf } from '../i18n/index.js';
 
 export default function Schedule() {
   const [view, setView] = useState('week');
@@ -19,7 +20,7 @@ export default function Schedule() {
     } else setDate(addDays(date, dir * step));
   };
   const d = fromKey(date);
-  const title = view === 'day' ? formatLong(date) : view === 'week' ? `أسبوع ${weekStart(date).slice(8)} ${MONTHS[fromKey(weekStart(date)).getMonth()]}` : `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const title = view === 'day' ? formatLong(date) : view === 'week' ? trf('أسبوع {d} {m}', { d: weekStart(date).slice(8), m: monthName(fromKey(weekStart(date)).getMonth()) }) : `${monthName(d.getMonth())} ${d.getFullYear()}`;
   return (
     <>
       <div className="page-head">
@@ -28,12 +29,12 @@ export default function Schedule() {
             <span className="ico">
               <CalendarDays />
             </span>
-            الجدول
+            {tr('الجدول')}
           </h1>
-          <p>اسحب المهام بين الأيام أو داخل اليوم لإعادة الترتيب</p>
+          <p>{tr('اسحب المهام بين الأيام أو داخل اليوم لإعادة الترتيب')}</p>
         </div>
         <button className="btn btn-primary" onClick={() => open('task', { preset: { date: view === 'day' ? date : todayKey() } })}>
-          <Plus /> مهمة جديدة
+          <Plus /> {tr('مهمة جديدة')}
         </button>
       </div>
       <div className="row between wrap mb">
@@ -44,26 +45,26 @@ export default function Schedule() {
             ['month', 'الشهر'],
           ].map(([k, l]) => (
             <button key={k} className={`tab ${view === k ? 'on' : ''}`} onClick={() => setView(k)}>
-              {l}
+              {tr(l)}
             </button>
           ))}
         </div>
         <div className="row">
-          <button className="icon-btn" onClick={() => move(-1)} aria-label="السابق">
+          <button className="icon-btn" onClick={() => move(-1)} aria-label={tr('السابق')}>
             <ChevronRight />
           </button>
           <span className="bold" style={{ minWidth: 150, textAlign: 'center' }}>{title}</span>
-          <button className="icon-btn" onClick={() => move(1)} aria-label="التالي">
+          <button className="icon-btn" onClick={() => move(1)} aria-label={tr('التالي')}>
             <ChevronLeft />
           </button>
           <button className="btn btn-sm" onClick={() => setDate(todayKey())}>
-            اليوم
+            {tr('اليوم')}
           </button>
         </div>
       </div>
       {view === 'day' && (
         <div className="dash" style={{ marginTop: 0 }}>
-          <DayMap key={date} span="span-12" date={date} title={date === todayKey() ? 'خريطة اليوم' : formatLong(date)} />
+          <DayMap key={date} span="span-12" date={date} title={date === todayKey() ? tr('خريطة اليوم') : formatLong(date)} />
         </div>
       )}
       {view === 'week' && <Week date={date} onOpenDay={(k) => (setDate(k), setView('day'))} />}
@@ -100,7 +101,7 @@ function Week({ date, onOpenDay }) {
         setActive(null);
         if (over && over.id !== tasks.find((t) => t.id === a.id)?.date) {
           moveTo(a.id, over.id);
-          useStore.getState().toast(`تم نقل المهمة إلى ${DAYS[fromKey(over.id).getDay()]}`, { icon: 'clock' });
+          useStore.getState().toast(trf('تم نقل المهمة إلى {day}', { day: dayName(fromKey(over.id).getDay()) }), { icon: 'clock' });
         }
       }}
     >
@@ -123,8 +124,8 @@ function DayCol({ k, tasks, onOpenDay }) {
     <div ref={setNodeRef} className={`week-col ${isOver ? 'over' : ''} ${k === todayKey() ? 'today' : ''}`}>
       <button className="row between" onClick={() => onOpenDay(k)} style={{ textAlign: 'start' }}>
         <div>
-          <div className={`small bold ${k === todayKey() ? 'purple' : ''}`}>{DAYS[d.getDay()]}</div>
-          <div className="tiny muted num">{d.getDate()} {MONTHS[d.getMonth()]}</div>
+          <div className={`small bold ${k === todayKey() ? 'purple' : ''}`}>{dayName(d.getDay())}</div>
+          <div className="tiny muted num">{formatShort(k)}</div>
         </div>
         {tasks.length > 0 && <span className="badge num">{done}/{tasks.length}</span>}
       </button>
@@ -132,7 +133,7 @@ function DayCol({ k, tasks, onOpenDay }) {
         <DraggableTask key={t.id} t={t} />
       ))}
       <button className="btn btn-xs btn-ghost" onClick={() => open('task', { preset: { date: k } })} style={{ marginTop: 'auto' }}>
-        <Plus /> إضافة
+        <Plus /> {tr('إضافة')}
       </button>
     </div>
   );
@@ -165,16 +166,16 @@ function Month({ date, onOpenDay }) {
   return (
     <div className="card">
       <div className="cal">
-        {DAYS_SHORT.map((x) => (
+        {DAYS_SHORT.map((x, i) => (
           <div className="hd" key={x}>
-            {x}
+            {dayShort(i)}
           </div>
         ))}
         {cells.map((k) => {
           const c = fromKey(k);
           const list = (byDay[k] || []).sort((a, b) => (toMin(a.time) ?? 9999) - (toMin(b.time) ?? 9999));
           return (
-            <button key={k} className={`day ${c.getMonth() !== d.getMonth() ? 'out' : ''} ${k === todayKey() ? 'today' : ''}`} onClick={() => onOpenDay(k)} aria-label={`${formatLong(k)} — ${list.length} مهام`}>
+            <button key={k} className={`day ${c.getMonth() !== d.getMonth() ? 'out' : ''} ${k === todayKey() ? 'today' : ''}`} onClick={() => onOpenDay(k)} aria-label={trf('{date} — {n} مهام', { date: formatLong(k), n: list.length })}>
               <span className="n num">{c.getDate()}</span>
               {list.slice(0, 3).map((t) => (
                 <span key={t.id} className={`pill ${t.done ? 'done' : ''}`}>

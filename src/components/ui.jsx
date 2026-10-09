@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, Check } from 'lucide-react';
 import { useStore } from '../store.js';
 import { IconTile } from './Glyph.jsx';
+import { tr } from '../i18n/index.js';
 
 const base = import.meta.env.BASE_URL;
 export const asset = (p) => base + p;
@@ -14,7 +15,7 @@ export function BrandMark({ className = '' }) {
 }
 export function Logo({ className = 'header-logo', onClick }) {
   return (
-    <button className={className} onClick={onClick} aria-label="مسار — الرئيسية">
+    <button className={className} onClick={onClick} aria-label={tr('مسار — الرئيسية')}>
       <span className="brand-mark" aria-hidden />
       <span className="brand-name" aria-hidden />
     </button>
@@ -48,7 +49,7 @@ export function Modal({ title, sub, onClose, children, footer, size = '', labell
               {sub && <p className="muted small mt-s">{sub}</p>}
             </div>
             {onClose && (
-              <button className="icon-btn sm" onClick={onClose} aria-label="إغلاق">
+              <button className="icon-btn sm" onClick={onClose} aria-label={tr('إغلاق')}>
                 <X />
               </button>
             )}
@@ -80,7 +81,7 @@ export function Drawer({ title, icon, onClose, children, actions }) {
           </div>
           <div className="row">
             {actions}
-            <button className="icon-btn sm" onClick={onClose} aria-label="إغلاق">
+            <button className="icon-btn sm" onClick={onClose} aria-label={tr('إغلاق')}>
               <X />
             </button>
           </div>
@@ -210,7 +211,7 @@ export function Empty({ icon, title, text, action }) {
 }
 
 export function Avatar({ name = '', src, size = '' }) {
-  return <span className={`avatar ${size}`}>{src ? <img src={src} alt={name} /> : (name || '؟').trim().charAt(0)}</span>;
+  return <span className={`avatar ${size}`}>{src ? <img src={src} alt={name} /> : (name || tr('؟')).trim().charAt(0)}</span>;
 }
 
 export function CardTitle({ icon, color = '', children, sub }) {
@@ -230,7 +231,7 @@ export function useConfirm() {
   return (opts) => open('confirm', opts);
 }
 
-export function ConfirmModal({ title, body, confirmLabel = 'تأكيد', danger, onConfirm, icon }) {
+export function ConfirmModal({ title, body, confirmLabel = tr('تأكيد'), danger, onConfirm, icon }) {
   const close = useStore((s) => s.closeModal);
   return (
     <Modal
@@ -239,7 +240,7 @@ export function ConfirmModal({ title, body, confirmLabel = 'تأكيد', danger,
       footer={
         <>
           <button className="btn btn-ghost" onClick={close}>
-            إلغاء
+            {tr('إلغاء')}
           </button>
           <button
             className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}

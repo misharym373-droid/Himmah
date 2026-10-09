@@ -8,6 +8,7 @@ import {
   Rocket, Heart, Flame, Trophy, Medal, Gift, Star, Sunrise, PhoneOff, Headphones, Cake, Smartphone, TreePalm, Folder, Presentation,
   PartyPopper, ChartColumn, House, Leaf, Crown, Zap, Bird, Gem, Handshake, Mic, Sprout, Siren, Flower2, Utensils, Mountain, Award,
 } from 'lucide-react';
+import { tr } from '../i18n/index.js';
 
 export const ICON_MAP = {
   book: BookOpen, study: GraduationCap, pen: PenLine, read: BookOpenText, dumbbell: Dumbbell, walk: Footprints, coffee: Coffee,
@@ -54,7 +55,7 @@ export function IconTile({ name, color = 'var(--primary)', size = 38, iconSize, 
 }
 
 // منتقي أيقونات بسيط
-export function IconPicker({ value, onChange, options, label = 'الأيقونة' }) {
+export function IconPicker({ value, onChange, options, label = tr('الأيقونة') }) {
   return (
     <div className="chips" role="radiogroup" aria-label={label}>
       {options.map((k) => (

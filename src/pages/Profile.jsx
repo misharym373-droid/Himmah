@@ -10,6 +10,8 @@ import { summary } from '../lib/stats.js';
 import { AREAS } from '../config.js';
 import { IconTile } from '../components/Glyph.jsx';
 import { Collapsible } from '../components/Widgets.jsx';
+import { requestLogout } from '../lib/appSession.js';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 const GOALS = ['زيادة اللياقة', 'تحسين الدراسة', 'تنظيم الوقت', 'قراءة أكثر', 'تعلم مهارة', 'إنجاز مشروع'];
 const INTERESTS = ['التقنية', 'الرياضة', 'القراءة', 'التصميم', 'الطبخ', 'السفر', 'الألعاب', 'ريادة الأعمال', 'اللغات', 'الموسيقى'];
@@ -52,9 +54,9 @@ export default function Profile() {
     img.src = URL.createObjectURL(file);
   }
   function save() {
-    if (!f.name.trim()) return useStore.getState().toast('الاسم مطلوب');
+    if (!f.name.trim()) return useStore.getState().toast(tr('الاسم مطلوب'));
     setProfile({ ...f, name: f.name.trim() });
-    useStore.getState().toast('تم حفظ معلوماتك', { icon: 'check' });
+    useStore.getState().toast(tr('تم حفظ معلوماتك'), { icon: 'check' });
   }
   const toggle = (k, v) => setF((x) => ({ ...x, [k]: x[k].includes(v) ? x[k].filter((y) => y !== v) : [...x[k], v] }));
 
@@ -66,7 +68,7 @@ export default function Profile() {
             <span className="ico">
               <User />
             </span>
-            ملفي الشخصي
+            {tr('ملفي الشخصي')}
           </h1>
         </div>
       </div>
@@ -74,20 +76,20 @@ export default function Profile() {
       <div className="card glow profile-hero reveal">
         <div className="avatar-wrap">
           <Avatar name={f.name} src={f.avatar} size="lg" />
-          <button className="icon-btn sm primary edit" onClick={() => fileRef.current.click()} aria-label="تغيير الصورة">
+          <button className="icon-btn sm primary edit" onClick={() => fileRef.current.click()} aria-label={tr('تغيير الصورة')}>
             <Camera />
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onAvatar(e.target.files[0])} />
         </div>
         <div className="grow" style={{ minWidth: 200 }}>
-          <h2 style={{ fontSize: '1.7rem' }}>{profile.name || 'بدون اسم'}</h2>
+          <h2 style={{ fontSize: '1.7rem' }}>{profile.name || tr('بدون اسم')}</h2>
           <p className="muted small">{profile.email}</p>
           <div className="row wrap mt-s" style={{ gap: 8 }}>
             <span className="badge purple">
-              <Star size={12} /> المستوى <span className="num">{lv.level}</span>
+              <Star size={12} /> {tr('المستوى')} <span className="num">{lv.level}</span>
             </span>
             <span className="badge gold">
-              <Flame size={12} /> <span className="num">{streak.count}</span> يوم متتالي
+              <Flame size={12} /> <span className="num">{streak.count}</span> {tr('يوم متتالي')}
             </span>
             {profile.field && <span className="badge blue">{profile.field}</span>}
           </div>
@@ -95,7 +97,7 @@ export default function Profile() {
         <div style={{ minWidth: 220 }} className="grow">
           <div className="row between small">
             <span className="muted">
-              المستوى <span className="num">{lv.level}</span> ← <span className="num">{lv.level + 1}</span>
+              {tr('المستوى')} <span className="num">{lv.level}</span> {isEn() ? '→' : '←'} <span className="num">{lv.level + 1}</span>
             </span>
             <span className="bold">
               <span className="num">{fmt(lv.into)}</span> / <span className="num">{fmt(lv.need)}</span> XP
@@ -103,10 +105,18 @@ export default function Profile() {
           </div>
           <Bar value={lv.pct} className="mt-s" />
           <div className="tiny muted mt-s">
-            باقي <b className="num">{fmt(lv.need - lv.into)}</b> XP للمستوى <span className="num">{lv.level + 1}</span>
+            {isEn() ? (
+              <>
+                <b className="num">{fmt(lv.need - lv.into)}</b> XP to level <span className="num">{lv.level + 1}</span>
+              </>
+            ) : (
+              <>
+                باقي <b className="num">{fmt(lv.need - lv.into)}</b> XP للمستوى <span className="num">{lv.level + 1}</span>
+              </>
+            )}
           </div>
           <div className="tiny dim mt-s">
-            إجمالي XP: <span className="num">{fmt(user.totalXp)}</span> · رصيد المكافآت: <span className="num">{fmt(user.xp)}</span>
+            {tr('إجمالي XP:')} <span className="num">{fmt(user.totalXp)}</span> · {tr('رصيد المكافآت:')} <span className="num">{fmt(user.xp)}</span>
           </div>
         </div>
       </div>
@@ -115,13 +125,13 @@ export default function Profile() {
         {[
           ['award', 'var(--green)', 'مهمة مكتملة', fmt(stats.done)],
           ['zap', 'var(--blue)', 'ساعات تركيز', formatHM(stats.focus)],
-          ['flame', 'var(--gold)', 'أفضل Streak', `${streak.best || streak.count} يوم`],
+          ['flame', 'var(--gold)', 'أفضل Streak', trf('{n} يوم', { n: streak.best || streak.count })],
           ['trophy', 'var(--primary)', 'إنجازات مفتوحة', `${unlocked}/${ACHIEVEMENTS.length}`],
         ].map(([icon, c, l, v]) => (
           <div className="sum-tile" key={l}>
             <IconTile name={icon} color={c} size={40} />
             <div>
-              <div className="sum-l">{l}</div>
+              <div className="sum-l">{tr(l)}</div>
               <div className="sum-v num">{v}</div>
             </div>
           </div>
@@ -131,11 +141,11 @@ export default function Profile() {
       <div className="dash">
         <div className="card span-7 reveal d1">
           <div className="card-hd">
-            <CardTitle icon={<Target size={18} />} color="green" sub="أهدافك الكبيرة وتقدمك فيها">
-              أهدافي
+            <CardTitle icon={<Target size={18} />} color="green" sub={tr('أهدافك الكبيرة وتقدمك فيها')}>
+              {tr('أهدافي')}
             </CardTitle>
             <button className="btn btn-xs btn-ghost" onClick={() => navigate('goals')}>
-              إدارة الأهداف
+              {tr('إدارة الأهداف')}
             </button>
           </div>
           {goals.length ? (
@@ -157,14 +167,14 @@ export default function Profile() {
               })}
             </div>
           ) : (
-            <p className="small muted">لا توجد أهداف بعد.</p>
+            <p className="small muted">{tr('لا توجد أهداف بعد.')}</p>
           )}
           <div className="divider" />
-          <div className="small bold mb">أهدافي الشخصية</div>
+          <div className="small bold mb">{tr('أهدافي الشخصية')}</div>
             <div className="chips">
               {[...new Set([...GOALS, ...f.personalGoals])].map((g) => (
                 <button key={g} className={`chip ${f.personalGoals.includes(g) ? 'on' : ''}`} onClick={() => (toggle('personalGoals', g), setProfile({ personalGoals: f.personalGoals.includes(g) ? f.personalGoals.filter((x) => x !== g) : [...f.personalGoals, g] }))}>
-                  {g}
+                  {tr(g)}
                 </button>
               ))}
             </div>
@@ -179,8 +189,8 @@ export default function Profile() {
                 setGoal('');
               }}
             >
-              <input className="input" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="هدف خاص…" aria-label="هدف خاص" />
-              <button className="icon-btn" aria-label="إضافة هدف">
+              <input className="input" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder={tr('هدف خاص…')} aria-label={tr('هدف خاص')} />
+              <button className="icon-btn" aria-label={tr('إضافة هدف')}>
                 <Plus />
               </button>
             </form>
@@ -192,12 +202,12 @@ export default function Profile() {
               <Wallet />
             </span>
             <div className="grow" style={{ minWidth: 150 }}>
-              <div className="tiny muted bold">منتجاتي</div>
-              <div className="bold">صُرّة لإدارة الأموال</div>
-              <div className="small muted">إدارة أموالك ومصروفاتك وأهدافك المالية في مكان واحد.</div>
+              <div className="tiny muted bold">{tr('منتجاتي')}</div>
+              <div className="bold">{tr('صُرّة لإدارة الأموال')}</div>
+              <div className="small muted">{tr('إدارة أموالك ومصروفاتك وأهدافك المالية في مكان واحد.')}</div>
             </div>
             <SurraLink className="btn btn-sm btn-primary">
-              فتح صُرّة <ExternalLink />
+              {tr('فتح صُرّة')} <ExternalLink />
             </SurraLink>
           </div>
 
@@ -205,82 +215,82 @@ export default function Profile() {
             <div className="row" style={{ gap: 12 }}>
               <img src={asset('brand/icon.png')} alt="" width="44" height="44" style={{ borderRadius: 13 }} />
               <div className="grow">
-                <div className="bold">حسابك</div>
-                <div className="tiny muted ellipsis">{profile.email || 'حساب محلي على هذا الجهاز'}</div>
+                <div className="bold">{tr('حسابك')}</div>
+                <div className="tiny muted ellipsis">{profile.email || tr('حساب محلي على هذا الجهاز')}</div>
               </div>
               <button className="btn btn-sm btn-ghost" onClick={() => navigate('settings')}>
-                <Palette /> الإعدادات
+                <Palette /> {tr('الإعدادات')}
               </button>
             </div>
             <button
               className="btn btn-danger btn-block mt"
               onClick={() =>
                 confirm({
-                  title: 'تسجيل الخروج',
-                  body: 'هل تريد تسجيل الخروج؟ بياناتك تبقى محفوظة على هذا الجهاز.',
-                  confirmLabel: 'تسجيل الخروج',
+                  title: tr('تسجيل الخروج'),
+                  body: tr('هل تريد تسجيل الخروج؟ بياناتك تبقى محفوظة على هذا الجهاز.'),
+                  confirmLabel: tr('تسجيل الخروج'),
                   danger: true,
                   onConfirm: () => requestLogout(),
                 })
               }
             >
-              <LogOut /> تسجيل الخروج
+              <LogOut /> {tr('تسجيل الخروج')}
             </button>
           </div>
         </div>
 
-        <Collapsible id="profile-info" title="معلوماتي" icon={<User size={18} />} hint="الاسم، التواصل، العمر، أوقات الاستيقاظ والنوم — كلها اختيارية ما عدا الاسم">
+        <Collapsible id="profile-info" title={tr('معلوماتي')} icon={<User size={18} />} hint={tr('الاسم، التواصل، العمر، أوقات الاستيقاظ والنوم — كلها اختيارية ما عدا الاسم')}>
           <div className="card span-12">
           <div className="grid g2">
             <label className="field">
-              <span>الاسم *</span>
+              <span>{tr('الاسم *')}</span>
               <input className="input" value={f.name} onChange={set('name')} />
             </label>
             <label className="field">
-              <span>البريد الإلكتروني</span>
+              <span>{tr('البريد الإلكتروني')}</span>
               <input className="input" type="email" value={f.email} onChange={set('email')} dir="ltr" />
             </label>
             <label className="field">
-              <span>رقم الجوال</span>
+              <span>{tr('رقم الجوال')}</span>
               <input className="input" type="tel" value={f.phone} onChange={set('phone')} dir="ltr" />
             </label>
             <label className="field">
-              <span>المدينة</span>
-              <input className="input" value={f.city} onChange={set('city')} placeholder="اختياري" />
+              <span>{tr('المدينة')}</span>
+              <input className="input" value={f.city} onChange={set('city')} placeholder={tr('اختياري')} />
             </label>
             <label className="field">
-              <span>مجال الدراسة / العمل</span>
-              <input className="input" value={f.field} onChange={set('field')} placeholder="مثال: طالب هندسة" />
+              <span>{tr('مجال الدراسة / العمل')}</span>
+              <input className="input" value={f.field} onChange={set('field')} placeholder={tr('مثال: طالب هندسة')} />
             </label>
             <div className="grid g3" style={{ gap: 10 }}>
               <label className="field">
-                <span>العمر</span>
+                <span>{tr('العمر')}</span>
                 <input className="input" type="number" min="5" max="120" value={f.age} onChange={set('age')} />
               </label>
               <label className="field">
-                <span>الوزن (كجم)</span>
+                <span>{tr('الوزن (كجم)')}</span>
                 <input className="input" type="number" min="20" max="300" value={f.weight} onChange={set('weight')} />
               </label>
               <label className="field">
-                <span>الطول (سم)</span>
+                <span>{tr('الطول (سم)')}</span>
                 <input className="input" type="number" min="80" max="250" value={f.height} onChange={set('height')} />
               </label>
             </div>
             <label className="field">
-              <span>وقت الاستيقاظ</span>
+              <span>{tr('وقت الاستيقاظ')}</span>
               <input className="input" type="time" value={f.wake} onChange={set('wake')} />
             </label>
             <label className="field">
-              <span>وقت النوم</span>
+              <span>{tr('وقت النوم')}</span>
               <input className="input" type="time" value={f.sleep} onChange={set('sleep')} />
             </label>
           </div>
           <div className="field mt">
-            <span>الاهتمامات</span>
+            <span>{tr('الاهتمامات')}</span>
             <div className="chips">
               {[...new Set([...INTERESTS, ...f.interests])].map((i) => (
                 <button key={i} className={`chip ${f.interests.includes(i) ? 'on' : ''}`} onClick={() => toggle('interests', i)}>
-                  {i}
+                  {tr(i)}
                 </button>
               ))}
             </div>
@@ -288,11 +298,11 @@ export default function Profile() {
           <div className="row mt" style={{ justifyContent: 'flex-end' }}>
             {dirty && (
               <button className="btn btn-ghost" onClick={() => setF(profile)}>
-                تراجع
+                {tr('تراجع')}
               </button>
             )}
             <button className="btn btn-primary" onClick={save} disabled={!dirty}>
-              <Save /> حفظ
+              <Save /> {tr('حفظ')}
             </button>
           </div>
           </div>

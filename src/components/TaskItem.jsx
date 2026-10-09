@@ -6,6 +6,7 @@ import { Glyph } from './Glyph.jsx';
 import { AREAS, PRIORITIES } from '../config.js';
 import { formatDuration, relativeDay } from '../lib/date.js';
 import { isOverdue, taskXp } from '../lib/game.js';
+import { tr, trf } from '../i18n/index.js';
 
 export const POSTPONE_OPTIONS = [
   ['now', 'الآن', Zap],
@@ -35,15 +36,15 @@ export function PostponeMenu({ taskId, onDone, compact }) {
   }
   return (
     <div className="pop-wrap" ref={ref} onClick={(e) => e.stopPropagation()}>
-      <button className={compact ? 'icon-btn sm plain' : 'btn btn-ghost'} aria-haspopup="menu" aria-expanded={open} aria-label="تأجيل المهمة" title="تأجيل" onClick={() => setOpen(!open)}>
+      <button className={compact ? 'icon-btn sm plain' : 'btn btn-ghost'} aria-haspopup="menu" aria-expanded={open} aria-label={tr('تأجيل المهمة')} title={tr('تأجيل')} onClick={() => setOpen(!open)}>
         <CalendarClock />
-        {!compact && 'تأجيل'}
+        {!compact && tr('تأجيل')}
       </button>
       {open && (
         <div className="pop-menu" role="menu">
           {POSTPONE_OPTIONS.map(([k, l, I]) => (
             <button key={k} role="menuitem" onClick={() => pick(k)}>
-              <I size={16} /> {l}
+              <I size={16} /> {tr(l)}
             </button>
           ))}
         </div>
@@ -72,11 +73,11 @@ function TaskItem({ task, showDate, dragHandle, current, compact, selectable, se
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && openTask()}
-      aria-label={`${task.title}${task.time ? ' — ' + task.time : ''}${task.done ? ' — مكتملة' : ''}`}
+      aria-label={`${task.title}${task.time ? ' — ' + task.time : ''}${task.done ? ' — ' + tr('مكتملة') : ''}`}
     >
       {dragHandle}
       {selectable && (
-        <input type="checkbox" aria-label={`تحديد ${task.title}`} checked={!!selected} onClick={(e) => e.stopPropagation()} onChange={() => onSelect(task.id)} className="sel-box" />
+        <input type="checkbox" aria-label={trf('تحديد {title}', { title: task.title })} checked={!!selected} onClick={(e) => e.stopPropagation()} onChange={() => onSelect(task.id)} className="sel-box" />
       )}
       <CheckBox
         on={task.done}
@@ -87,7 +88,7 @@ function TaskItem({ task, showDate, dragHandle, current, compact, selectable, se
           }
           toggle(task.id);
         }}
-        label={task.done ? `إلغاء إكمال ${task.title}` : `إكمال ${task.title}`}
+        label={task.done ? trf('إلغاء إكمال {title}', { title: task.title }) : trf('إكمال {title}', { title: task.title })}
       />
       <span className="t-icon" style={{ color: area.color }} aria-hidden>
         <Glyph name={task.icon} fallback={area.icon} size={18} />
@@ -99,52 +100,52 @@ function TaskItem({ task, showDate, dragHandle, current, compact, selectable, se
             <Clock size={12} aria-hidden />
             {showDate && relativeDay(task.date)}
             {showDate && ' · '}
-            {task.time ? <span className="num">{task.time}</span> : 'طوال اليوم'}
+            {task.time ? <span className="num">{task.time}</span> : tr('طوال اليوم')}
           </span>
           {task.time && <span className="meta-item">{formatDuration(task.duration)}</span>}
           {!compact && (
             <span className="meta-item" style={{ color: area.color }}>
-              <Glyph name={area.icon} size={12} /> {area.label}
+              <Glyph name={area.icon} size={12} /> {tr(area.label)}
             </span>
           )}
           {task.priority !== 'med' && task.priority !== 'low' && (
             <span className="prio-tag" style={{ '--c': prio.color }}>
-              {prio.label}
+              {tr(prio.label)}
             </span>
           )}
-          {(task.template || task.seriesId) && <Repeat size={12} aria-label="متكررة" />}
+          {(task.template || task.seriesId) && <Repeat size={12} aria-label={tr('متكررة')} />}
           {task.subtasks?.length > 0 && (
             <span className="meta-item">
               <ListChecks size={12} aria-hidden /> <span className="num">{subDone}/{task.subtasks.length}</span>
             </span>
           )}
           {goal && (
-            <span className="meta-item purple ellipsis" style={{ maxWidth: 150 }} title={`مرتبطة بهدف: ${goal.title}`}>
+            <span className="meta-item purple ellipsis" style={{ maxWidth: 150 }} title={trf('مرتبطة بهدف: {title}', { title: goal.title })}>
               <Target size={12} aria-hidden /> {goal.title}
             </span>
           )}
-          {overdue && <span className="prio-tag" style={{ '--c': 'var(--red)' }}>متأخرة</span>}
+          {overdue && <span className="prio-tag" style={{ '--c': 'var(--red)' }}>{tr('متأخرة')}</span>}
           {task.done && <span className="meta-item green num">+{task.xpAwarded || taskXp(task)} XP</span>}
         </div>
       </div>
       <div className="t-actions" onClick={(e) => e.stopPropagation()}>
         {overdue && (
-          <button className="icon-btn sm plain" title="إعادة التخطيط" aria-label="إعادة التخطيط" onClick={() => open('reschedule', { id: task.id })}>
+          <button className="icon-btn sm plain" title={tr('إعادة التخطيط')} aria-label={tr('إعادة التخطيط')} onClick={() => open('reschedule', { id: task.id })}>
             <CalendarClock className="red" />
           </button>
         )}
         {!task.done && !overdue && !compact && <PostponeMenu taskId={task.id} compact />}
         {!task.done && (
-          <button className="icon-btn sm plain" title="ابدأ جلسة تركيز" aria-label={`ابدأ جلسة تركيز: ${task.title}`} onClick={() => pickFocus(task.id)}>
+          <button className="icon-btn sm plain" title={tr('ابدأ جلسة تركيز')} aria-label={trf('ابدأ جلسة تركيز: {title}', { title: task.title })} onClick={() => pickFocus(task.id)}>
             <Play />
           </button>
         )}
         {!compact && (
           <>
-            <button className="icon-btn sm plain hide-mobile" title="تعديل" aria-label={`تعديل ${task.title}`} onClick={openTask}>
+            <button className="icon-btn sm plain hide-mobile" title={tr('تعديل')} aria-label={trf('تعديل {title}', { title: task.title })} onClick={openTask}>
               <Pencil />
             </button>
-            <button className="icon-btn sm plain hide-mobile" title="حذف" aria-label={`حذف ${task.title}`} onClick={() => del(task.id)}>
+            <button className="icon-btn sm plain hide-mobile" title={tr('حذف')} aria-label={trf('حذف {title}', { title: task.title })} onClick={() => del(task.id)}>
               <Trash2 />
             </button>
           </>
@@ -159,7 +160,7 @@ export default memo(TaskItem);
 
 export function DragHandle(props) {
   return (
-    <span className="drag-handle" aria-label="اسحب لإعادة الترتيب" onClick={(e) => e.stopPropagation()} {...props}>
+    <span className="drag-handle" aria-label={tr('اسحب لإعادة الترتيب')} onClick={(e) => e.stopPropagation()} {...props}>
       <GripVertical size={18} />
     </span>
   );

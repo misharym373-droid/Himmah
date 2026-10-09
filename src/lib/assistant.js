@@ -6,6 +6,7 @@ import { todayKey, addDays, toMin, fromMin, nowMin, roundUp5, formatDuration } f
 import { PRIORITIES } from '../config.js';
 import { isOverdue } from './game.js';
 import { parseTasks, normalize } from './nlp.js';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 // ————— شخصية المساعد —————
 const VOICE = {
@@ -43,7 +44,7 @@ const VOICE = {
   },
 };
 const pick = (a) => (Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a);
-export const say = (persona, key) => pick((VOICE[persona] || VOICE.friend)[key]);
+export const say = (persona, key) => tr(pick((VOICE[persona] || VOICE.friend)[key]));
 
 const live = (s) => s.tasks.filter((t) => !t.deletedAt && !t.template);
 const todayOpen = (s) => live(s).filter((t) => !t.done && (t.date === todayKey() || isOverdue(t)));
@@ -55,24 +56,24 @@ export function scoreTask(t, s, now = nowMin()) {
   const reasons = [];
   if (isOverdue(t)) {
     score += 35;
-    reasons.push('متأخرة');
+    reasons.push(tr('متأخرة'));
   }
   if (t.time) {
     const diff = toMin(t.time) - now;
     if (diff <= 15 && diff >= -t.duration) {
       score += 40;
-      reasons.push('وقتها الآن');
+      reasons.push(tr('وقتها الآن'));
     } else if (diff > 15 && diff < 90) score += 15;
     else if (diff > 180) score -= 15;
   }
   if (energy === 'low') {
-    if (t.duration <= 25) (score += 25), reasons.push('قصيرة وتناسب طاقتك');
+    if (t.duration <= 25) (score += 25), reasons.push(tr('قصيرة وتناسب طاقتك'));
     if (t.duration >= 60) score -= 25;
   } else if (energy === 'high') {
-    if (t.duration >= 45) (score += 20), reasons.push('تحتاج طاقة عالية وطاقتك ممتازة');
+    if (t.duration >= 45) (score += 20), reasons.push(tr('تحتاج طاقة عالية وطاقتك ممتازة'));
   }
-  if (t.priority === 'urgent') reasons.push('عاجلة');
-  else if (t.priority === 'high') reasons.push('أولوية عالية');
+  if (t.priority === 'urgent') reasons.push(tr('عاجلة'));
+  else if (t.priority === 'high') reasons.push(tr('أولوية عالية'));
   return { score, reasons };
 }
 
@@ -86,7 +87,7 @@ export function suggestNow(s) {
     task: best.t,
     reasons: best.reasons,
     alternatives: ranked.slice(1, 3).map((r) => r.t),
-    text: `${say(persona, 'now')} ${best.t.title} لمدة ${formatDuration(best.t.duration)}.`,
+    text: trf('{now} {title} لمدة {dur}.', { now: say(persona, 'now'), title: best.t.title, dur: formatDuration(best.t.duration) }),
   };
 }
 
@@ -146,8 +147,8 @@ const BREAKDOWNS = [
 ];
 export function breakdownTask(title) {
   const n = normalize(title);
-  for (const [re, steps] of BREAKDOWNS) if (re.test(n)) return steps;
-  return ['تحديد المطلوب بدقة', 'البدء بأصغر خطوة', 'إنجاز الجزء الأساسي', 'المراجعة والإنهاء'];
+  for (const [re, steps] of BREAKDOWNS) if (re.test(n)) return steps.map((x) => tr(x));
+  return ['تحديد المطلوب بدقة', 'البدء بأصغر خطوة', 'إنجاز الجزء الأساسي', 'المراجعة والإنهاء'].map((x) => tr(x));
 }
 export const isBigTask = (t) => (t.duration || 0) >= 60 || /مذاكر|ذاكر|مشروع|واجب|تقرير|بحث|اختبار/.test(normalize(t.title || ''));
 
@@ -174,10 +175,10 @@ export function studyPlan(text) {
     const from = Math.floor((d * chapters) / studyDays);
     const to = Math.floor(((d + 1) * chapters) / studyDays);
     const chs = [];
-    for (let c = from; c < to; c++) chs.push(`الفصل ${ORD[c] || c + 1}`);
-    plan.push({ day: d + 1, date: addDays(todayKey(), d), title: chs.length ? chs.join(' + ') : 'مراجعة خفيفة' });
+    for (let c = from; c < to; c++) chs.push(trf('الفصل {n}', { n: isEn() ? c + 1 : ORD[c] || c + 1 }));
+    plan.push({ day: d + 1, date: addDays(todayKey(), d), title: chs.length ? chs.join(' + ') : tr('مراجعة خفيفة') });
   }
-  if (days > 1) plan.push({ day: days, date: addDays(todayKey(), days - 1), title: 'مراجعة شاملة واختبار نفسك' });
+  if (days > 1) plan.push({ day: days, date: addDays(todayKey(), days - 1), title: tr('مراجعة شاملة واختبار نفسك') });
   return { days, chapters, subject, plan };
 }
 
@@ -192,15 +193,15 @@ const GOAL_TEMPLATES = [
 export function goalBreakdown(title, months = 6) {
   const n = normalize(title);
   let tpl = GOAL_TEMPLATES.find(([re]) => re.test(n));
-  const monthly = tpl ? tpl[1] : ['التخطيط والبداية', 'بناء الأساس', 'التقدم المنتظم', 'التحدي الأكبر', 'التحسين', 'الإنجاز والمراجعة'];
-  const daily = tpl ? tpl[2] : ['خطوة يومية صغيرة', 'مراجعة التقدم', 'تعلم شيء جديد'];
+  const monthly = (tpl ? tpl[1] : ['التخطيط والبداية', 'بناء الأساس', 'التقدم المنتظم', 'التحدي الأكبر', 'التحسين', 'الإنجاز والمراجعة']).map((x) => tr(x));
+  const daily = (tpl ? tpl[2] : ['خطوة يومية صغيرة', 'مراجعة التقدم', 'تعلم شيء جديد']).map((x) => tr(x));
   months = Math.max(1, Math.min(12, months));
   const out = [];
   for (let i = 0; i < months; i++) {
     const mTitle = monthly[Math.min(i, monthly.length - 1)] + (i >= monthly.length ? ` (${i + 1})` : '');
     out.push({
-      title: `الشهر ${i + 1}: ${mTitle}`,
-      weeks: [1, 2, 3, 4].map((w) => `الأسبوع ${w}: ${w === 4 ? 'مراجعة وتقييم' : mTitle}`),
+      title: trf('الشهر {n}: {title}', { n: i + 1, title: mTitle }),
+      weeks: [1, 2, 3, 4].map((w) => trf('الأسبوع {w}: {title}', { w, title: w === 4 ? tr('مراجعة وتقييم') : mTitle })),
     });
   }
   return { months: out, daily };
@@ -237,54 +238,54 @@ export function chat(s, message) {
   const m = normalize(message);
   const hi = say(persona, 'hi');
 
-  if (/وش اسوي|وش أسوي|ماذا افعل|ماذا أفعل|ايش اسوي|اقترح/.test(m)) {
+  if (/وش اسوي|وش أسوي|ماذا افعل|ماذا أفعل|ايش اسوي|اقترح/.test(m) || /what should i do|what now|suggest/i.test(m)) {
     const r = suggestNow(s);
-    if (!r.task) return { text: r.text, actions: [{ type: 'addTask', label: 'إضافة مهمة' }] };
+    if (!r.task) return { text: r.text, actions: [{ type: 'addTask', label: tr('إضافة مهمة') }] };
     return {
-      text: `${r.text}${r.reasons?.length ? `\nالسبب: ${r.reasons.join('، ')}.` : ''}`,
+      text: `${r.text}${r.reasons?.length ? '\n' + trf('السبب: {reasons}.', { reasons: r.reasons.join(tr('، ')) }) : ''}`,
       tasks: [r.task],
-      actions: [{ type: 'focus', label: 'ابدأ المهمة', payload: r.task.id }],
+      actions: [{ type: 'focus', label: tr('ابدأ المهمة'), payload: r.task.id }],
     };
   }
-  if (/متاخر|متأخر|انقذ|أنقذ|ساعدني|ضايع|ضغط/.test(m)) {
+  if (/متاخر|متأخر|انقذ|أنقذ|ساعدني|ضايع|ضغط/.test(m) || /rescue|behind|overwhelmed|help me/i.test(m)) {
     const p = rescuePlan(s);
-    if (!p.total) return { text: `${hi} ما عندك مهام متبقية اليوم، أنت بالسليم.` };
+    if (!p.total) return { text: trf('{hi} ما عندك مهام متبقية اليوم، أنت بالسليم.', { hi }) };
     return {
-      text: `${p.text}\nباقي لك تقريبًا ${formatDuration(p.remaining)}. أهم ${p.keep.length} مهام الآن، و${p.move.length} أقترح نقلها لبكرة.`,
+      text: `${p.text}\n${trf('باقي لك تقريبًا {left}. أهم {keep} مهام الآن، و{move} أقترح نقلها لبكرة.', { left: formatDuration(p.remaining), keep: p.keep.length, move: p.move.length })}`,
       tasks: p.keep,
-      actions: [{ type: 'rescue', label: 'طبّق الخطة الجديدة' }],
+      actions: [{ type: 'rescue', label: tr('طبّق الخطة الجديدة') }],
     };
   }
   const hourM = m.match(/(\d+)\s*(دقيقة|دقايق|دقائق)|ساعة|ساعتين|نص ساعة/);
   if (hourM && /(اقدر|أقدر|انجز|أنجز|عندي|خلال|فقط|بس)/.test(m) && !/اختبار|امتحان/.test(m) && !parseTasks(message).some((t) => t.time)) {
     const minutes = hourM[1] ? +hourM[1] : /ساعتين/.test(m) ? 120 : /نص ساعة/.test(m) ? 30 : 60;
     const r = fitInTime(s, minutes);
-    if (!r.tasks.length && !r.partial) return { text: 'ما عندك مهام مفتوحة اليوم. استغل الوقت لشيء تحبه.' };
-    if (!r.tasks.length) return { text: `ما فيه مهمة كاملة تناسب ${minutes} دقيقة، لكن تقدر تبدأ جزء من "${r.partial.title}".`, tasks: [r.partial], actions: [{ type: 'focus', label: 'ابدأ جزءًا منها', payload: r.partial.id }] };
-    return { text: `خلال ${formatDuration(minutes)} تقدر تنجز ${r.tasks.length} مهام (${formatDuration(r.used)}):`, tasks: r.tasks, actions: [{ type: 'focus', label: 'ابدأ بالأولى', payload: r.tasks[0].id }] };
+    if (!r.tasks.length && !r.partial) return { text: tr('ما عندك مهام مفتوحة اليوم. استغل الوقت لشيء تحبه.') };
+    if (!r.tasks.length) return { text: trf('ما فيه مهمة كاملة تناسب {n} دقيقة، لكن تقدر تبدأ جزء من "{title}".', { n: minutes, title: r.partial.title }), tasks: [r.partial], actions: [{ type: 'focus', label: tr('ابدأ جزءًا منها'), payload: r.partial.id }] };
+    return { text: trf('خلال {time} تقدر تنجز {n} مهام ({used}):', { time: formatDuration(minutes), n: r.tasks.length, used: formatDuration(r.used) }), tasks: r.tasks, actions: [{ type: 'focus', label: tr('ابدأ بالأولى'), payload: r.tasks[0].id }] };
   }
   if (/اختبار|امتحان|فصول|فصل/.test(m) && /بعد|خلال|عندي|احتاج|أحتاج/.test(m)) {
     const p = studyPlan(message);
     return {
-      text: `${hi} هذي خطتك: ${p.chapters} فصول خلال ${p.days} أيام، مع يوم أخير للمراجعة.`,
+      text: trf('{hi} هذي خطتك: {chapters} فصول خلال {days} أيام، مع يوم أخير للمراجعة.', { hi, chapters: p.chapters, days: p.days }),
       plan: p.plan,
-      actions: [{ type: 'createPlan', label: 'إنشاء الخطة', payload: p }],
+      actions: [{ type: 'createPlan', label: tr('إنشاء الخطة'), payload: p }],
     };
   }
   if (/قسم|قسّم|قسملي|هدف/.test(m)) {
     const goalText = message.replace(/قسم لي|قسّم لي|قسملي|قسم|هذا الهدف|هدفي|هدف/g, '').trim();
-    if (goalText.length < 3) return { text: 'اكتب لي الهدف، مثلًا: "قسم لي هدف تعلم الإنجليزية خلال 6 أشهر".' };
+    if (goalText.length < 3) return { text: tr('اكتب لي الهدف، مثلًا: "قسم لي هدف تعلم الإنجليزية خلال 6 أشهر".') };
     const months = monthsFromText(message);
     const g = goalBreakdown(goalText, months);
     return {
-      text: `قسّمت الهدف إلى ${g.months.length} مراحل شهرية، كل مرحلة 4 أسابيع، ومهام يومية بسيطة:`,
+      text: trf('قسّمت الهدف إلى {n} مراحل شهرية، كل مرحلة 4 أسابيع، ومهام يومية بسيطة:', { n: g.months.length }),
       goal: { title: goalText.replace(/خلال.*$/, '').trim() || goalText, months, breakdown: g },
-      actions: [{ type: 'createGoal', label: 'إنشاء الهدف', payload: { title: goalText.replace(/خلال.*$/, '').trim(), months, breakdown: g } }],
+      actions: [{ type: 'createGoal', label: tr('إنشاء الهدف'), payload: { title: goalText.replace(/خلال.*$/, '').trim(), months, breakdown: g } }],
     };
   }
-  if (/رتب|رتّب|نظم|نظّم/.test(m)) {
+  if (/رتب|رتّب|نظم|نظّم/.test(m) || /organi[sz]e|plan my day|sort my/i.test(m)) {
     const open = todayOpen(s);
-    if (!open.length) return { text: say(persona, 'empty'), actions: [{ type: 'addTask', label: 'إضافة مهمة' }] };
+    if (!open.length) return { text: say(persona, 'empty'), actions: [{ type: 'addTask', label: tr('إضافة مهمة') }] };
     const ranked = open.map((t) => ({ t, ...scoreTask(t, s) })).sort((a, b) => b.score - a.score);
     let start = roundUp5(Math.max(nowMin() + 5, toMin(s.profile.wake || '07:00')));
     const tasks = ranked.map((r) => {
@@ -292,14 +293,14 @@ export function chat(s, message) {
       start += r.t.duration + 10;
       return x;
     });
-    return { text: `${hi} رتبت ${tasks.length} مهام حسب الأولوية والطاقة والوقت:`, tasks, actions: [{ type: 'reorder', label: 'اعتمد هذا الترتيب', payload: tasks.map((t) => ({ id: t.id, time: t.newTime })) }] };
+    return { text: trf('{hi} رتبت {n} مهام حسب الأولوية والطاقة والوقت:', { hi, n: tasks.length }), tasks, actions: [{ type: 'reorder', label: tr('اعتمد هذا الترتيب'), payload: tasks.map((t) => ({ id: t.id, time: t.newTime })) }] };
   }
   const parsed = parseTasks(message);
   if (parsed.length && parsed.some((p) => p.time)) {
-    return { text: `فهمت ${parsed.length > 1 ? `${parsed.length} مهام` : 'المهمة'}:`, parsed, actions: [{ type: 'addParsed', label: 'أضفها لجدولي', payload: parsed }] };
+    return { text: parsed.length > 1 ? trf('فهمت {n} مهام:', { n: parsed.length }) : tr('فهمت المهمة:'), parsed, actions: [{ type: 'addParsed', label: tr('أضفها لجدولي'), payload: parsed }] };
   }
-  if (/شكرا|شكرًا|يعطيك|تسلم/.test(m)) return { text: 'العفو! أنا هنا متى ما احتجتني.' };
+  if (/شكرا|شكرًا|يعطيك|تسلم/.test(m) || /thank/i.test(m)) return { text: tr('العفو! أنا هنا متى ما احتجتني.') };
   return {
-    text: `${hi} أقدر أساعدك في:\n• "رتب يومي"\n• "وش أسوي الآن؟"\n• "وش أقدر أنجز خلال ساعة؟"\n• "أنا متأخر اليوم، ساعدني"\n• "عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول"\n• "قسم لي هدف تعلم الإنجليزية خلال 6 أشهر"\n• أو اكتب مهامك مع أوقاتها وأجدولها لك.`,
+    text: trf('{hi} أقدر أساعدك في:\n• "رتب يومي"\n• "وش أسوي الآن؟"\n• "وش أقدر أنجز خلال ساعة؟"\n• "أنا متأخر اليوم، ساعدني"\n• "عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول"\n• "قسم لي هدف تعلم الإنجليزية خلال 6 أشهر"\n• أو اكتب مهامك مع أوقاتها وأجدولها لك.', { hi }),
   };
 }

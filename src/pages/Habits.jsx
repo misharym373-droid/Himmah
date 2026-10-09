@@ -3,8 +3,9 @@ import { Repeat, Plus, Minus, Trash2, Check, Flame } from 'lucide-react';
 import { useStore } from '../store.js';
 import { Modal, Bar, Ring, Empty, useConfirm } from '../components/ui.jsx';
 import { habitStreak, habitRate } from '../lib/game.js';
-import { todayKey, addDays, fromKey, DAYS_SHORT, formatShort, formatLong } from '../lib/date.js';
+import { todayKey, addDays, fromKey, DAYS_SHORT, dayShort, formatShort, formatLong } from '../lib/date.js';
 import { Glyph, IconTile, IconPicker } from '../components/Glyph.jsx';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 export default function Habits() {
   const habits = useStore((s) => s.habits);
@@ -19,19 +20,27 @@ export default function Habits() {
             <span className="ico">
               <Repeat />
             </span>
-            عاداتي
+            {tr('عاداتي')}
           </h1>
           <p>
-            اليوم أنجزت <span className="num bold">{doneToday}</span> من <span className="num">{habits.length}</span> عادات
+            {isEn() ? (
+              <>
+                Today you did <span className="num bold">{doneToday}</span> of <span className="num">{habits.length}</span> habits
+              </>
+            ) : (
+              <>
+                اليوم أنجزت <span className="num bold">{doneToday}</span> من <span className="num">{habits.length}</span> عادات
+              </>
+            )}
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setAdding(true)}>
-          <Plus /> عادة جديدة
+          <Plus /> {tr('عادة جديدة')}
         </button>
       </div>
       {!habits.length ? (
         <div className="card">
-          <Empty icon={<Repeat />} title="ابنِ أول عادة" text="العادات الصغيرة تصنع فرقًا كبيرًا." action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Plus /> عادة جديدة</button>} />
+          <Empty icon={<Repeat />} title={tr('ابنِ أول عادة')} text={tr('العادات الصغيرة تصنع فرقًا كبيرًا.')} action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Plus /> {tr('عادة جديدة')}</button>} />
         </div>
       ) : (
         <div className="grid g2">
@@ -61,16 +70,16 @@ function HabitCard({ h, delay }) {
       <div className="row" style={{ gap: 14 }}>
         <IconTile name={h.icon} color={h.color} size={56} />
         <div className="grow">
-          <h3 style={{ fontSize: '1.1rem' }}>{h.title}</h3>
+          <h3 style={{ fontSize: '1.1rem' }}>{tr(h.title)}</h3>
           <div className="row small muted wrap" style={{ gap: 12 }}>
             <span>
-              <Flame size={14} className="gold" style={{ verticalAlign: -2 }} /> <span className="num">{streak}</span> يوم
+              <Flame size={14} className="gold" style={{ verticalAlign: -2 }} /> {isEn() ? <><span className="num">{streak}</span> {streak === 1 ? 'day' : 'days'}</> : <><span className="num">{streak}</span> يوم</>}
             </span>
             <span>
-              الالتزام <span className="num bold">{rate}%</span>
+              {tr('الالتزام')} <span className="num bold">{rate}%</span>
             </span>
             <span>
-              الهدف: <span className="num">{h.target}</span> {h.unit}
+              {tr('الهدف:')} <span className="num">{h.target}</span> {h.unit}
             </span>
           </div>
         </div>
@@ -81,33 +90,33 @@ function HabitCard({ h, delay }) {
       <div className="row mt">
         {h.target > 1 ? (
           <>
-            <button className="icon-btn" onClick={() => logHabit(h.id, T, -1)} aria-label="إنقاص" disabled={v <= 0}>
+            <button className="icon-btn" onClick={() => logHabit(h.id, T, -1)} aria-label={tr('إنقاص')} disabled={v <= 0}>
               <Minus />
             </button>
             <div className="grow">
               <Bar value={(v / h.target) * 100} variant={done ? 'green' : 'blue'} />
             </div>
-            <button className="icon-btn primary" onClick={() => logHabit(h.id, T, 1)} aria-label="زيادة" disabled={done}>
+            <button className="icon-btn primary" onClick={() => logHabit(h.id, T, 1)} aria-label={tr('زيادة')} disabled={done}>
               <Plus />
             </button>
           </>
         ) : (
           <button className={`btn btn-block ${done ? 'btn-green' : 'btn-primary'}`} onClick={() => logHabit(h.id, T, done ? -1 : 1)}>
-            <Check /> {done ? 'تم اليوم' : 'سجّل إنجاز اليوم'}
+            <Check /> {done ? tr('تم اليوم') : tr('سجّل إنجاز اليوم')}
           </button>
         )}
       </div>
       <div className="mt">
         <div className="row between tiny muted mb">
-          <span>آخر 5 أسابيع</span>
+          <span>{tr('آخر 5 أسابيع')}</span>
           <span>
-            {formatShort(cells[0])} ← {formatShort(cells[cells.length - 1])}
+            {formatShort(cells[0])} {isEn() ? '→' : '←'} {formatShort(cells[cells.length - 1])}
           </span>
         </div>
         <div className="heat mb" style={{ gap: 5 }}>
-          {DAYS_SHORT.map((d) => (
+          {DAYS_SHORT.map((d, i) => (
             <span key={d} className="tiny dim" style={{ textAlign: 'center' }}>
-              {d}
+              {dayShort(i)}
             </span>
           ))}
         </div>
@@ -120,7 +129,7 @@ function HabitCard({ h, delay }) {
                 key={d}
                 className={`c ${lvl} ${d === T ? 'today' : ''}`}
                 title={`${formatLong(d)}: ${val}/${h.target}`}
-                aria-label={`${formatLong(d)}: ${val >= h.target ? 'مكتمل' : 'غير مكتمل'}`}
+                aria-label={`${formatLong(d)}: ${val >= h.target ? tr('مكتمل') : tr('غير مكتمل')}`}
                 disabled={d > T}
                 onClick={() => logHabit(h.id, d, val >= h.target ? -h.target : h.target - val)}
                 style={{ opacity: d > T ? 0.25 : 1 }}
@@ -132,9 +141,9 @@ function HabitCard({ h, delay }) {
         </div>
       </div>
       <div className="row between mt">
-        <span className="tiny dim">اضغط على أي يوم لتعديله</span>
-        <button className="btn btn-xs btn-ghost" onClick={() => confirm({ title: 'حذف العادة', body: `هل تريد حذف "${h.title}" وسجلها؟`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteHabit(h.id) })}>
-          <Trash2 /> حذف
+        <span className="tiny dim">{tr('اضغط على أي يوم لتعديله')}</span>
+        <button className="btn btn-xs btn-ghost" onClick={() => confirm({ title: tr('حذف العادة'), body: trf('هل تريد حذف "{title}" وسجلها؟', { title: h.title }), danger: true, confirmLabel: tr('حذف'), onConfirm: () => deleteHabit(h.id) })}>
+          <Trash2 /> {tr('حذف')}
         </button>
       </div>
     </div>
@@ -157,24 +166,24 @@ const COLORS = ['#2E6B57', '#2F7CF6', '#30A46C', '#E8940C', '#D7264F', '#5856D6'
 
 function HabitModal({ onClose }) {
   const addHabit = useStore((s) => s.addHabit);
-  const [f, setF] = useState({ icon: 'sparkles', title: '', target: 1, unit: 'مرة', color: '#2E6B57' });
+  const [f, setF] = useState({ icon: 'sparkles', title: '', target: 1, unit: tr('مرة'), color: '#2E6B57' });
   function save() {
     if (!f.title.trim()) return;
     addHabit({ ...f, title: f.title.trim(), target: Math.max(1, +f.target || 1) });
-    useStore.getState().toast(`تمت إضافة عادة "${f.title}"`, { icon: 'check' });
+    useStore.getState().toast(trf('تمت إضافة عادة "{title}"', { title: f.title }), { icon: 'check' });
     onClose();
   }
   return (
     <Modal
-      title="عادة جديدة"
+      title={tr('عادة جديدة')}
       onClose={onClose}
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>
-            إلغاء
+            {tr('إلغاء')}
           </button>
           <button className="btn btn-primary" onClick={save} disabled={!f.title.trim()}>
-            <Check /> إضافة
+            <Check /> {tr('إضافة')}
           </button>
         </>
       }
@@ -182,33 +191,33 @@ function HabitModal({ onClose }) {
       <div className="col" style={{ gap: 16 }}>
         <div className="chips">
           {SUGGEST.map(([icon, title, target, unit]) => (
-            <button key={title} className={`chip ${f.title === title ? 'on' : ''}`} onClick={() => setF({ ...f, icon, title, target, unit })}>
-              <Glyph name={icon} size={15} /> {title}
+            <button key={title} className={`chip ${f.title === tr(title) ? 'on' : ''}`} onClick={() => setF({ ...f, icon, title: tr(title), target, unit: tr(unit) })}>
+              <Glyph name={icon} size={15} /> {tr(title)}
             </button>
           ))}
         </div>
         <div className="grid" style={{ gridTemplateColumns: '80px 1fr', gap: 10 }}>
           <label className="field">
-            <span>الرمز</span>
+            <span>{tr('الرمز')}</span>
             <IconPicker value={f.icon} options={HABIT_ICONS} onChange={(icon) => setF({ ...f, icon })} />
           </label>
           <label className="field">
-            <span>اسم العادة</span>
-            <input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="مثال: قراءة 10 صفحات" autoFocus />
+            <span>{tr('اسم العادة')}</span>
+            <input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={tr('مثال: قراءة 10 صفحات')} autoFocus />
           </label>
         </div>
         <div className="grid g2">
           <label className="field">
-            <span>الهدف اليومي</span>
+            <span>{tr('الهدف اليومي')}</span>
             <input className="input" type="number" min="1" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} />
           </label>
           <label className="field">
-            <span>الوحدة</span>
-            <input className="input" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="مرة / أكواب / صفحات" />
+            <span>{tr('الوحدة')}</span>
+            <input className="input" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder={tr('مرة / أكواب / صفحات')} />
           </label>
         </div>
         <div className="field">
-          <span>اللون</span>
+          <span>{tr('اللون')}</span>
           <div className="swatches">
             {COLORS.map((c) => (
               <button key={c} className={`swatch-btn ${f.color === c ? 'on' : ''}`} style={{ background: c, color: c }} onClick={() => setF({ ...f, color: c })} aria-label={c} />

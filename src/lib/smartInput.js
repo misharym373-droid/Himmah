@@ -3,6 +3,7 @@
 // للربط مع AI حقيقي لاحقًا: أضف محركًا بنفس الشكل { name, analyze(text) => Promise<Task[]> }
 // ومرّره إلى setEngine() — الواجهة (الإدخال السريع، المايك، المساعد) لا تحتاج أي تعديل.
 import { parseTasks } from './nlp.js';
+import { tr } from '../i18n/index.js';
 
 const localEngine = {
   name: 'local',
@@ -12,7 +13,7 @@ const localEngine = {
 
 let engine = localEngine;
 export const setEngine = (e) => (engine = e || localEngine);
-export const engineInfo = () => ({ name: engine.name, label: engine.label });
+export const engineInfo = () => ({ name: engine.name, label: tr(engine.label) });
 
 // متزامن للمعاينة الفورية أثناء الكتابة (محلي دائمًا)
 export const previewTasks = (text) => parseTasks(text);

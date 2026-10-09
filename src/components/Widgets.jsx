@@ -15,11 +15,12 @@ import { Ring, Bar, Num, CardTitle, Empty, CheckBox } from './ui.jsx';
 import { Glyph, IconTile } from './Glyph.jsx';
 import TaskItem, { DragHandle, PostponeMenu } from './TaskItem.jsx';
 import { Bars, TimeLine, Donut } from './Charts.jsx';
-import { formatLong, todayKey, formatDuration, formatHM, nowMin, toMin, fmt, addDays, DAYS_SHORT, fromKey, formatClock } from '../lib/date.js';
+import { formatLong, todayKey, formatDuration, formatHM, nowMin, toMin, fmt, addDays, dayShort, fromKey, formatClock } from '../lib/date.js';
 import { levelInfo, habitStreak, isOverdue } from '../lib/game.js';
 import { scoreTask, studyPlan, postponeInsights, say } from '../lib/assistant.js';
 import { weekBars, summary, balance, timeMachine } from '../lib/stats.js';
 import { ENERGY, AREAS } from '../config.js';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 const ENERGY_ICONS = { low: BatteryLow, mid: BatteryMedium, high: BatteryFull };
 
@@ -70,19 +71,19 @@ export function EnergyCheck() {
   if (energy && !edit) {
     const I = ENERGY_ICONS[energy];
     return (
-      <button className="chip" onClick={() => setEdit(true)} title="تغيير مستوى الطاقة" aria-label={`طاقتك اليوم ${ENERGY[energy].label} — تغيير`}>
-        <I size={16} /> طاقتك: {ENERGY[energy].label}
+      <button className="chip" onClick={() => setEdit(true)} title={tr('تغيير مستوى الطاقة')} aria-label={trf('طاقتك اليوم {level} — تغيير', { level: tr(ENERGY[energy].label) })}>
+        <I size={16} /> {trf('طاقتك: {level}', { level: tr(ENERGY[energy].label) })}
       </button>
     );
   }
   return (
-    <div className="energy-pick" role="radiogroup" aria-label="كيف طاقتك اليوم؟">
-      <span className="small muted bold">كيف طاقتك اليوم؟</span>
+    <div className="energy-pick" role="radiogroup" aria-label={tr('كيف طاقتك اليوم؟')}>
+      <span className="small muted bold">{tr('كيف طاقتك اليوم؟')}</span>
       {Object.entries(ENERGY).map(([k, e]) => {
         const I = ENERGY_ICONS[k];
         return (
-          <button key={k} role="radio" aria-checked={energy === k} className={`chip ${energy === k ? 'on' : ''}`} onClick={() => (setEnergy(k), setEdit(false))} title={e.hint}>
-            <I size={16} /> {e.label}
+          <button key={k} role="radio" aria-checked={energy === k} className={`chip ${energy === k ? 'on' : ''}`} onClick={() => (setEnergy(k), setEdit(false))} title={tr(e.hint)}>
+            <I size={16} /> {tr(e.label)}
           </button>
         );
       })}
@@ -96,33 +97,41 @@ export function Greeting({ input }) {
   const open = useStore((s) => s.openModal);
   const { progress, dayLeft } = useToday();
   const h = new Date().getHours();
-  const hello = h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'مساء النور';
+  const hello = h < 12 ? tr('صباح الخير') : h < 18 ? tr('مساء الخير') : tr('مساء النور');
   const actions = [
-    [Siren, 'أنقذ يومي', () => open('rescue'), 'red'],
-    [Hourglass, 'عندي ساعة فقط', () => open('oneHour'), 'gold'],
-    [ImagePlus, 'مهمة من صورة', () => open('image'), 'blue'],
+    [Siren, tr('أنقذ يومي'), () => open('rescue'), 'red'],
+    [Hourglass, tr('عندي ساعة فقط'), () => open('oneHour'), 'gold'],
+    [ImagePlus, tr('مهمة من صورة'), () => open('image'), 'blue'],
   ];
   return (
-    <section className="greeting span-12 reveal" aria-label="الترحيب">
+    <section className="greeting span-12 reveal" aria-label={tr('الترحيب')}>
       <div className="greet-top">
         <div>
           <p className="small muted bold">{formatLong(todayKey())}</p>
           <h1 className="greet-title">
             {hello}
-            {name ? `، ${name}` : ''}
+            {name ? `${tr('، ')}${name}` : ''}
           </h1>
           <p className="greet-sub">
             {progress.total ? (
               <>
-                أنجزت <b className="num">{progress.done}</b> من <b className="num">{progress.total}</b> مهام
+                {isEn() ? (
+                  <>
+                    You've done <b className="num">{progress.done}</b> of <b className="num">{progress.total}</b> tasks
+                  </>
+                ) : (
+                  <>
+                    أنجزت <b className="num">{progress.done}</b> من <b className="num">{progress.total}</b> مهام
+                  </>
+                )}
                 {dayLeft > 0 && (
                   <>
-                    {' '}· باقي <b>{formatDuration(dayLeft)}</b> من يومك
+                    {' '}· {isEn() ? null : 'باقي '}<b>{formatDuration(dayLeft)}</b> {tr('من يومك')}
                   </>
                 )}
               </>
             ) : (
-              'يومك فاضي — اكتب ما عندك ومسار يرتبه لك.'
+              tr('يومك فاضي — اكتب ما عندك ومسار يرتبه لك.')
             )}
           </p>
         </div>
@@ -131,7 +140,7 @@ export function Greeting({ input }) {
       {input}
       <div className="greet-actions">
         <button className="btn btn-primary btn-sm" onClick={() => open('whatNow')}>
-          <Brain /> وش أسوي الآن؟
+          <Brain /> {tr('وش أسوي الآن؟')}
         </button>
         {actions.map(([I, l, run, c]) => (
           <button key={l} className={`btn btn-sm btn-ghost tone-${c}`} onClick={run}>
@@ -139,7 +148,7 @@ export function Greeting({ input }) {
           </button>
         ))}
         <button className="btn btn-sm btn-ghost" onClick={() => open('interactive')}>
-          <Sparkles /> التجربة التفاعلية
+          <Sparkles /> {tr('التجربة التفاعلية')}
         </button>
       </div>
     </section>
@@ -155,42 +164,42 @@ export function SummaryStrip() {
   const focusToday = useMemo(() => focusLog.filter((f) => f.date === T).reduce((a, f) => a + f.minutes, 0), [focusLog, T]);
   const tight = openMinutes > dayLeft && dayLeft > 0;
   return (
-    <section className="summary span-12 reveal d1" aria-label="ملخص اليوم">
+    <section className="summary span-12 reveal d1" aria-label={tr('ملخص اليوم')}>
       <div className="sum-tile sum-ring">
         <Ring value={progress.pct} size={76} stroke={8} id="dayRing">
           <span className="xbold num" style={{ fontSize: '1.1rem' }}>{progress.pct}%</span>
         </Ring>
         <div>
-          <div className="sum-l">إنجاز اليوم</div>
+          <div className="sum-l">{tr('إنجاز اليوم')}</div>
           <div className="sum-v">
-            <Num value={progress.done} /> <span className="muted small">/ {progress.total} مهام</span>
+            <Num value={progress.done} /> <span className="muted small">{trf('/ {n} مهام', { n: progress.total })}</span>
           </div>
         </div>
       </div>
       <div className={`sum-tile ${tight ? 'warn' : ''}`}>
         <IconTile name="sunrise" color={tight ? 'var(--gold)' : 'var(--blue)'} size={40} />
         <div>
-          <div className="sum-l">باقي من يومك</div>
-          <div className="sum-v">{dayLeft ? formatDuration(dayLeft) : 'انتهى اليوم'}</div>
-          <div className="tiny muted">{openMinutes ? `مهامك المتبقية تحتاج ${formatDuration(openMinutes)}` : 'لا مهام متبقية'}</div>
+          <div className="sum-l">{tr('باقي من يومك')}</div>
+          <div className="sum-v">{dayLeft ? formatDuration(dayLeft) : tr('انتهى اليوم')}</div>
+          <div className="tiny muted">{openMinutes ? trf('مهامك المتبقية تحتاج {d}', { d: formatDuration(openMinutes) }) : tr('لا مهام متبقية')}</div>
         </div>
       </div>
       <div className="sum-tile">
         <IconTile name="zap" color="var(--green)" size={40} />
         <div>
-          <div className="sum-l">تركيز اليوم</div>
+          <div className="sum-l">{tr('تركيز اليوم')}</div>
           <div className="sum-v num">{formatHM(focusToday)}</div>
-          <div className="tiny muted">ساعة:دقيقة</div>
+          <div className="tiny muted">{tr('ساعة:دقيقة')}</div>
         </div>
       </div>
       <div className="sum-tile">
         <IconTile name="flame" color="var(--gold)" size={40} />
         <div>
-          <div className="sum-l">الـStreak</div>
+          <div className="sum-l">{tr('الـStreak')}</div>
           <div className="sum-v">
-            <Num value={streak.count} /> <span className="muted small">يوم</span>
+            <Num value={streak.count} /> <span className="muted small">{tr('يوم')}</span>
           </div>
-          <div className="tiny muted">{streak.lastDate === T ? 'حافظت عليه اليوم' : 'أكمل يومك للحفاظ عليه'}</div>
+          <div className="tiny muted">{streak.lastDate === T ? tr('حافظت عليه اليوم') : tr('أكمل يومك للحفاظ عليه')}</div>
         </div>
       </div>
     </section>
@@ -212,23 +221,23 @@ export function Insights() {
         <div className="notice danger">
           <TriangleAlert size={18} aria-hidden />
           <span className="grow small">
-            <b className="num">{overdue.length}</b> مهام متأخرة تحتاج قرارك: <span className="muted">{overdue.slice(0, 2).map((t) => t.title).join('، ')}</span>
+            <b className="num">{overdue.length}</b> {tr('مهام متأخرة تحتاج قرارك:')} <span className="muted">{overdue.slice(0, 2).map((t) => t.title).join(tr('، '))}</span>
           </span>
           <button className="btn btn-xs" onClick={() => open('reschedule', { id: overdue[0].id })}>
-            أعد التخطيط
+            {tr('أعد التخطيط')}
           </button>
         </div>
       )}
       {ins && (
         <div className="notice warn">
           <Lightbulb size={18} aria-hidden />
-          <span className="grow small">لاحظنا أنك غالبًا تؤجل مهام "{ins.key}" — تقسيمها لخطوات أصغر يساعد.</span>
+          <span className="grow small">{trf('لاحظنا أنك غالبًا تؤجل مهام "{key}" — تقسيمها لخطوات أصغر يساعد.', { key: ins.key })}</span>
           {!ins.sample.done && !ins.sample.deletedAt && (
             <button className="btn btn-xs" onClick={() => open('task', { task: ins.sample })}>
-              قسّمها
+              {tr('قسّمها')}
             </button>
           )}
-          <button className="icon-btn sm plain" aria-label="تجاهل الاقتراح" onClick={() => dismissInsight(ins.key)}>
+          <button className="icon-btn sm plain" aria-label={tr('تجاهل الاقتراح')} onClick={() => dismissInsight(ins.key)}>
             <X />
           </button>
         </div>
@@ -258,18 +267,18 @@ export function TopThree({ span = 'span-7' }) {
   return (
     <div className={`card ${span} reveal d2`}>
       <div className="card-hd">
-        <CardTitle icon={<ListTodo size={18} />} sub={top.length ? 'مرتبة حسب الأولوية والوقت وطاقتك' : null}>
-          أهم 3 مهام اليوم
+        <CardTitle icon={<ListTodo size={18} />} sub={top.length ? tr('مرتبة حسب الأولوية والوقت وطاقتك') : null}>
+          {tr('أهم 3 مهام اليوم')}
         </CardTitle>
-        <button className="icon-btn sm primary" onClick={() => open('task')} aria-label="إضافة مهمة">
+        <button className="icon-btn sm primary" onClick={() => open('task')} aria-label={tr('إضافة مهمة')}>
           <Plus />
         </button>
       </div>
       {!top.length ? (
         progress.total ? (
-          <Empty icon={<CircleCheck />} title="أنجزت كل مهام اليوم" text="يوم ممتاز. خذ راحتك أو خطط لبكرة." />
+          <Empty icon={<CircleCheck />} title={tr('أنجزت كل مهام اليوم')} text={tr('يوم ممتاز. خذ راحتك أو خطط لبكرة.')} />
         ) : (
-          <Empty icon={<CalendarDays />} title="يومك جاهز لك." text="أضف أول مهمة وابدأ." action={<button className="btn btn-primary" onClick={() => open('task')}><Plus /> إضافة مهمة</button>} />
+          <Empty icon={<CalendarDays />} title={tr('يومك جاهز لك.')} text={tr('أضف أول مهمة وابدأ.')} action={<button className="btn btn-primary" onClick={() => open('task')}><Plus /> {tr('إضافة مهمة')}</button>} />
         )
       ) : (
         <div className="col" style={{ gap: 8 }}>
@@ -285,7 +294,7 @@ export function TopThree({ span = 'span-7' }) {
         </div>
       )}
       <button className="btn btn-ghost btn-sm mt" onClick={() => navigate('tasks')}>
-        كل مهام اليوم ({progress.total}) <ArrowLeft />
+        {trf('كل مهام اليوم ({n})', { n: progress.total })} <ArrowLeft />
       </button>
     </div>
   );
@@ -301,8 +310,8 @@ export function NextTask({ span = 'span-5' }) {
   if (!task)
     return (
       <div className={`card ${span} reveal d3`}>
-        <CardTitle icon={<Clock size={18} />} color="blue">المهمة القادمة</CardTitle>
-        <Empty icon={<Sunset />} title="لا توجد مهام مجدولة لاحقًا اليوم" text="أضف وقتًا لمهامك لتظهر هنا." action={<button className="btn btn-sm" onClick={() => open('task')}><Plus /> مهمة بوقت</button>} />
+        <CardTitle icon={<Clock size={18} />} color="blue">{tr('المهمة القادمة')}</CardTitle>
+        <Empty icon={<Sunset />} title={tr('لا توجد مهام مجدولة لاحقًا اليوم')} text={tr('أضف وقتًا لمهامك لتظهر هنا.')} action={<button className="btn btn-sm" onClick={() => open('task')}><Plus /> {tr('مهمة بوقت')}</button>} />
       </div>
     );
   const start = toMin(task.time);
@@ -312,28 +321,28 @@ export function NextTask({ span = 'span-5' }) {
   return (
     <div className={`card ${span} reveal d3 next-card ${isNow ? 'is-now' : ''}`}>
       <div className="card-hd">
-        <CardTitle icon={<Clock size={18} />} color="blue">{isNow ? 'جارية الآن' : 'المهمة القادمة'}</CardTitle>
-        <span className={`badge ${isNow ? 'green' : 'blue'}`}>{isNow ? <><span className="pulse-dot" /> الآن</> : <span className="num">{task.time}</span>}</span>
+        <CardTitle icon={<Clock size={18} />} color="blue">{isNow ? tr('جارية الآن') : tr('المهمة القادمة')}</CardTitle>
+        <span className={`badge ${isNow ? 'green' : 'blue'}`}>{isNow ? <><span className="pulse-dot" /> {tr('الآن')}</> : <span className="num">{task.time}</span>}</span>
       </div>
       <div className="row" style={{ gap: 14 }}>
         <IconTile name={task.icon} color={area.color} size={56} />
         <div className="grow" style={{ minWidth: 0 }}>
           <h3 className="ellipsis" style={{ fontSize: '1.25rem' }}>{task.title}</h3>
           <div className="small muted">
-            <span className="num">{task.time}</span> · {formatDuration(task.duration)} · {area.label}
+            <span className="num">{task.time}</span> · {formatDuration(task.duration)} · {tr(area.label)}
           </div>
         </div>
       </div>
       <div className="countdown">
-        <span className="tiny muted bold">{isNow ? 'باقي على انتهائها' : 'تبدأ بعد'}</span>
+        <span className="tiny muted bold">{isNow ? tr('باقي على انتهائها') : tr('تبدأ بعد')}</span>
         <span className="cd-v">{formatDuration(Math.max(1, mins))}</span>
       </div>
       <div className="row wrap">
         <button className="btn btn-primary grow" onClick={() => pickFocus(task.id)}>
-          <Play /> ابدأ جلسة تركيز
+          <Play /> {tr('ابدأ جلسة تركيز')}
         </button>
         <button className="btn" onClick={() => complete(task.id)}>
-          <Check /> إكمال
+          <Check /> {tr('إكمال')}
         </button>
         <PostponeMenu taskId={task.id} />
       </div>
@@ -348,13 +357,13 @@ export function GoalsShortcut({ span = 'span-7' }) {
   return (
     <div className={`card ${span} reveal`}>
       <div className="card-hd">
-        <CardTitle icon={<Target size={18} />}>أهدافي</CardTitle>
+        <CardTitle icon={<Target size={18} />}>{tr('أهدافي')}</CardTitle>
         <button className="btn btn-xs btn-ghost" onClick={() => navigate('goals')}>
-          كل الأهداف <ArrowLeft />
+          {tr('كل الأهداف')} <ArrowLeft />
         </button>
       </div>
       {!goals.length ? (
-        <Empty icon={<Target />} title="ما الشيء الذي تريد الوصول إليه؟" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('goals?new=1')}>إنشاء هدف</button>} />
+        <Empty icon={<Target />} title={tr('ما الشيء الذي تريد الوصول إليه؟')} action={<button className="btn btn-sm btn-primary" onClick={() => navigate('goals?new=1')}>{tr('إنشاء هدف')}</button>} />
       ) : (
         <div className="col" style={{ gap: 14 }}>
           {goals.slice(0, 3).map((g) => {
@@ -369,7 +378,7 @@ export function GoalsShortcut({ span = 'span-7' }) {
                     <span className="purple xbold small num">{p}%</span>
                   </span>
                   <Bar value={p} className="thin" />
-                  <span className="tiny muted ellipsis" style={{ display: 'block', marginTop: 4 }}>{stage ? `المرحلة الحالية: ${stage.title}` : 'كل المراحل مكتملة'}</span>
+                  <span className="tiny muted ellipsis" style={{ display: 'block', marginTop: 4 }}>{stage ? trf('المرحلة الحالية: {title}', { title: stage.title }) : tr('كل المراحل مكتملة')}</span>
                 </span>
               </button>
             );
@@ -402,24 +411,24 @@ export function FocusCard({ span = 'span-5' }) {
   return (
     <div className={`card ${span} reveal ${focus ? 'focus-live' : ''}`}>
       <div className="card-hd">
-        <CardTitle icon={<Timer size={18} />} color="green">التركيز</CardTitle>
+        <CardTitle icon={<Timer size={18} />} color="green">{tr('التركيز')}</CardTitle>
         <span className="tiny muted">
-          <span className="num">{today.length}</span> جلسات اليوم
+          <span className="num">{today.length}</span> {tr('جلسات اليوم')}
         </span>
       </div>
       {focus ? (
         <>
-          <div className="small muted ellipsis">{focusTask?.title || 'جلسة تركيز'}</div>
+          <div className="small muted ellipsis">{focusTask?.title || tr('جلسة تركيز')}</div>
           <div className="focus-clock num">{formatClock(remaining)}</div>
           <Bar value={100 - (remaining / focus.totalSec) * 100} variant="green" />
           <div className="row mt wrap">
             {!focus.finished && (
               <button className="btn btn-sm" onClick={() => (focus.running ? pauseFocus() : resumeFocus())}>
-                {focus.running ? <Pause /> : <Play />} {focus.running ? 'إيقاف مؤقت' : 'استئناف'}
+                {focus.running ? <Pause /> : <Play />} {focus.running ? tr('إيقاف مؤقت') : tr('استئناف')}
               </button>
             )}
             <button className="btn btn-sm btn-primary" onClick={() => minimizeFocus(false)}>
-              <Maximize2 /> وضع التركيز
+              <Maximize2 /> {tr('وضع التركيز')}
             </button>
           </div>
         </>
@@ -429,7 +438,7 @@ export function FocusCard({ span = 'span-5' }) {
             <div>
               <div className="sum-v num">{formatHM(minutes)}</div>
               <div className="tiny muted">
-                من هدف <span className="num">{FOCUS_TARGET / 60}</span> ساعات تركيز يوميًا
+                {tr('من هدف')} <span className="num">{FOCUS_TARGET / 60}</span> {tr('ساعات تركيز يوميًا')}
               </div>
             </div>
             <Ring value={(minutes / FOCUS_TARGET) * 100} size={58} stroke={6} id="focusRing" color="var(--green)">
@@ -439,21 +448,21 @@ export function FocusCard({ span = 'span-5' }) {
           {suggested ? (
             <>
               <div className="small mt">
-                ابدأ على: <b>{suggested.title}</b>
+                {tr('ابدأ على:')} <b>{suggested.title}</b>
               </div>
               <div className="row mt-s wrap">
                 {[15, 25, 45].map((m) => (
-                  <button key={m} className="btn btn-sm" onClick={() => startFocus(suggested.id, m)} aria-label={`جلسة ${m} دقيقة على ${suggested.title}`}>
-                    <span className="num">{m}</span> د
+                  <button key={m} className="btn btn-sm" onClick={() => startFocus(suggested.id, m)} aria-label={trf('جلسة {m} دقيقة على {title}', { m, title: suggested.title })}>
+                    <span className="num">{m}</span> {tr('د')}
                   </button>
                 ))}
                 <button className="btn btn-sm btn-ghost" onClick={() => pickFocus(suggested.id)}>
-                  تخصيص
+                  {tr('تخصيص')}
                 </button>
               </div>
             </>
           ) : (
-            <p className="small muted mt">لا توجد مهام مفتوحة للتركيز عليها الآن.</p>
+            <p className="small muted mt">{tr('لا توجد مهام مفتوحة للتركيز عليها الآن.')}</p>
           )}
         </>
       )}
@@ -493,36 +502,36 @@ export function DayMap({ span = 'span-7', date = todayKey(), title = 'خريطة
     if (!over || active.id === over.id) return;
     const ids = list.map((t) => t.id);
     reorder(date, arrayMove(ids, ids.indexOf(active.id), ids.indexOf(over.id)));
-    useStore.getState().toast('تمت إعادة ترتيب الجدول وتحديث الأوقات', { icon: 'sparkles' });
+    useStore.getState().toast(tr('تمت إعادة ترتيب الجدول وتحديث الأوقات'), { icon: 'sparkles' });
   }
   return (
     <div className={`card ${span} reveal`} id="day-map">
       <div className="card-hd">
         {title ? (
-          <CardTitle icon={<CalendarDays size={18} />} color="blue" sub={list.length ? 'اسحب المهام لإعادة ترتيبها — الأوقات تتحدث تلقائيًا' : null}>
-            {title}
+          <CardTitle icon={<CalendarDays size={18} />} color="blue" sub={list.length ? tr('اسحب المهام لإعادة ترتيبها — الأوقات تتحدث تلقائيًا') : null}>
+            {tr(title)}
           </CardTitle>
         ) : (
-          <span className="small muted">{list.length ? 'اسحب المهام لإعادة ترتيبها — الأوقات تتحدث تلقائيًا' : ''}</span>
+          <span className="small muted">{list.length ? tr('اسحب المهام لإعادة ترتيبها — الأوقات تتحدث تلقائيًا') : ''}</span>
         )}
         <div className="row">
           <button className="btn btn-sm btn-ghost hide-mobile" onClick={() => navigate('schedule')}>
-            الجدول الكامل
+            {tr('الجدول الكامل')}
           </button>
-          <button className="icon-btn sm primary" onClick={() => open('task', { preset: { date } })} aria-label="إضافة مهمة لهذا اليوم">
+          <button className="icon-btn sm primary" onClick={() => open('task', { preset: { date } })} aria-label={tr('إضافة مهمة لهذا اليوم')}>
             <Plus />
           </button>
         </div>
       </div>
       {!list.length ? (
-        <Empty icon={<CalendarDays />} title="يومك جاهز لك." text="أضف أول مهمة وابدأ." action={<button className="btn btn-primary" onClick={() => open('task', { preset: { date } })}><Plus /> إضافة مهمة</button>} />
+        <Empty icon={<CalendarDays />} title={tr('يومك جاهز لك.')} text={tr('أضف أول مهمة وابدأ.')} action={<button className="btn btn-primary" onClick={() => open('task', { preset: { date } })}><Plus /> {tr('إضافة مهمة')}</button>} />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onEnd}>
           <SortableContext items={list.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <div className="timeline" ref={scroller} style={{ maxHeight: 560, overflowY: 'auto', paddingInlineEnd: 4 }}>
               {list.map((t) => (
                 <div className={`tl-row ${t.id === currentId ? 'now' : ''}`} key={t.id} data-next={t.id === firstOpenId ? '1' : undefined}>
-                  <div className="tl-time">{t.time || <span className="tl-allday">طوال اليوم</span>}</div>
+                  <div className="tl-time">{t.time || <span className="tl-allday">{tr('طوال اليوم')}</span>}</div>
                   <SortableTask task={t} current={t.id === currentId} />
                 </div>
               ))}
@@ -544,13 +553,13 @@ export function HabitsWidget() {
     <>
       <div className="card span-6 reveal">
         <div className="card-hd">
-          <CardTitle icon={<Repeat size={18} />} color="green">العادات</CardTitle>
+          <CardTitle icon={<Repeat size={18} />} color="green">{tr('العادات')}</CardTitle>
           <button className="btn btn-xs btn-ghost" onClick={() => navigate('habits')}>
-            الكل <ArrowLeft />
+            {tr('الكل')} <ArrowLeft />
           </button>
         </div>
         {!habits.length ? (
-          <Empty icon={<Repeat />} title="ابنِ أول عادة" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('habits')}>عاداتي</button>} />
+          <Empty icon={<Repeat />} title={tr('ابنِ أول عادة')} action={<button className="btn btn-sm btn-primary" onClick={() => navigate('habits')}>{tr('عاداتي')}</button>} />
         ) : (
           <div className="col" style={{ gap: 10 }}>
             {habits.slice(0, 5).map((h) => {
@@ -578,13 +587,13 @@ export function HabitsWidget() {
       </div>
       <div className="card span-6 reveal d1">
         <div className="card-hd">
-          <CardTitle icon={<Swords size={18} />} color="gold">التحديات</CardTitle>
+          <CardTitle icon={<Swords size={18} />} color="gold">{tr('التحديات')}</CardTitle>
           <button className="btn btn-xs btn-ghost" onClick={() => navigate('achievements?tab=challenges')}>
-            الكل <ArrowLeft />
+            {tr('الكل')} <ArrowLeft />
           </button>
         </div>
         {!challenges.length ? (
-          <Empty icon={<Swords />} title="ابدأ تحديًا جديدًا" action={<button className="btn btn-sm btn-primary" onClick={() => navigate('achievements?tab=challenges')}>تحدياتي</button>} />
+          <Empty icon={<Swords />} title={tr('ابدأ تحديًا جديدًا')} action={<button className="btn btn-sm btn-primary" onClick={() => navigate('achievements?tab=challenges')}>{tr('تحدياتي')}</button>} />
         ) : (
           <div className="col" style={{ gap: 14 }}>
             {challenges.slice(0, 4).map((c) => {
@@ -619,28 +628,28 @@ export function StatsWidget() {
   return (
     <div className="card span-12 reveal">
       <div className="card-hd">
-        <CardTitle icon={<ChartColumn size={18} />} color="blue">آخر 7 أيام</CardTitle>
+        <CardTitle icon={<ChartColumn size={18} />} color="blue">{tr('آخر 7 أيام')}</CardTitle>
         <button className="btn btn-xs btn-ghost" onClick={() => navigate('stats')}>
-          التفاصيل <ArrowLeft />
+          {tr('التفاصيل')} <ArrowLeft />
         </button>
       </div>
       <div className="dash" style={{ marginTop: 0, alignItems: 'center' }}>
         <div className="span-4 grid g2" style={{ gap: 10 }}>
           <div className="mini-stat">
             <div className="v green"><Num value={s.done} /></div>
-            <div className="l">مهمة أنجزتها</div>
+            <div className="l">{tr('مهمة أنجزتها')}</div>
           </div>
           <div className="mini-stat">
             <div className="v purple num">{s.rate}%</div>
-            <div className="l">نسبة الالتزام</div>
+            <div className="l">{tr('نسبة الالتزام')}</div>
           </div>
           <div className="mini-stat">
             <div className="v num">{formatHM(s.focus)}</div>
-            <div className="l">ساعات تركيز</div>
+            <div className="l">{tr('ساعات تركيز')}</div>
           </div>
           <div className="mini-stat">
             <div className="v num" style={{ fontSize: '1rem', paddingTop: 6 }}>{s.bestWindow}</div>
-            <div className="l">أفضل وقت لك</div>
+            <div className="l">{tr('أفضل وقت لك')}</div>
           </div>
         </div>
         <div className="span-8">
@@ -665,19 +674,27 @@ export function XpWidget() {
         <div className="xp-cell">
           <span className="lvl-ring sm num">{lv.level}</span>
           <div className="grow">
-            <div className="tiny muted bold">المستوى {lv.level}</div>
+            <div className="tiny muted bold">{trf('المستوى {n}', { n: lv.level })}</div>
             <Bar value={lv.pct} className="mt-s" />
             <div className="tiny muted mt-s">
-              باقي <span className="num">{fmt(lv.need - lv.into)}</span> XP للمستوى {lv.level + 1}
+              {isEn() ? (
+                <>
+                  <span className="num">{fmt(lv.need - lv.into)}</span> XP to level {lv.level + 1}
+                </>
+              ) : (
+                <>
+                  باقي <span className="num">{fmt(lv.need - lv.into)}</span> XP للمستوى {lv.level + 1}
+                </>
+              )}
             </div>
           </div>
         </div>
         <div className="xp-cell">
           <IconTile name="flame" color="var(--gold)" size={44} />
           <div className="grow">
-            <div className="tiny muted bold">الـStreak</div>
+            <div className="tiny muted bold">{tr('الـStreak')}</div>
             <div className="bold">
-              <span className="num">{streak.count}</span> يوم · الأفضل <span className="num">{streak.best || streak.count}</span>
+              <span className="num">{streak.count}</span> {tr('يوم')} · {tr('الأفضل')} <span className="num">{streak.best || streak.count}</span>
             </div>
             <div className="week-dots mt-s">
               {Array.from({ length: 7 }).map((_, i) => {
@@ -685,22 +702,22 @@ export function XpWidget() {
                 const on = streak.days?.[d];
                 return (
                   <div className="d" key={d}>
-                    <i className={on ? 'on' : ''} aria-label={`${d} ${on ? 'مكتمل' : ''}`}>{on ? <Check size={12} /> : ''}</i>
-                    {DAYS_SHORT[fromKey(d).getDay()].slice(0, 2)}
+                    <i className={on ? 'on' : ''} aria-label={`${d} ${on ? tr('مكتمل') : ''}`}>{on ? <Check size={12} /> : ''}</i>
+                    {dayShort(fromKey(d).getDay()).slice(0, 2)}
                   </div>
                 );
               })}
             </div>
           </div>
         </div>
-        <button className="xp-cell" onClick={() => navigate('rewards')} aria-label="المكافآت">
+        <button className="xp-cell" onClick={() => navigate('rewards')} aria-label={tr('المكافآت')}>
           <IconTile name="gift" color="var(--green)" size={44} />
           <div className="grow" style={{ textAlign: 'start' }}>
-            <div className="tiny muted bold">رصيدك</div>
+            <div className="tiny muted bold">{tr('رصيدك')}</div>
             <div className="bold num">{fmt(user.xp)} XP</div>
             {nextReward && (
               <div className="tiny muted ellipsis">
-                {user.xp >= nextReward.cost ? `تقدر تستبدل: ${nextReward.title}` : `باقي ${fmt(nextReward.cost - user.xp)} لـ ${nextReward.title}`}
+                {user.xp >= nextReward.cost ? trf('تقدر تستبدل: {title}', { title: tr(nextReward.title) }) : trf('باقي {n} لـ {title}', { n: fmt(nextReward.cost - user.xp), title: tr(nextReward.title) })}
               </div>
             )}
           </div>
@@ -715,7 +732,7 @@ export function AIWidget() {
   const setDrawer = useStore((s) => s.setDrawer);
   const createStudyPlan = useStore((s) => s.createStudyPlan);
   const persona = useStore((s) => s.settings.persona);
-  const [text, setText] = useState('عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول.');
+  const [text, setText] = useState(() => tr('عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول.'));
   const [plan, setPlan] = useState(null);
   const [thinking, setThinking] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -731,17 +748,17 @@ export function AIWidget() {
   return (
     <div className="card span-12 reveal">
       <div className="card-hd">
-        <CardTitle icon={<Bot size={18} />} sub={`${say(persona, 'hi')} اكتب وضعك وأبني لك خطة.`}>
-          مساعد التخطيط
+        <CardTitle icon={<Bot size={18} />} sub={`${say(persona, 'hi')} ${tr('اكتب وضعك وأبني لك خطة.')}`}>
+          {tr('مساعد التخطيط')}
         </CardTitle>
         <button className="btn btn-sm btn-ghost" onClick={() => setDrawer('assistant')}>
-          <Sparkles /> اسأل مسار
+          <Sparkles /> {tr('اسأل مسار')}
         </button>
       </div>
       <form className="quick" style={{ maxWidth: 'none' }} onSubmit={(e) => (e.preventDefault(), build())}>
         <Sparkles size={18} className="spark" aria-hidden />
-        <input value={text} onChange={(e) => setText(e.target.value)} aria-label="اكتب وضعك للمساعد" placeholder="عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول" />
-        <button className="btn btn-sm btn-primary">إنشاء الخطة</button>
+        <input value={text} onChange={(e) => setText(e.target.value)} aria-label={tr('اكتب وضعك للمساعد')} placeholder={tr('عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول')} />
+        <button className="btn btn-sm btn-primary">{tr('إنشاء الخطة')}</button>
       </form>
       {thinking && (
         <div className="row mt">
@@ -750,7 +767,7 @@ export function AIWidget() {
             <i />
             <i />
           </span>
-          <span className="small muted">أبني خطتك…</span>
+          <span className="small muted">{tr('أبني خطتك…')}</span>
         </div>
       )}
       {plan && !thinking && (
@@ -758,20 +775,20 @@ export function AIWidget() {
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
             {plan.plan.map((d, i) => (
               <div key={d.day} className="mini-stat reveal" style={{ textAlign: 'start', animationDelay: `${i * 0.05}s` }}>
-                <div className="tiny purple bold">اليوم {d.day}</div>
+                <div className="tiny purple bold">{trf('اليوم {n}', { n: d.day })}</div>
                 <div className="small bold">{d.title}</div>
-                <div className="tiny muted">{DAYS_SHORT[fromKey(d.date).getDay()]} · 18:00</div>
+                <div className="tiny muted">{dayShort(fromKey(d.date).getDay())} · 18:00</div>
               </div>
             ))}
           </div>
           <button className="btn btn-primary btn-sm mt" disabled={saved} onClick={() => (createStudyPlan(plan, plan.subject), setSaved(true))}>
             {saved ? (
               <>
-                <Check /> تمت الإضافة للجدول
+                <Check /> {tr('تمت الإضافة للجدول')}
               </>
             ) : (
               <>
-                <Plus /> أضف الخطة لجدولي
+                <Plus /> {tr('أضف الخطة لجدولي')}
               </>
             )}
           </button>
@@ -787,8 +804,8 @@ export function BalanceWidget({ span = 'span-6' }) {
   const data = useMemo(() => balance(tasks), [tasks]);
   return (
     <div className={`card ${span} reveal`}>
-      <CardTitle icon={<ChartPie size={18} />} sub="توزيع وقتك على مجالات حياتك — آخر 30 يوم">
-        توازن حياتي
+      <CardTitle icon={<ChartPie size={18} />} sub={tr('توزيع وقتك على مجالات حياتك — آخر 30 يوم')}>
+        {tr('توازن حياتي')}
       </CardTitle>
       <div className="row mt wrap" style={{ gap: 24, justifyContent: 'center' }}>
         <Donut data={data} />
@@ -797,7 +814,7 @@ export function BalanceWidget({ span = 'span-6' }) {
             <div className="legend-row" key={d.key}>
               <span className="swatch" style={{ background: d.color }} />
               <span className="small row" style={{ gap: 6 }}>
-                <Glyph name={d.icon} size={14} /> {d.label}
+                <Glyph name={d.icon} size={14} /> {tr(d.label)}
               </span>
               <span className="small xbold num">{d.pct}%</span>
               <span />
@@ -818,31 +835,39 @@ export function TimeMachineWidget({ span = 'span-6' }) {
   const tm = useMemo(() => timeMachine(tasks), [tasks]);
   return (
     <div className={`card ${span} reveal d1`}>
-      <CardTitle icon={<Hourglass size={18} />} color="blue" sub="مستقبلك يبدأ من اليوم">
-        آلة الزمن
+      <CardTitle icon={<Hourglass size={18} />} color="blue" sub={tr('مستقبلك يبدأ من اليوم')}>
+        {tr('آلة الزمن')}
       </CardTitle>
       <div className="grid mt" style={{ gap: 10, gridTemplateColumns: 'repeat(3,minmax(0,1fr))' }}>
         <div className="mini-stat">
-          <div className="l">قبل 30 يوم</div>
+          <div className="l">{tr('قبل 30 يوم')}</div>
           <div className="v"><Num value={tm.past30} /></div>
-          <div className="l">مهمة</div>
+          <div className="l">{tr('مهمة')}</div>
         </div>
         <div className="mini-stat" style={{ borderColor: 'rgba(var(--primary-rgb),.45)' }}>
-          <div className="l purple bold">اليوم</div>
+          <div className="l purple bold">{tr('اليوم')}</div>
           <div className="v"><Num value={tm.today} /></div>
-          <div className="l">مهام</div>
+          <div className="l">{tr('مهام')}</div>
         </div>
         <div className="mini-stat">
-          <div className="l">بعد 30 يوم</div>
+          <div className="l">{tr('بعد 30 يوم')}</div>
           <div className="v blue"><Num value={tm.future} /></div>
-          <div className="l">مهمة</div>
+          <div className="l">{tr('مهمة')}</div>
         </div>
       </div>
       <div className="mt">
         <TimeLine series={tm.series} proj={tm.proj} />
       </div>
       <p className="tiny muted" style={{ textAlign: 'center' }}>
-        بنفس معدلك (<span className="num">{tm.rate.toFixed(1)}</span> مهمة/يوم) ستصل إلى <b className="num">{tm.future}</b> مهمة مكتملة
+        {isEn() ? (
+          <>
+            At your current pace (<span className="num">{tm.rate.toFixed(1)}</span> tasks/day) you'll reach <b className="num">{tm.future}</b> completed tasks
+          </>
+        ) : (
+          <>
+            بنفس معدلك (<span className="num">{tm.rate.toFixed(1)}</span> مهمة/يوم) ستصل إلى <b className="num">{tm.future}</b> مهمة مكتملة
+          </>
+        )}
       </p>
     </div>
   );

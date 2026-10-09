@@ -4,6 +4,7 @@ import { useStore } from '../store.js';
 import { Modal, Bar, Num, Empty, CardTitle, useConfirm } from '../components/ui.jsx';
 import { fmt, timeAgo } from '../lib/date.js';
 import { Glyph, IconTile } from '../components/Glyph.jsx';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 export default function Rewards() {
   const user = useStore((s) => s.user);
@@ -20,12 +21,12 @@ export default function Rewards() {
             <span className="ico">
               <Gift />
             </span>
-            مكافآتي
+            {tr('مكافآتي')}
           </h1>
-          <p>أنت من يحدد مكافآته — أنجز، اجمع XP، واستمتع</p>
+          <p>{tr('أنت من يحدد مكافآته — أنجز، اجمع XP، واستمتع')}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setAdding(true)}>
-          <Plus /> مكافأة جديدة
+          <Plus /> {tr('مكافأة جديدة')}
         </button>
       </div>
       <div className="card glow mb reveal">
@@ -33,20 +34,20 @@ export default function Rewards() {
           <div className="row" style={{ gap: 16 }}>
             <IconTile name="star" color="var(--gold)" size={56} />
             <div>
-              <div className="small muted bold">رصيد XP</div>
+              <div className="small muted bold">{tr('رصيد XP')}</div>
               <div className="xbold" style={{ fontSize: '2.4rem', lineHeight: 1.1 }}>
                 <Num value={user.xp} /> <span className="small muted">XP</span>
               </div>
             </div>
           </div>
           <p className="small muted" style={{ maxWidth: 360 }}>
-            الاستبدال يخصم من رصيدك فقط، ولا يؤثر على مستواك (المستوى يعتمد على مجموع XP الذي جمعته).
+            {tr('الاستبدال يخصم من رصيدك فقط، ولا يؤثر على مستواك (المستوى يعتمد على مجموع XP الذي جمعته).')}
           </p>
         </div>
       </div>
       {!rewards.length ? (
         <div className="card">
-          <Empty icon={<Gift />} title="لا توجد مكافآت بعد" text="أضف شيئًا تحبه ليكون حافزك." action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Plus /> مكافأة جديدة</button>} />
+          <Empty icon={<Gift />} title={tr('لا توجد مكافآت بعد')} text={tr('أضف شيئًا تحبه ليكون حافزك.')} action={<button className="btn btn-primary" onClick={() => setAdding(true)}><Plus /> {tr('مكافأة جديدة')}</button>} />
         </div>
       ) : (
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))' }}>
@@ -54,19 +55,19 @@ export default function Rewards() {
             const can = user.xp >= r.cost;
             return (
               <div key={r.id} className="card reward hover reveal" style={{ animationDelay: `${i * 0.05}s` }}>
-                <button className="icon-btn sm plain" style={{ position: 'absolute', top: 10, insetInlineEnd: 10 }} aria-label="حذف المكافأة" onClick={() => confirm({ title: 'حذف المكافأة', body: `حذف "${r.title}"؟`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteReward(r.id) })}>
+                <button className="icon-btn sm plain" style={{ position: 'absolute', top: 10, insetInlineEnd: 10 }} aria-label={tr('حذف المكافأة')} onClick={() => confirm({ title: tr('حذف المكافأة'), body: trf('حذف "{title}"؟', { title: tr(r.title) }), danger: true, confirmLabel: tr('حذف'), onConfirm: () => deleteReward(r.id) })}>
                   <Trash2 />
                 </button>
                 <div className="em">
                   <Glyph name={r.icon} size={30} />
                 </div>
-                <div className="bold">{r.title}</div>
+                <div className="bold">{tr(r.title)}</div>
                 <div className="purple xbold num">{fmt(r.cost)} XP</div>
                 {!can && (
                   <div style={{ width: '100%' }}>
                     <Bar value={(user.xp / r.cost) * 100} className="thin" />
                     <div className="tiny muted mt-s">
-                      باقي <span className="num">{fmt(r.cost - user.xp)}</span> XP
+                      {isEn() ? <><span className="num">{fmt(r.cost - user.xp)}</span> XP to go</> : <>باقي <span className="num">{fmt(r.cost - user.xp)}</span> XP</>}
                     </div>
                   </div>
                 )}
@@ -75,15 +76,15 @@ export default function Rewards() {
                   disabled={!can}
                   onClick={() =>
                     confirm({
-                      title: 'استبدال المكافأة',
+                      title: tr('استبدال المكافأة'),
                       icon: r.icon,
-                      body: `سيتم خصم ${fmt(r.cost)} XP من رصيدك مقابل "${r.title}". رصيدك بعد الاستبدال: ${fmt(user.xp - r.cost)} XP.`,
-                      confirmLabel: 'استبدال',
+                      body: trf('سيتم خصم {cost} XP من رصيدك مقابل "{title}". رصيدك بعد الاستبدال: {after} XP.', { cost: fmt(r.cost), title: tr(r.title), after: fmt(user.xp - r.cost) }),
+                      confirmLabel: tr('استبدال'),
                       onConfirm: () => redeemReward(r.id),
                     })
                   }
                 >
-                  استبدال
+                  {tr('استبدال')}
                 </button>
               </div>
             );
@@ -92,16 +93,16 @@ export default function Rewards() {
       )}
       <div className="card mt">
         <CardTitle icon={<History size={18} />} color="blue">
-          سجل الاستبدال
+          {tr('سجل الاستبدال')}
         </CardTitle>
         {!history.length ? (
-          <p className="small muted mt">لم تستبدل أي مكافأة بعد.</p>
+          <p className="small muted mt">{tr('لم تستبدل أي مكافأة بعد.')}</p>
         ) : (
           <div className="col mt">
             {history.slice(0, 20).map((h) => (
               <div key={h.id} className="row between small">
                 <span>
-                  <Glyph name={h.icon} size={14} /> {h.title}
+                  <Glyph name={h.icon} size={14} /> {tr(h.title)}
                 </span>
                 <span className="muted">
                   <span className="num red">-{fmt(h.cost)} XP</span> · {timeAgo(h.time)}
@@ -128,15 +129,15 @@ function RewardModal({ onClose }) {
   }
   return (
     <Modal
-      title="مكافأة جديدة"
+      title={tr('مكافأة جديدة')}
       onClose={onClose}
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>
-            إلغاء
+            {tr('إلغاء')}
           </button>
           <button className="btn btn-primary" onClick={save} disabled={!f.title.trim()}>
-            <Star /> إضافة
+            <Star /> {tr('إضافة')}
           </button>
         </>
       }
@@ -150,11 +151,11 @@ function RewardModal({ onClose }) {
           ))}
         </div>
         <label className="field">
-          <span>المكافأة</span>
-          <input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="مثال: قهوة مختصة" autoFocus />
+          <span>{tr('المكافأة')}</span>
+          <input className="input" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={tr('مثال: قهوة مختصة')} autoFocus />
         </label>
         <label className="field">
-          <span>التكلفة (XP)</span>
+          <span>{tr('التكلفة (XP)')}</span>
           <input className="input" type="number" min="10" step="10" value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value })} />
         </label>
         <div className="chips">

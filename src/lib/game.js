@@ -1,5 +1,6 @@
 // نظام XP والمستويات والإنجازات
 import { todayKey, addDays, toMin } from './date.js';
+import { tr } from '../i18n/index.js';
 
 // XP المطلوب للانتقال من المستوى n إلى n+1 — منحنى متصاعد: كل مستوى أصعب بوضوح من اللي قبله
 // المستوى 2 = 800 · المستوى 3 = +2,450 · المستوى 5 = +7,450 تقريبًا · المستوى 10 = +27,000
@@ -33,7 +34,7 @@ export function taskXp(task) {
 }
 export function taskSize(task) {
   const d = task.duration || 30;
-  return d <= 20 ? 'صغيرة' : d <= 50 ? 'متوسطة' : 'كبيرة';
+  return tr(d <= 20 ? 'صغيرة' : d <= 50 ? 'متوسطة' : 'كبيرة');
 }
 
 const live = (s) => s.tasks.filter((t) => !t.deletedAt);

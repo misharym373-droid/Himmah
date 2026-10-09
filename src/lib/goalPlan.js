@@ -2,6 +2,7 @@
 // (مراحل متدرجة → أسابيع بتواريخها → جلسة مفصلة لكل يوم عمل طوال المدة)
 // يعمل محليًا بالكامل: يتعرف على نوع الهدف ويبني جدولًا أسبوعيًا وتدرجًا في الشدة/الكمية.
 import { todayKey, addDays, fromKey, diffDays } from './date.js';
+import { tr, trf } from '../i18n/index.js';
 
 const norm = (s) => String(s || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase();
 
@@ -9,7 +10,7 @@ const norm = (s) => String(s || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, '�
 // كل قالب: الجدول الأسبوعي (تركيزات تتناوب على أيام العمل)، المراحل، وتفاصيل كل جلسة حسب المرحلة والأسبوع
 const KINDS = {
   fitness: {
-    match: /نادي|جيم|gym|وزن|عضل|لياق|تخسيس|رشاق|حرق|تنشيف|كمال|رياض|جري|بطن|ضخام|fitness|muscle|weight|workout/,
+    match: /نادي|جيم|gym|وزن|عضل|لياق|تخسيس|رشاق|حرق|تنشيف|كمال|رياض|جري|بطن|ضخام|fitness|muscle|weight|workout|gym|lose weight|exercise|cardio|running|\bfit\b|\babs\b|bulk/,
     icon: 'dumbbell',
     area: 'health',
     duration: 70,
@@ -32,18 +33,19 @@ const KINDS = {
       const deload = inPhaseWeek === 4;
       if (f.cardio) {
         const mins = ph.cardio + Math.min(10, (inPhaseWeek - 1) * 2) - (deload ? 5 : 0);
-        const head = f.hiit ? `HIIT: 30 ث سرعة عالية / 60 ث مشي × ${Math.round(mins / 1.5)} جولة` : `كارديو ${mins} دقيقة (مشي مائل أو دراجة) بنبض متوسط`;
-        return `${head}\nبطن: ${f.ex.map((e) => `${e} ${ph.sets}×${e.includes('بلانك') ? '40 ث' : '15'}`).join(' · ')}${deload ? '\nأسبوع تخفيف: شدة أقل للتعافي' : ''}`;
+        const head = f.hiit ? trf('HIIT: 30 ث سرعة عالية / 60 ث مشي × {n} جولة', { n: Math.round(mins / 1.5) }) : trf('كارديو {n} دقيقة (مشي مائل أو دراجة) بنبض متوسط', { n: mins });
+        const abs = trf('بطن: {list}', { list: f.ex.map((e) => `${tr(e)} ${ph.sets}×${e.includes('بلانك') ? tr('40 ث') : '15'}`).join(' · ') });
+        return `${head}\n${abs}${deload ? '\n' + tr('أسبوع تخفيف: شدة أقل للتعافي') : ''}`;
       }
-      const lines = f.ex.map((e) => `• ${e}: ${deload ? ph.sets - 1 : ph.sets}×${ph.reps}`);
-      const prog = deload ? 'أسبوع تخفيف: نفس التمارين بوزن أخف 20% للتعافي' : inPhaseWeek > 1 ? `زِد 2.5 كجم أو تكرارًا واحدًا عن الأسبوع الماضي` : 'سجّل الأوزان التي تبدأ بها';
-      return `${lines.join('\n')}\nالراحة بين المجموعات: ${ph.rest}\n${prog}\nختام: كارديو ${Math.round(ph.cardio / 2)} دقيقة`;
+      const lines = f.ex.map((e) => `• ${tr(e)}: ${deload ? ph.sets - 1 : ph.sets}×${ph.reps}`);
+      const prog = deload ? tr('أسبوع تخفيف: نفس التمارين بوزن أخف 20% للتعافي') : inPhaseWeek > 1 ? tr('زِد 2.5 كجم أو تكرارًا واحدًا عن الأسبوع الماضي') : tr('سجّل الأوزان التي تبدأ بها');
+      return `${lines.join('\n')}\n${trf('الراحة بين المجموعات: {rest}', { rest: tr(ph.rest) })}\n${prog}\n${trf('ختام: كارديو {n} دقيقة', { n: Math.round(ph.cardio / 2) })}`;
     },
     rest: 'راحة واستشفاء: مشي خفيف 20 دقيقة + إطالات + نوم كافٍ',
     tips: ['اشرب 8 أكواب ماء يوميًا', 'بروتين في كل وجبة', 'نم 7–8 ساعات'],
   },
   language: {
-    match: /انجليز|إنجليز|english|لغه|لغة|انقلش|فرنس|اسبان|الماني|ياباني|كوري|صيني|محادث/,
+    match: /انجليز|إنجليز|english|لغه|لغة|انقلش|فرنس|اسبان|الماني|ياباني|كوري|صيني|محادث|language|spanish|french|german|japanese|korean|chinese|arabic|speak|fluent/,
     icon: 'globe',
     area: 'study',
     duration: 40,
@@ -64,12 +66,12 @@ const KINDS = {
     ],
     session(f, ph, week) {
       const m = {
-        vocab: `تعلّم ${ph.words} كلمة جديدة + راجع كلمات الأسبوع الماضي (تكرار متباعد)`,
-        grammar: `قاعدة جديدة (${ph.minutes} د) + 10 جمل تطبيقية عليها`,
-        listen: `استماع ${ph.minutes} دقيقة (بودكاست/مقطع) ودوّن 5 عبارات جديدة`,
-        speak: `تحدّث ${Math.round(ph.minutes / 2)} دقيقة مع نفسك أو شريك عن موضوع يومك وسجّل صوتك`,
-        read: `اقرأ نصًا قصيرًا (${ph.minutes} د) ولخّصه في 3 جمل`,
-        write: `اكتب فقرة من ${60 + week * 5} كلمة عن يومك أو رأيك في موضوع`,
+        vocab: trf('تعلّم {n} كلمة جديدة + راجع كلمات الأسبوع الماضي (تكرار متباعد)', { n: ph.words }),
+        grammar: trf('قاعدة جديدة ({n} د) + 10 جمل تطبيقية عليها', { n: ph.minutes }),
+        listen: trf('استماع {n} دقيقة (بودكاست/مقطع) ودوّن 5 عبارات جديدة', { n: ph.minutes }),
+        speak: trf('تحدّث {n} دقيقة مع نفسك أو شريك عن موضوع يومك وسجّل صوتك', { n: Math.round(ph.minutes / 2) }),
+        read: trf('اقرأ نصًا قصيرًا ({n} د) ولخّصه في 3 جمل', { n: ph.minutes }),
+        write: trf('اكتب فقرة من {n} كلمة عن يومك أو رأيك في موضوع', { n: 60 + week * 5 }),
       };
       return m[f.key];
     },
@@ -77,7 +79,7 @@ const KINDS = {
     tips: ['غيّر لغة جوالك', 'شاهد بترجمة اللغة نفسها'],
   },
   quran: {
-    match: /قران|قرآن|حفظ|سوره|سورة|جزء|تلاوه|تلاوة|مراجعه الحفظ/,
+    match: /قران|قرآن|حفظ|سوره|سورة|جزء|تلاوه|تلاوة|مراجعه الحفظ|quran|qur'an|memoriz|memoris|surah|juz/,
     icon: 'pray',
     area: 'family',
     duration: 30,
@@ -94,14 +96,14 @@ const KINDS = {
       { title: 'الإتقان', desc: 'مراجعة كل المحفوظ وتسميع كامل', amount: 'وجه ونصف' },
     ],
     session(f, ph, week) {
-      if (f.key === 'review') return `مراجعة محفوظ الأسبوع ${week} كاملًا + تسميع الأسبوع السابق`;
-      return `حفظ ${ph.amount} جديد بعد الفجر + تكراره 10 مرات + ربطه بما قبله`;
+      if (f.key === 'review') return trf('مراجعة محفوظ الأسبوع {week} كاملًا + تسميع الأسبوع السابق', { week });
+      return trf('حفظ {amount} جديد بعد الفجر + تكراره 10 مرات + ربطه بما قبله', { amount: tr(ph.amount) });
     },
     rest: 'مراجعة خفيفة لما حُفظ هذا الأسبوع',
     tips: ['احفظ في وقت ثابت', 'سمّع على شخص آخر أسبوعيًا'],
   },
   reading: {
-    match: /قراء|كتاب|كتب|روايه|رواية|read|book/,
+    match: /قراء|كتاب|كتب|روايه|رواية|read|book|novel/,
     icon: 'read',
     area: 'study',
     duration: 30,
@@ -114,14 +116,14 @@ const KINDS = {
       { title: 'التنويع والمراجعة', desc: 'مجالات جديدة ومراجعة ما قرأته', pages: 30 },
     ],
     session(f, ph, week, inPhaseWeek, dayInWeek) {
-      if (dayInWeek === 0 && week > 1) return `اكتب ملخص أسبوع ${week - 1}: أهم 3 أفكار وكيف تطبقها\nثم اقرأ ${ph.pages} صفحة`;
-      return `اقرأ ${ph.pages + (inPhaseWeek - 1) * 2} صفحة ودوّن فكرة واحدة استفدت منها`;
+      if (dayInWeek === 0 && week > 1) return `${trf('اكتب ملخص أسبوع {week}: أهم 3 أفكار وكيف تطبقها', { week: week - 1 })}\n${trf('ثم اقرأ {n} صفحة', { n: ph.pages })}`;
+      return trf('اقرأ {n} صفحة ودوّن فكرة واحدة استفدت منها', { n: ph.pages + (inPhaseWeek - 1) * 2 });
     },
     rest: 'راحة — أو قراءة حرة بدون التزام',
     tips: ['احمل كتابك معك', 'اقرأ قبل النوم بدل الجوال'],
   },
   exam: {
-    match: /اختبار|امتحان|مذاكره|مذاكرة|دراسه|دراسة|قدرات|تحصيلي|ايلتس|توفل|stem|exam|study/,
+    match: /اختبار|امتحان|مذاكره|مذاكرة|دراسه|دراسة|قدرات|تحصيلي|ايلتس|توفل|stem|exam|study|test|ielts|toefl|\bsat\b|gmat|\bgre\b|final/,
     icon: 'study',
     area: 'study',
     duration: 90,
@@ -141,11 +143,11 @@ const KINDS = {
     ],
     session(f, ph, week) {
       const m = {
-        learn: `ذاكر درسًا/فصلًا جديدًا (جلستان × 40 د) واكتب ملخصًا في صفحة`,
-        learn2: `أكمل الفصل التالي + 10 أسئلة على ما ذاكرته`,
-        practice: `حل ${ph.q} سؤالًا مع تصحيحها وتسجيل كل خطأ في دفتر الأخطاء`,
-        review: `راجع دفتر الأخطاء وأعد حل الأسئلة التي أخطأت فيها هذا الأسبوع`,
-        mock: week > 2 ? `اختبار تجريبي كامل بوقت حقيقي ثم حلّل نتيجتك` : `اختبار قصير (${ph.q} سؤال) على ما ذاكرته هذا الأسبوع`,
+        learn: tr('ذاكر درسًا/فصلًا جديدًا (جلستان × 40 د) واكتب ملخصًا في صفحة'),
+        learn2: tr('أكمل الفصل التالي + 10 أسئلة على ما ذاكرته'),
+        practice: trf('حل {n} سؤالًا مع تصحيحها وتسجيل كل خطأ في دفتر الأخطاء', { n: ph.q }),
+        review: tr('راجع دفتر الأخطاء وأعد حل الأسئلة التي أخطأت فيها هذا الأسبوع'),
+        mock: week > 2 ? tr('اختبار تجريبي كامل بوقت حقيقي ثم حلّل نتيجتك') : trf('اختبار قصير ({n} سؤال) على ما ذاكرته هذا الأسبوع', { n: ph.q }),
       };
       return m[f.key];
     },
@@ -153,7 +155,7 @@ const KINDS = {
     tips: ['ذاكر بتقنية بومودورو', 'نم جيدًا قبل الاختبار'],
   },
   skill: {
-    match: /برمج|كود|code|تطوير|تصميم|مهار|فوتوشوب|بايثون|python|جافا|موقع|تطبيق|رسم|تصوير|كورس|دوره|دورة/,
+    match: /برمج|كود|code|تطوير|تصميم|مهار|فوتوشوب|بايثون|python|جافا|موقع|تطبيق|رسم|تصوير|كورس|دوره|دورة|coding|programming|design|skill|course|javascript|develop|website|\bapp\b|drawing|photography/,
     icon: 'laptop',
     area: 'work',
     duration: 60,
@@ -172,10 +174,10 @@ const KINDS = {
     ],
     session(f, ph, week) {
       const m = {
-        learn: `درس جديد (40 د) ضمن مرحلة «${ph.title}» ودوّن أهم 3 نقاط`,
-        practice: `طبّق درس الأمس بتمرين عملي من صنعك`,
-        project: `اعمل على مشروع المرحلة: أنجز جزءًا واحدًا واضحًا (أسبوع ${week})`,
-        review: `راجع ما تعلمته هذا الأسبوع واكتب ملاحظاتك أو انشر ما أنجزته`,
+        learn: trf('درس جديد (40 د) ضمن مرحلة «{phase}» ودوّن أهم 3 نقاط', { phase: tr(ph.title) }),
+        practice: tr('طبّق درس الأمس بتمرين عملي من صنعك'),
+        project: trf('اعمل على مشروع المرحلة: أنجز جزءًا واحدًا واضحًا (أسبوع {week})', { week }),
+        review: tr('راجع ما تعلمته هذا الأسبوع واكتب ملاحظاتك أو انشر ما أنجزته'),
       };
       return m[f.key];
     },
@@ -183,7 +185,7 @@ const KINDS = {
     tips: ['تعلّم بالتطبيق', 'وثّق تقدمك أسبوعيًا'],
   },
   money: {
-    match: /مال|ادخار|توفير|فلوس|ميزانيه|ميزانية|ديون|استثمار|saving|money/,
+    match: /مال|ادخار|توفير|فلوس|ميزانيه|ميزانية|ديون|استثمار|saving|money|save|budget|debt|invest|financ/,
     icon: 'money',
     area: 'money',
     duration: 15,
@@ -200,8 +202,8 @@ const KINDS = {
       { title: 'النمو والمراجعة', desc: 'مراجعة شاملة والتخطيط لما بعده' },
     ],
     session(f, ph, week) {
-      if (f.key === 'review') return `راجع مصاريف الأسبوع ${week} مقابل الميزانية وحوّل مبلغ الادخار الأسبوعي`;
-      return `سجّل كل مصاريف اليوم وصنّفها (أساسي / كمالي)`;
+      if (f.key === 'review') return trf('راجع مصاريف الأسبوع {week} مقابل الميزانية وحوّل مبلغ الادخار الأسبوعي', { week });
+      return tr('سجّل كل مصاريف اليوم وصنّفها (أساسي / كمالي)');
     },
     rest: 'يوم بدون شراء غير ضروري',
     tips: ['ادخر أولًا ثم اصرف', 'ألغِ الاشتراكات غير المستخدمة'],
@@ -227,10 +229,10 @@ const GENERIC = {
   ],
   session(f, ph, week, inPhaseWeek, dayInWeek, title) {
     const m = {
-      learn: `خطط لخطوات هذا الأسبوع نحو «${title}» وتعلّم شيئًا يساعدك`,
-      do: `نفّذ خطوة عملية واحدة واضحة نحو «${title}»`,
-      do2: `أكمل خطوة الأمس أو ابدأ الخطوة التالية`,
-      review: `راجع تقدم الأسبوع ${week}: ماذا أنجزت؟ وما الذي سيتغير؟`,
+      learn: trf('خطط لخطوات هذا الأسبوع نحو «{title}» وتعلّم شيئًا يساعدك', { title }),
+      do: trf('نفّذ خطوة عملية واحدة واضحة نحو «{title}»', { title }),
+      do2: tr('أكمل خطوة الأمس أو ابدأ الخطوة التالية'),
+      review: trf('راجع تقدم الأسبوع {week}: ماذا أنجزت؟ وما الذي سيتغير؟', { week }),
     };
     return m[f.key];
   },
@@ -279,8 +281,8 @@ export function buildGoalPlan({ title, months = 3, restDays, time = null, startD
   const ranges = phaseRanges(totalWeeks, def.phases.length);
   const phases = ranges.map((r, i) => ({
     ...r,
-    title: def.phases[i].title,
-    desc: def.phases[i].desc,
+    title: tr(def.phases[i].title),
+    desc: tr(def.phases[i].desc),
     from: addDays(startDate, (r.fromWeek - 1) * 7),
     to: i === ranges.length - 1 ? endDate : addDays(startDate, r.toWeek * 7 - 1),
   }));
@@ -291,11 +293,11 @@ export function buildGoalPlan({ title, months = 3, restDays, time = null, startD
     weekly ||
     Array.from({ length: 7 }, (_, i) => {
       const dow = (startDow + i) % 7;
-      if (rest.includes(dow)) return { dow, rest: true, focus: def.rest };
+      if (rest.includes(dow)) return { dow, rest: true, focus: tr(def.rest) };
       const f = def.focuses[k++ % def.focuses.length];
-      return { dow, rest: false, key: f.key, focus: f.title };
+      return { dow, rest: false, key: f.key, focus: tr(f.title) };
     });
-  return { kind, label: def.label, icon: def.icon, area: def.area, duration: def.duration, startDate, endDate, totalWeeks, restDays: schedule.filter((d) => d.rest).map((d) => d.dow), time, weekly: schedule, phases, tips: def.tips };
+  return { kind, label: tr(def.label), icon: def.icon, area: def.area, duration: def.duration, startDate, endDate, totalWeeks, restDays: schedule.filter((d) => d.rest).map((d) => d.dow), time, weekly: schedule, phases, tips: def.tips.map((x) => tr(x)) };
 }
 
 // معلومات الأسبوع والمرحلة لتاريخ معيّن داخل الخطة
@@ -324,8 +326,8 @@ export function planSessions(plan, title, from = plan.startDate) {
       console.warn('[himmah:plan]', e?.message || e);
     }
     out.push({
-      title: `${slot.focus} — الأسبوع ${week}`,
-      desc: `المرحلة ${phaseIndex + 1}: ${plan.phases[phaseIndex].title}\n${desc}`.trim(),
+      title: trf('{focus} — الأسبوع {week}', { focus: slot.focus, week }),
+      desc: `${trf('المرحلة {n}: {title}', { n: phaseIndex + 1, title: plan.phases[phaseIndex].title })}\n${desc}`.trim(),
       date,
       time: plan.time || null,
       duration: plan.duration,

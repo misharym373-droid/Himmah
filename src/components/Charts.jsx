@@ -1,8 +1,10 @@
 // رسوم بيانية خفيفة بـ SVG (بدون مكتبات ضخمة)
+import { tr } from '../i18n/index.js';
+
 export function Bars({ data, height = 150, valueKey = 'done', labelKey = 'label' }) {
   const max = Math.max(1, ...data.map((d) => d[valueKey]));
   return (
-    <div className="bars" style={{ height }} role="img" aria-label="رسم بياني بالأعمدة">
+    <div className="bars" style={{ height }} role="img" aria-label={tr('رسم بياني بالأعمدة')}>
       {data.map((d, i) => (
         <div className={`b ${d.today ? 'today' : ''}`} key={i}>
           <i data-v={d[valueKey]} style={{ height: `${Math.max(4, (d[valueKey] / max) * 100)}%`, animationDelay: `${i * 0.06}s` }} />
@@ -41,7 +43,7 @@ export function TimeLine({ series, proj, height = 150 }) {
   const areaD = `${smooth(series)} L${Xr(0)},${height} L${Xr(-30)},${height} Z`;
   const now = series[series.length - 1];
   return (
-    <svg className="chart-line" viewBox={`0 0 ${w} ${height}`} width="100%" height={height} preserveAspectRatio="none" role="img" aria-label="منحنى تقدم المهام">
+    <svg className="chart-line" viewBox={`0 0 ${w} ${height}`} width="100%" height={height} preserveAspectRatio="none" role="img" aria-label={tr('منحنى تقدم المهام')}>
       <defs>
         <linearGradient id="tmFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--primary)" stopOpacity=".35" />
@@ -71,7 +73,7 @@ export function Donut({ data, size = 150, stroke = 18 }) {
   let acc = 0;
   const total = data.reduce((a, d) => a + d.pct, 0) || 1;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }} role="img" aria-label="توزيع المجالات">
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }} role="img" aria-label={tr('توزيع المجالات')}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(148,163,184,.1)" strokeWidth={stroke} />
       {data
         .filter((d) => d.pct > 0)

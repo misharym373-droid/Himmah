@@ -11,6 +11,7 @@ import { VoiceModal, CreatedModal, ImageModal, RescheduleModal, RescueModal, One
 import { formatClock, timeAgo, relativeDay } from '../lib/date.js';
 import { chat, say } from '../lib/assistant.js';
 import { PERSONAS } from '../config.js';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 const TOAST_ICONS = { check: Check, trash: Trash2, clock: Clock, sparkles: Sparkles };
 
@@ -36,7 +37,7 @@ export function Toasts() {
                 <Undo2 /> {t.action.label}
               </button>
             )}
-            <button className="icon-btn sm plain toast-x" aria-label="إغلاق التنبيه" onClick={() => dismiss(t.id)}>
+            <button className="icon-btn sm plain toast-x" aria-label={tr('إغلاق التنبيه')} onClick={() => dismiss(t.id)}>
               <X />
             </button>
           </div>
@@ -64,15 +65,15 @@ export function FxLayer() {
       </div>
     );
   const map = {
-    level: { tone: 'var(--primary)', icon: 'star', kicker: 'Level Up', title: `وصلت إلى المستوى ${cur.level}`, ring: cur.level },
-    achievement: { tone: 'var(--gold)', icon: cur.ach?.icon, kicker: 'إنجاز جديد', title: cur.ach?.title, sub: cur.ach?.desc },
-    streak: { tone: 'var(--gold)', icon: 'flame', kicker: 'أكملت يومك', title: `${cur.count} يوم متتالي` },
-    reward: { tone: 'var(--green)', icon: cur.reward?.icon || 'gift', kicker: 'استمتع بمكافأتك', title: cur.reward?.title },
+    level: { tone: 'var(--primary)', icon: 'star', kicker: 'Level Up', title: trf('وصلت إلى المستوى {n}', { n: cur.level }), ring: cur.level },
+    achievement: { tone: 'var(--gold)', icon: cur.ach?.icon, kicker: tr('إنجاز جديد'), title: tr(cur.ach?.title), sub: tr(cur.ach?.desc) },
+    streak: { tone: 'var(--gold)', icon: 'flame', kicker: tr('أكملت يومك'), title: trf('{n} يوم متتالي', { n: cur.count }) },
+    reward: { tone: 'var(--green)', icon: cur.reward?.icon || 'gift', kicker: tr('استمتع بمكافأتك'), title: cur.reward?.title },
   }[cur.type];
   if (!map) return null;
   return (
     <div className="fx-card-wrap" aria-live="assertive">
-      <button className="fx-card" key={cur.id} onClick={() => shift(cur.id)} style={{ '--tone': map.tone }} aria-label={`${map.kicker}: ${map.title} — إغلاق`}>
+      <button className="fx-card" key={cur.id} onClick={() => shift(cur.id)} style={{ '--tone': map.tone }} aria-label={trf('{kicker}: {title} — إغلاق', { kicker: map.kicker, title: map.title })}>
         {map.ring ? <span className="lvl-ring sm num">{map.ring}</span> : <IconTile name={map.icon} color={map.tone} size={44} />}
         <span className="grow" style={{ textAlign: 'start' }}>
           <span className="tiny bold" style={{ color: map.tone, display: 'block' }}>{map.kicker}</span>
@@ -109,48 +110,48 @@ export function FocusMode() {
 
   if (focus.minimized && !finished)
     return (
-      <div className="focus-mini" role="status" aria-label="جلسة تركيز جارية">
+      <div className="focus-mini" role="status" aria-label={tr('جلسة تركيز جارية')}>
         <span className="pulse-dot" />
         <div className="grow" style={{ minWidth: 0 }}>
-          <div className="tiny muted">تركيز</div>
-          <div className="bold ellipsis small">{task?.title || 'جلسة تركيز'}</div>
+          <div className="tiny muted">{tr('تركيز')}</div>
+          <div className="bold ellipsis small">{task?.title || tr('جلسة تركيز')}</div>
         </div>
         <span className="xbold num" style={{ fontSize: '1.2rem' }}>{formatClock(remaining)}</span>
-        <button className="icon-btn sm" onClick={() => (focus.running ? pauseFocus() : resumeFocus())} aria-label={focus.running ? 'إيقاف مؤقت' : 'استئناف'}>
+        <button className="icon-btn sm" onClick={() => (focus.running ? pauseFocus() : resumeFocus())} aria-label={focus.running ? tr('إيقاف مؤقت') : tr('استئناف')}>
           {focus.running ? <Pause /> : <Play />}
         </button>
-        <button className="icon-btn sm" onClick={() => minimizeFocus(false)} aria-label="فتح وضع التركيز">
+        <button className="icon-btn sm" onClick={() => minimizeFocus(false)} aria-label={tr('فتح وضع التركيز')}>
           <Maximize2 />
         </button>
       </div>
     );
 
   return (
-    <div className="focus-mode" role="dialog" aria-modal="true" aria-label="وضع التركيز">
+    <div className="focus-mode" role="dialog" aria-modal="true" aria-label={tr('وضع التركيز')}>
       <div className="breath" />
       {!finished && (
-        <button className="icon-btn" style={{ position: 'absolute', top: 20, insetInlineEnd: 20 }} onClick={() => minimizeFocus(true)} aria-label="تصغير وضع التركيز">
+        <button className="icon-btn" style={{ position: 'absolute', top: 20, insetInlineEnd: 20 }} onClick={() => minimizeFocus(true)} aria-label={tr('تصغير وضع التركيز')}>
           <Minimize2 />
         </button>
       )}
       <div className="badge purple" style={{ fontSize: '.85rem', padding: '4px 14px' }}>
         {finished ? (
           <>
-            <CircleCheck size={14} /> انتهت الجلسة
+            <CircleCheck size={14} /> {tr('انتهت الجلسة')}
           </>
         ) : focus.running ? (
           <>
-            <span className="pulse-dot" /> جلسة تركيز {focus.session > 1 ? <span className="num">#{focus.session}</span> : ''}
+            <span className="pulse-dot" /> {tr('جلسة تركيز')} {focus.session > 1 ? <span className="num">#{focus.session}</span> : ''}
           </>
         ) : (
-          'متوقف مؤقتًا'
+          tr('متوقف مؤقتًا')
         )}
       </div>
       <div>
         <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2.1rem)', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-          {task && <Glyph name={task.icon} size={26} />} {task?.title || 'جلسة تركيز'}
+          {task && <Glyph name={task.icon} size={26} />} {task?.title || tr('جلسة تركيز')}
         </h2>
-        <div className="muted small mt-s">{finished ? `سجلنا ${minutes} دقيقة تركيز` : `جلسة ${minutes} دقيقة`}</div>
+        <div className="muted small mt-s">{finished ? trf('سجلنا {n} دقيقة تركيز', { n: minutes }) : trf('جلسة {n} دقيقة', { n: minutes })}</div>
       </div>
       <div className="timer" aria-live="off">{formatClock(remaining)}</div>
       <div style={{ width: 'min(420px, 80vw)' }}>
@@ -175,14 +176,14 @@ export function FocusMode() {
           <>
             {task && !task.done && (
               <button className="btn btn-lg btn-green" onClick={completeTask}>
-                <CircleCheck /> إكمال المهمة
+                <CircleCheck /> {tr('إكمال المهمة')}
               </button>
             )}
             <button className="btn btn-lg btn-glass" onClick={another}>
-              <RotateCw /> جلسة أخرى
+              <RotateCw /> {tr('جلسة أخرى')}
             </button>
             <button className="btn btn-lg btn-ghost" style={{ color: '#8B9590' }} onClick={() => endFocus(false)}>
-              إنهاء
+              {tr('إنهاء')}
             </button>
           </>
         ) : (
@@ -190,31 +191,31 @@ export function FocusMode() {
             <button className="btn btn-lg btn-glass" onClick={() => (focus.running ? pauseFocus() : resumeFocus())}>
               {focus.running ? (
                 <>
-                  <Pause /> إيقاف مؤقت
+                  <Pause /> {tr('إيقاف مؤقت')}
                 </>
               ) : (
                 <>
-                  <Play /> استئناف
+                  <Play /> {tr('استئناف')}
                 </>
               )}
             </button>
             {task && !task.done && (
               <button className="btn btn-lg btn-green" onClick={completeTask}>
-                <CircleCheck /> إنهاء المهمة
+                <CircleCheck /> {tr('إنهاء المهمة')}
               </button>
             )}
             <button
               className="btn btn-lg btn-glass"
               onClick={() => {
                 const m = endFocus(false);
-                useStore.getState().toast(m ? `سجلنا ${m} دقيقة تركيز` : 'أُنهيت الجلسة', { icon: 'clock' });
+                useStore.getState().toast(m ? trf('سجلنا {n} دقيقة تركيز', { n: m }) : tr('أُنهيت الجلسة'), { icon: 'clock' });
               }}
             >
-              <Square /> إنهاء مبكرًا
+              <Square /> {tr('إنهاء مبكرًا')}
             </button>
             {task && !task.done && (
               <button className="btn btn-lg btn-ghost" style={{ color: '#8B9590' }} onClick={() => (endFocus(false), openModal('reschedule', { id: task.id }))}>
-                <Clock /> تأجيل
+                <Clock /> {tr('تأجيل')}
               </button>
             )}
           </>
@@ -234,27 +235,28 @@ export function CommandMenu() {
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
   const close = () => setDrawer(null);
+  const ga = tr('إجراءات');
   const actions = [
-    { g: 'إجراءات', label: 'مهمة جديدة', icon: Plus, run: () => open('task'), k: 'N' },
-    { g: 'إجراءات', label: 'إضافة بالصوت', icon: Mic, run: () => open('voice'), k: 'V' },
-    { g: 'إجراءات', label: 'أضف مهمة من صورة', icon: ImagePlus, run: () => open('image') },
-    { g: 'إجراءات', label: 'وش أسوي الآن؟', icon: Sparkles, run: () => open('whatNow'), k: 'W' },
-    { g: 'إجراءات', label: 'أنقذ يومي', icon: Siren, run: () => open('rescue') },
-    { g: 'إجراءات', label: 'عندي ساعة فقط', icon: Hourglass, run: () => open('oneHour') },
-    { g: 'إجراءات', label: 'اسأل مسار', icon: Bot, run: () => setTimeout(() => setDrawer('assistant')), k: 'A' },
-    { g: 'إجراءات', label: 'اختصارات لوحة المفاتيح', icon: Keyboard, run: () => open('shortcuts'), k: '?' },
-    ...NAV.map((n) => ({ g: 'الصفحات', label: n.label, icon: n.icon, run: () => navigate(n.id) })),
+    { g: ga, label: tr('مهمة جديدة'), icon: Plus, run: () => open('task'), k: 'N' },
+    { g: ga, label: tr('إضافة بالصوت'), icon: Mic, run: () => open('voice'), k: 'V' },
+    { g: ga, label: tr('أضف مهمة من صورة'), icon: ImagePlus, run: () => open('image') },
+    { g: ga, label: tr('وش أسوي الآن؟'), icon: Sparkles, run: () => open('whatNow'), k: 'W' },
+    { g: ga, label: tr('أنقذ يومي'), icon: Siren, run: () => open('rescue') },
+    { g: ga, label: tr('عندي ساعة فقط'), icon: Hourglass, run: () => open('oneHour') },
+    { g: ga, label: tr('اسأل مسار'), icon: Bot, run: () => setTimeout(() => setDrawer('assistant')), k: 'A' },
+    { g: ga, label: tr('اختصارات لوحة المفاتيح'), icon: Keyboard, run: () => open('shortcuts'), k: '?' },
+    ...NAV.map((n) => ({ g: tr('الصفحات'), label: tr(n.label), icon: n.icon, run: () => navigate(n.id) })),
   ];
   const ql = q.trim();
   const results = useMemo(() => {
-    const a = actions.filter((x) => !ql || x.label.includes(ql));
+    const a = actions.filter((x) => !ql || x.label.toLowerCase().includes(ql.toLowerCase()));
     if (!ql) return a;
     const t = tasks
       .filter((x) => !x.deletedAt && !x.template && x.title.includes(ql))
       .slice(0, 8)
-      .map((x) => ({ g: 'المهام', label: x.title, sub: `${relativeDay(x.date)}${x.time ? ' · ' + x.time : ''}`, icon: CheckCheck, run: () => open('task', { task: x }) }));
-    const gs = goals.filter((x) => x.title.includes(ql)).map((x) => ({ g: 'الأهداف', label: x.title, icon: Target, run: () => navigate('goals') }));
-    const hs = habits.filter((x) => x.title.includes(ql)).map((x) => ({ g: 'العادات', label: x.title, icon: Flame, run: () => navigate('habits') }));
+      .map((x) => ({ g: tr('المهام'), label: x.title, sub: `${relativeDay(x.date)}${x.time ? ' · ' + x.time : ''}`, icon: CheckCheck, run: () => open('task', { task: x }) }));
+    const gs = goals.filter((x) => x.title.includes(ql)).map((x) => ({ g: tr('الأهداف'), label: x.title, icon: Target, run: () => navigate('goals') }));
+    const hs = habits.filter((x) => x.title.includes(ql)).map((x) => ({ g: tr('العادات'), label: x.title, icon: Flame, run: () => navigate('habits') }));
     return [...t, ...gs, ...hs, ...a];
   }, [ql, tasks, goals, habits]); // eslint-disable-line
   useEffect(() => setIdx(0), [ql]);
@@ -265,15 +267,15 @@ export function CommandMenu() {
   let lastG = null;
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal cmd" role="dialog" aria-label="قائمة الأوامر">
+      <div className="modal cmd" role="dialog" aria-label={tr('قائمة الأوامر')}>
         <div className="cmd-input">
           <Search size={20} className="dim" />
           <input
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث عن مهمة، هدف، صفحة أو أمر…"
-            aria-label="بحث"
+            placeholder={tr('ابحث عن مهمة، هدف، صفحة أو أمر…')}
+            aria-label={tr('بحث')}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') (e.preventDefault(), setIdx((i) => Math.min(results.length - 1, i + 1)));
               if (e.key === 'ArrowUp') (e.preventDefault(), setIdx((i) => Math.max(0, i - 1)));
@@ -286,9 +288,9 @@ export function CommandMenu() {
         <div className="cmd-list" role="listbox">
           {!results.length && (
             <div className="empty">
-              <p className="muted">لا توجد نتائج لـ "{ql}"</p>
-              <button className="btn btn-sm btn-primary" onClick={() => (close(), useStore.getState().addTask({ title: ql }), useStore.getState().toast(`تمت إضافة "${ql}"`))}>
-                <Plus /> أضف "{ql}" كمهمة
+              <p className="muted">{trf('لا توجد نتائج لـ "{q}"', { q: ql })}</p>
+              <button className="btn btn-sm btn-primary" onClick={() => (close(), useStore.getState().addTask({ title: ql }), useStore.getState().toast(trf('تمت إضافة "{q}"', { q: ql })))}>
+                <Plus /> {trf('أضف "{q}" كمهمة', { q: ql })}
               </button>
             </div>
           )}
@@ -348,13 +350,13 @@ export function NotificationsDrawer() {
   }, [markAll]);
   return (
     <Drawer
-      title="الإشعارات"
+      title={tr('الإشعارات')}
       icon={<Bell size={18} />}
       onClose={() => setDrawer(null)}
       actions={
         list.length > 0 && (
           <button className="btn btn-xs btn-ghost" onClick={clear}>
-            مسح الكل
+            {tr('مسح الكل')}
           </button>
         )
       }
@@ -364,8 +366,8 @@ export function NotificationsDrawer() {
           <div className="e-ico">
             <Bell />
           </div>
-          <h3>لا توجد إشعارات</h3>
-          <p className="muted small">كل شيء تحت السيطرة.</p>
+          <h3>{tr('لا توجد إشعارات')}</h3>
+          <p className="muted small">{tr('كل شيء تحت السيطرة.')}</p>
         </div>
       ) : (
         <div className="col">
@@ -377,7 +379,7 @@ export function NotificationsDrawer() {
                 <div className="small muted">{n.body}</div>
                 <div className="tiny dim mt-s">{timeAgo(n.time)}</div>
               </div>
-              <button className="icon-btn sm plain" aria-label="حذف الإشعار" onClick={() => remove(n.id)}>
+              <button className="icon-btn sm plain" aria-label={tr('حذف الإشعار')} onClick={() => remove(n.id)}>
                 <X />
               </button>
             </div>
@@ -385,7 +387,7 @@ export function NotificationsDrawer() {
         </div>
       )}
       <button className="btn btn-sm btn-ghost btn-block mt" onClick={() => (setDrawer(null), navigate('settings?tab=notifications'))}>
-        تخصيص الإشعارات
+        {tr('تخصيص الإشعارات')}
       </button>
     </Drawer>
   );
@@ -396,16 +398,16 @@ export function AssistantDrawer() {
   const setDrawer = useStore((s) => s.setDrawer);
   const persona = useStore((s) => s.settings.persona);
   const name = useStore((s) => s.profile.name);
-  const [msgs, setMsgs] = useState(() => [{ role: 'ai', text: `${say(persona, 'hi')} ${name ? name + '،' : ''} أنا مساعد مسار. كيف أقدر أساعدك اليوم؟` }]);
+  const [msgs, setMsgs] = useState(() => [{ role: 'ai', text: trf('{hi} {name} أنا مساعد مسار. كيف أقدر أساعدك اليوم؟', { hi: say(persona, 'hi'), name: name ? name + (isEn() ? ',' : '،') : '' }) }]);
   const [v, setV] = useState('');
   const [typing, setTyping] = useState(false);
   const end = useRef(null);
   useEffect(() => end.current?.scrollIntoView({ behavior: 'smooth' }), [msgs, typing]);
-  function send(text) {
+  function send(text, shown) {
     const t = (text ?? v).trim();
     if (!t) return;
     setV('');
-    setMsgs((m) => [...m, { role: 'me', text: t }]);
+    setMsgs((m) => [...m, { role: 'me', text: shown ?? t }]);
     setTyping(true);
     setTimeout(() => {
       const r = chat(useStore.getState(), t);
@@ -421,15 +423,15 @@ export function AssistantDrawer() {
     if (a.type === 'createPlan') s.createStudyPlan(a.payload, a.payload.subject);
     if (a.type === 'createGoal') {
       s.addGoal({ title: a.payload.title, months: a.payload.months, breakdown: a.payload.breakdown });
-      s.toast('تم إنشاء الهدف مع خطته', { icon: 'sparkles' });
+      s.toast(tr('تم إنشاء الهدف مع خطته'), { icon: 'sparkles' });
     }
-    if (a.type === 'reorder') (s.applyTimes(a.payload), s.toast('تم اعتماد الترتيب الجديد', { icon: 'check' }));
-    if (a.type === 'addParsed') (s.addTasks(a.payload), s.toast('تمت الإضافة إلى جدولك', { icon: 'check' }));
+    if (a.type === 'reorder') (s.applyTimes(a.payload), s.toast(tr('تم اعتماد الترتيب الجديد'), { icon: 'check' }));
+    if (a.type === 'addParsed') (s.addTasks(a.payload), s.toast(tr('تمت الإضافة إلى جدولك'), { icon: 'check' }));
     setMsgs((m) => m.map((x, j) => (j === i ? { ...x, used: true } : x)));
   }
   const prompts = ['رتب يومي', 'وش أسوي الآن؟', 'وش أقدر أنجز خلال ساعة؟', 'أنا متأخر اليوم، ساعدني', 'عندي اختبار بعد 5 أيام وأحتاج أذاكر 4 فصول', 'قسم لي هدف تعلم الإنجليزية خلال 6 أشهر'];
   return (
-    <Drawer title="اسأل مسار" icon={<Sparkles size={18} />} onClose={() => setDrawer(null)} actions={<span className="badge purple"><Glyph name={PERSONAS[persona]?.icon} size={12} /> {PERSONAS[persona]?.label}</span>}>
+    <Drawer title={tr('اسأل مسار')} icon={<Sparkles size={18} />} onClose={() => setDrawer(null)} actions={<span className="badge purple"><Glyph name={PERSONAS[persona]?.icon} size={12} /> {tr(PERSONAS[persona]?.label)}</span>}>
       <div className="chat">
         {msgs.map((m, i) => (
           <div key={i} className={`msg ${m.role}`}>
@@ -449,7 +451,7 @@ export function AssistantDrawer() {
               <div className="col mt-s" style={{ gap: 6 }}>
                 {m.plan.map((p) => (
                   <div key={p.day} className="row small" style={{ padding: '6px 10px', borderRadius: 10, background: 'rgba(var(--primary-rgb),.1)' }}>
-                    <span className="bold purple">اليوم {p.day}</span>
+                    <span className="bold purple">{trf('اليوم {n}', { n: p.day })}</span>
                     <span className="grow">{p.title}</span>
                   </div>
                 ))}
@@ -460,14 +462,14 @@ export function AssistantDrawer() {
                 {m.goal.breakdown.months.map((mo) => (
                   <div key={mo.title} className="small">• {mo.title}</div>
                 ))}
-                <div className="tiny muted mt-s">مهام يومية: {m.goal.breakdown.daily.join('، ')}</div>
+                <div className="tiny muted mt-s">{trf('مهام يومية: {list}', { list: m.goal.breakdown.daily.join(tr('، ')) })}</div>
               </div>
             )}
             {m.parsed && (
               <div className="col mt-s" style={{ gap: 4 }}>
                 {m.parsed.map((p, k) => (
                   <div key={k} className="small">
-                    <Glyph name={p.icon} size={14} /> <span className="num">{p.time || '—'}</span> — {p.title} — <span className="num">{p.duration}</span> دقيقة
+                    <Glyph name={p.icon} size={14} /> <span className="num">{p.time || '—'}</span> — {p.title} — <span className="num">{p.duration}</span> {tr('دقيقة')}
                   </div>
                 ))}
               </div>
@@ -476,7 +478,7 @@ export function AssistantDrawer() {
               <div className="row wrap mt-s">
                 {m.actions.map((a) => (
                   <button key={a.label} className="btn btn-xs btn-primary" disabled={m.used} onClick={() => act(a, i)}>
-                    {m.used ? 'تم' : a.label}
+                    {m.used ? tr('تم') : a.label}
                   </button>
                 ))}
               </div>
@@ -497,8 +499,8 @@ export function AssistantDrawer() {
       {msgs.length < 3 && (
         <div className="chips mt">
           {prompts.map((p) => (
-            <button key={p} className="chip" onClick={() => send(p)}>
-              {p}
+            <button key={p} className="chip" onClick={() => send(p, tr(p))}>
+              {tr(p)}
             </button>
           ))}
         </div>
@@ -512,13 +514,13 @@ export function AssistantDrawer() {
         }}
       >
         <Bot size={18} className="spark" />
-        <input value={v} onChange={(e) => setV(e.target.value)} placeholder="اكتب سؤالك…" aria-label="اكتب سؤالك للمساعد" autoFocus />
-        <button type="submit" className="icon-btn sm primary" aria-label="إرسال" disabled={!v.trim()}>
+        <input value={v} onChange={(e) => setV(e.target.value)} placeholder={tr('اكتب سؤالك…')} aria-label={tr('اكتب سؤالك للمساعد')} autoFocus />
+        <button type="submit" className="icon-btn sm primary" aria-label={tr('إرسال')} disabled={!v.trim()}>
           <Send style={{ transform: 'scaleX(-1)' }} />
         </button>
       </form>
       <p className="tiny dim mt-s" style={{ textAlign: 'center' }}>
-        المساعد يعمل بمنطق ذكي محلي على جهازك — جاهز للربط بنموذج ذكاء اصطناعي لاحقًا.
+        {tr('المساعد يعمل بمنطق ذكي محلي على جهازك — جاهز للربط بنموذج ذكاء اصطناعي لاحقًا.')}
       </p>
     </Drawer>
   );
