@@ -24,14 +24,6 @@ export async function extractText(file, onProgress) {
   const { data } = await T.recognize(file, 'ara+eng', {
     logger: (m) => m.status === 'recognizing text' && onProgress?.(Math.round(m.progress * 100)),
   });
-  return data.text || '';
-}
-
-// تحويل النص إلى قائمة مهام: كل سطر له معنى = مهمة
-export function textToTasks(text) {
-  return text
-    .split(/\n+/)
-    .map((l) => l.replace(/^[\s\-•*·▪◦○●☐☑✓✔\d.)(]+/, '').replace(/\s+/g, ' ').trim())
-    .filter((l) => l.length >= 3 && /[؀-ۿA-Za-z]{2,}/.test(l))
-    .slice(0, 15);
+  // نرجع الأسطر مع أحجامها ودرجة الثقة لتصفية النص الصغير والإشعارات
+  return { text: data.text || '', lines: data.lines || [] };
 }

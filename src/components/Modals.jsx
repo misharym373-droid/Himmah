@@ -3,12 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mic, Square, Check, X, ImagePlus, Camera, Loader2, Sparkles, Play, CalendarPlus, Trash2, ArrowLeft, Undo2, Keyboard, Calendar, Clock, Timer, Repeat, MicOff, RotateCcw, Pencil, Zap, Sun, CalendarArrowUp, CalendarDays, BatteryLow, BatteryMedium, BatteryFull, Siren, Hourglass } from 'lucide-react';
 import { useStore } from '../store.js';
 import { useAssistantState } from '../hooks.js';
-import { Modal, CheckBox } from './ui.jsx';
+import { Modal, CheckBox, Switch } from './ui.jsx';
 import { Glyph } from './Glyph.jsx';
 import { parseTasks, guessMeta } from '../lib/nlp.js';
-import { extractText, textToTasks } from '../lib/ocr.js';
+import { extractText } from '../lib/ocr.js';
+import { filterOcrLines, linesToItems, nextDateFor } from '../lib/scheduleOcr.js';
+import { ScenePicker, useSceneSettings, useCustomMedia } from './FocusScene.jsx';
 import { rescuePlan, fitInTime, suggestNow, say } from '../lib/assistant.js';
-import { formatDuration, relativeDay, todayKey, addDays, formatLong } from '../lib/date.js';
+import { formatDuration, relativeDay, todayKey, addDays, formatLong, formatShort, dayName, toMin } from '../lib/date.js';
 import { AREAS, PRIORITIES } from '../config.js';
 import { tr, trf, isEn } from '../i18n/index.js';
 
@@ -280,35 +282,55 @@ export function CreatedModal({ ids }) {
 // ————— بدء جلسة تركيز —————
 export function FocusStartModal({ taskId }) {
   const close = useStore((s) => s.closeModal);
-  const task = useStore((s) => s.tasks.find((t) => t.id === taskId));
+  const tasks = useStore((s) => s.tasks);
   const startFocus = useStore((s) => s.startFocus);
-  const [custom, setCustom] = useState(task?.duration || 30);
+  // المهمة اختيارية: «تركيز حر» بدون ربط بمهمة
+  const [pick, setPick] = useState(taskId || '');
+  const task = tasks.find((t) => t.id === pick);
+  const open = useMemo(() => tasks.filter((t) => !t.done && !t.deletedAt && !t.template && t.date === todayKey()).slice(0, 30), [tasks]);
+  const [custom, setCustom] = useState(task?.duration || 25);
+  const cfg = useSceneSettings();
+  const media = useCustomMedia();
   const presets = [15, 25, 45];
+  const go = (m) => startFocus(pick || null, m);
   return (
-    <Modal title={tr('ابدأ جلسة تركيز')} sub={task ? task.title : null} onClose={close}>
-      <div className="focus-presets">
+    <Modal title={tr('ابدأ جلسة تركيز')} sub={task ? task.title : tr('تركيز حر — بدون ربط بمهمة')} onClose={close} size="wide">
+      <label className="field">
+        <span>{tr('على ماذا ستركّز؟')}</span>
+        <select className="select" value={pick} onChange={(e) => setPick(e.target.value)}>
+          <option value="">{tr('تركيز حر (بدون مهمة)')}</option>
+          {task && !open.includes(task) && <option value={task.id}>{task.title}</option>}
+          {open.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="focus-presets mt">
         {presets.map((m) => (
-          <button key={m} className="seg-btn" onClick={() => startFocus(taskId, m)}>
+          <button key={m} className="seg-btn" onClick={() => go(m)}>
             <span className="xbold num" style={{ fontSize: '1.6rem' }}>{m}</span>
             <span className="tiny muted">{tr('دقيقة')}</span>
           </button>
         ))}
       </div>
-      <div className="divider" />
-      <label className="field">
+      <label className="field mt">
         <span>{tr('تخصيص المدة (دقيقة)')}</span>
         <div className="row">
-          <input className="input" type="number" min="5" max="240" step="5" value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && startFocus(taskId, Math.max(1, +custom || 25))} />
-          <button className="btn btn-primary" onClick={() => startFocus(taskId, Math.max(1, +custom || 25))}>
+          <input className="input" type="number" min="5" max="240" step="5" value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go(Math.max(1, +custom || 25))} />
+          <button className="btn btn-primary" onClick={() => go(Math.max(1, +custom || 25))}>
             <Play /> {tr('ابدأ')}
           </button>
         </div>
       </label>
       {task?.duration && !presets.includes(task.duration) && (
-        <button className="btn btn-ghost btn-sm mt" onClick={() => startFocus(taskId, task.duration)}>
+        <button className="btn btn-ghost btn-sm mt" onClick={() => go(task.duration)}>
           <Timer /> {trf('مدة المهمة كاملة ({d})', { d: formatDuration(task.duration) })}
         </button>
       )}
+      <div className="divider" />
+      <ScenePicker cfg={cfg} media={media} compact />
     </Modal>
   );
 }
@@ -320,9 +342,11 @@ export function ImageModal() {
   const [img, setImg] = useState(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [lines, setLines] = useState([]);
+  const [items, setItems] = useState([]);
+  const [ocr, setOcr] = useState({ keep: [], dropped: [] });
+  const [showIgnored, setShowIgnored] = useState(false);
+  const [weekly, setWeekly] = useState(false);
   const [err, setErr] = useState('');
-  const [date, setDate] = useState(todayKey());
   const input = useRef(null);
   const camera = useRef(null);
   // لصق صورة مباشرة (Ctrl+V) على الكمبيوتر
@@ -335,42 +359,68 @@ export function ImageModal() {
     return () => window.removeEventListener('paste', onPaste);
   }, []); // eslint-disable-line
 
+  function build(keep, dropped, withIgnored) {
+    const found = linesToItems(withIgnored ? [...keep, ...dropped] : keep);
+    setItems(found);
+    setWeekly(found.some((x) => x.dow != null));
+    return found;
+  }
   async function onFile(file) {
     if (!file) return;
     if (!file.type.startsWith('image/')) return setErr(tr('الملف يجب أن يكون صورة'));
     setErr('');
-    setLines([]);
+    setItems([]);
     setImg(URL.createObjectURL(file));
     setBusy(true);
     setProgress(0);
     try {
-      const text = await extractText(file, setProgress);
-      const found = textToTasks(text);
+      const data = await extractText(file, setProgress);
+      const res = filterOcrLines(data);
+      setOcr(res);
+      setShowIgnored(false);
+      const found = build(res.keep, res.dropped, false);
       if (!found.length) setErr(tr('ما قدرت ألقى مهام واضحة في الصورة. جرّب صورة أوضح أو أضف المهام يدويًا.'));
-      setLines(found.map((t) => ({ title: t, on: true })));
     } catch (e) {
       setErr(e.message || tr('حدث خطأ أثناء قراءة الصورة'));
     } finally {
       setBusy(false);
     }
   }
+  const upd = (i, patch) => setItems(items.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  function setDay(i, v) {
+    const dow = v === '' ? null : +v;
+    upd(i, { dow, date: dow == null ? todayKey() : nextDateFor(dow) });
+  }
+  function setRange(i, key, v) {
+    const it = { ...items[i], [key]: v || null };
+    const a = toMin(it.time);
+    const e = toMin(it.end);
+    upd(i, { [key]: v || null, duration: a != null && e != null && e > a ? e - a : it.duration });
+  }
   function add() {
-    const chosen = lines.filter((l) => l.on && l.title.trim());
-    addTasks(chosen.map((l) => ({ title: l.title.trim(), date, duration: 30, ...guessMeta(l.title) })));
+    const chosen = items.filter((l) => l.on && l.title.trim());
+    addTasks(
+      chosen.map((l) => ({
+        ...guessMeta(l.title),
+        title: l.title.trim(),
+        date: l.date,
+        time: l.time || null,
+        duration: l.duration || 60,
+        desc: l.place ? trf('المكان: {place}', { place: l.place }) : '',
+        repeat: weekly && l.dow != null ? { type: 'days', days: [l.dow] } : { type: 'none', days: [] },
+      }))
+    );
     useStore.getState().toast(trf('تمت إضافة {n} مهام من الصورة', { n: chosen.length }), { icon: 'check' });
     close();
   }
+  const count = items.filter((l) => l.on).length;
   return (
-    <Modal title={tr('أضف مهمة من صورة')} sub={tr('صوّر ورقة واجب أو قائمة مهام، ومسار يستخرج المهام منها')} onClose={close} size="wide">
+    <Modal title={tr('أضف مهمة من صورة')} sub={tr('صوّر جدولك أو قائمة مهامك، ومسار يستخرج اليوم والوقت والمكان')} onClose={close} size="xl">
       {/* اختيار من المعرض/الملفات (يعمل على الجوال والكمبيوتر) + التقاط بالكاميرا على الجوال */}
       <input ref={input} type="file" accept="image/*" hidden onChange={(e) => (onFile(e.target.files[0]), (e.target.value = ''))} />
       <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => (onFile(e.target.files[0]), (e.target.value = ''))} />
       {!img ? (
-        <div
-          className="drop-zone"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => (e.preventDefault(), onFile(e.dataTransfer.files[0]))}
-        >
+        <div className="drop-zone" onDragOver={(e) => e.preventDefault()} onDrop={(e) => (e.preventDefault(), onFile(e.dataTransfer.files[0]))}>
           <div className="drop-ico">
             <ImagePlus size={30} />
           </div>
@@ -384,21 +434,23 @@ export function ImageModal() {
               <Camera /> {tr('التقاط صورة')}
             </button>
           </div>
-          <div className="tiny dim">{tr('يدعم العربية والإنجليزية · الصورة تُعالج على جهازك')}</div>
+          <div className="tiny dim">{tr('يفهم الجداول: «الأحد 8-12 محاضرة الرياضيات قاعة 3» · العربية والإنجليزية · الصورة تُعالج على جهازك')}</div>
         </div>
       ) : (
-        <div className="grid g2" style={{ alignItems: 'start' }}>
-          <div>
-            <img src={img} alt={tr('الصورة المرفوعة')} style={{ borderRadius: 16, maxHeight: 320, width: '100%', objectFit: 'contain', background: '#0003' }} />
+        <div className="ocr-layout">
+          <div className="ocr-image">
+            <img src={img} alt={tr('الصورة المرفوعة')} />
             <button className="btn btn-sm btn-ghost mt-s" onClick={() => input.current.click()}>
               {tr('تغيير الصورة')}
             </button>
           </div>
-          <div>
+          <div className="grow" style={{ minWidth: 0 }}>
             {busy ? (
               <div className="col" style={{ alignItems: 'center', padding: 30 }}>
                 <Loader2 className="purple" size={36} style={{ animation: 'spin 1s linear infinite' }} />
-                <div className="bold">{tr('جاري قراءة الصورة…')} <span className="num">{progress}%</span></div>
+                <div className="bold">
+                  {tr('جاري قراءة الصورة…')} <span className="num">{progress}%</span>
+                </div>
                 <div style={{ width: '100%' }}>
                   <div className="bar">
                     <i style={{ width: `${progress}%` }} />
@@ -407,32 +459,58 @@ export function ImageModal() {
                 <p className="tiny dim">{tr('أول مرة قد تأخذ وقتًا أطول لتحميل محرك القراءة')}</p>
               </div>
             ) : (
-              lines.length > 0 && (
-                <div className="col">
-                  <div className="bold green row">
-                    <Check size={18} /> {trf('وجدت {n} مهام', { n: lines.length })}
-                  </div>
-                  {lines.map((l, i) => (
-                    <div className="row" key={i}>
-                      <CheckBox on={l.on} onChange={(v) => setLines(lines.map((x, j) => (j === i ? { ...x, on: v } : x)))} label={l.title} />
-                      <input className="input" style={{ height: 38 }} value={l.title} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
+              items.length > 0 && (
+                <div className="col" style={{ gap: 10 }}>
+                  <div className="row between wrap">
+                    <div className="bold green row">
+                      <Check size={18} /> {trf('وجدت {n} مهام', { n: items.length })}
                     </div>
-                  ))}
-                  <label className="field mt-s">
-                    <span>{tr('تاريخ المهام')}</span>
-                    <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-                  </label>
+                    {items.some((x) => x.dow != null) && (
+                      <label className="row small" style={{ cursor: 'pointer' }}>
+                        <Switch on={weekly} onChange={setWeekly} label={tr('كرر أسبوعيًا')} /> {tr('كرر أسبوعيًا (جدول ثابت)')}
+                      </label>
+                    )}
+                  </div>
+                  <div className="ocr-list">
+                    {items.map((l, i) => (
+                      <div className={`ocr-item ${l.on ? '' : 'off'}`} key={i}>
+                        <CheckBox on={l.on} onChange={(v) => upd(i, { on: v })} label={l.title} />
+                        <div className="ocr-fields">
+                          <input className="input ocr-title" value={l.title} onChange={(e) => upd(i, { title: e.target.value })} aria-label={tr('عنوان المهمة')} />
+                          <select className="select" value={l.dow ?? ''} onChange={(e) => setDay(i, e.target.value)} aria-label={tr('يوم الأسبوع')}>
+                            <option value="">{formatShort(l.date)}</option>
+                            {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+                              <option key={d} value={d}>
+                                {dayName(d)}
+                              </option>
+                            ))}
+                          </select>
+                          <input className="input" type="time" value={l.time || ''} onChange={(e) => setRange(i, 'time', e.target.value)} aria-label={tr('من')} />
+                          <input className="input" type="time" value={l.end || ''} onChange={(e) => setRange(i, 'end', e.target.value)} aria-label={tr('إلى')} />
+                          <input className="input" value={l.place} placeholder={tr('المكان')} onChange={(e) => upd(i, { place: e.target.value })} aria-label={tr('المكان')} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )
+            )}
+            {!busy && ocr.dropped.length > 0 && (
+              <p className="tiny muted mt-s">
+                {trf('تجاهلت {n} سطرًا (نص صغير أو إشعارات أو غير واضح).', { n: ocr.dropped.length })}{' '}
+                <button className="purple bold" onClick={() => (setShowIgnored(!showIgnored), build(ocr.keep, ocr.dropped, !showIgnored))}>
+                  {showIgnored ? tr('إخفاؤها') : tr('إظهارها')}
+                </button>
+              </p>
             )}
           </div>
         </div>
       )}
       {err && <div className="err mt">{err}</div>}
-      {lines.some((l) => l.on) && !busy && (
+      {count > 0 && !busy && (
         <div className="modal-ft">
           <button className="btn btn-primary" onClick={add}>
-            <CalendarPlus /> {trf('إضافة {n} مهام', { n: lines.filter((l) => l.on).length })}
+            <CalendarPlus /> {trf('إضافة {n} مهام', { n: count })}
           </button>
         </div>
       )}

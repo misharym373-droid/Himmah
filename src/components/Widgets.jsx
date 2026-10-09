@@ -460,9 +460,17 @@ export function FocusCard({ span = 'span-5' }) {
                   {tr('تخصيص')}
                 </button>
               </div>
+              <button className="btn btn-sm btn-ghost mt-s" onClick={() => pickFocus(null)}>
+                {tr('تركيز حر بدون مهمة')}
+              </button>
             </>
           ) : (
-            <p className="small muted mt">{tr('لا توجد مهام مفتوحة للتركيز عليها الآن.')}</p>
+            <>
+              <p className="small muted mt">{tr('لا توجد مهام مفتوحة للتركيز عليها الآن.')}</p>
+              <button className="btn btn-sm btn-primary mt-s" onClick={() => pickFocus(null)}>
+                {tr('تركيز حر بدون مهمة')}
+              </button>
+            </>
           )}
         </>
       )}

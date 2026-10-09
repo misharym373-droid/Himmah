@@ -1,6 +1,6 @@
 // الطبقات العائمة: التنبيهات المنبثقة، الاحتفالات، وضع التركيز، قائمة الأوامر، الإشعارات، المساعد
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
+import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Palette, Volume2, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
 import { Glyph, IconTile } from './Glyph.jsx';
 import { useStore } from '../store.js';
 import { navigate } from '../router.js';
@@ -12,6 +12,7 @@ import { formatClock, timeAgo, relativeDay } from '../lib/date.js';
 import { chat, say } from '../lib/assistant.js';
 import { PERSONAS } from '../config.js';
 import { tr, trf, isEn } from '../i18n/index.js';
+import { SceneBackground, ScenePicker, useSceneSettings, useAmbient, useCustomMedia } from './FocusScene.jsx';
 
 const TOAST_ICONS = { check: Check, trash: Trash2, clock: Clock, sparkles: Sparkles };
 
@@ -91,6 +92,18 @@ export function FocusMode() {
   const task = useStore((s) => (s.focus ? s.tasks.find((t) => t.id === s.focus.taskId) : null));
   const { pauseFocus, resumeFocus, endFocus, minimizeFocus, openModal, finishFocus, startFocus } = useStore.getState();
   const [, force] = useState(0);
+  const cfg = useSceneSettings();
+  const media = useCustomMedia();
+  const [picker, setPicker] = useState(false);
+  // الصوت يستمر حتى لو صغّرت الجلسة، ويتوقف عند الإيقاف المؤقت أو الانتهاء
+  const ambient = useAmbient(!!focus && focus.running && !focus.finished, cfg, media.audio);
+  // Esc يصغّر وضع التركيز ويرجعك للموقع (الجلسة تستمر)
+  useEffect(() => {
+    if (!focus || focus.minimized || focus.finished) return;
+    const onKey = (e) => e.key === 'Escape' && (picker ? setPicker(false) : minimizeFocus(true));
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [focus?.minimized, focus?.finished, !!focus, picker]); // eslint-disable-line
   useEffect(() => {
     if (!focus?.running) return;
     const t = setInterval(() => {
@@ -128,12 +141,26 @@ export function FocusMode() {
 
   return (
     <div className="focus-mode" role="dialog" aria-modal="true" aria-label={tr('وضع التركيز')}>
-      <div className="breath" />
-      {!finished && (
-        <button className="icon-btn" style={{ position: 'absolute', top: 20, insetInlineEnd: 20 }} onClick={() => minimizeFocus(true)} aria-label={tr('تصغير وضع التركيز')}>
-          <Minimize2 />
+      <SceneBackground cfg={cfg} customBg={media.bg} />
+      <div className="focus-scrim" aria-hidden />
+      {!cfg.custom && cfg.scene === 'minimal' && <div className="breath" />}
+      <div className="focus-top">
+        {!finished && (
+          <button className="btn btn-sm btn-glass" onClick={() => minimizeFocus(true)} title="Esc">
+            <Minimize2 /> {tr('تصغير والرجوع للموقع')}
+          </button>
+        )}
+        <span className="grow" />
+        {ambient.blocked && (
+          <button className="btn btn-sm btn-glass" onClick={ambient.unblock}>
+            <Volume2 /> {tr('تشغيل الصوت')}
+          </button>
+        )}
+        <button className="btn btn-sm btn-glass" onClick={() => setPicker(!picker)} aria-expanded={picker}>
+          <Palette /> {tr('الأجواء')}
         </button>
-      )}
+      </div>
+      {picker && <ScenePicker cfg={cfg} media={media} onClose={() => setPicker(false)} />}
       <div className="badge purple" style={{ fontSize: '.85rem', padding: '4px 14px' }}>
         {finished ? (
           <>
@@ -238,6 +265,7 @@ export function CommandMenu() {
   const ga = tr('إجراءات');
   const actions = [
     { g: ga, label: tr('مهمة جديدة'), icon: Plus, run: () => open('task'), k: 'N' },
+    { g: ga, label: tr('تركيز حر بدون مهمة'), icon: Timer, run: () => useStore.getState().pickFocus(null) },
     { g: ga, label: tr('إضافة بالصوت'), icon: Mic, run: () => open('voice'), k: 'V' },
     { g: ga, label: tr('أضف مهمة من صورة'), icon: ImagePlus, run: () => open('image') },
     { g: ga, label: tr('وش أسوي الآن؟'), icon: Sparkles, run: () => open('whatNow'), k: 'W' },
