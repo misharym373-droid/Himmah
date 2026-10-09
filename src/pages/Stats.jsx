@@ -6,7 +6,7 @@ import { Bars } from '../components/Charts.jsx';
 import { BalanceWidget, TimeMachineWidget } from '../components/Widgets.jsx';
 import { summary, weekBars } from '../lib/stats.js';
 import { formatHM, dayShort, formatDuration } from '../lib/date.js';
-import { tr, trf } from '../i18n/index.js';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 // كل بطاقة تجيب عن سؤال واحد واضح
 function QA({ icon: I, color = '', q, a, note, children, span = 'span-4' }) {
@@ -73,7 +73,7 @@ export default function Stats() {
           q={trf('كم أنجزت {period}؟', { period })}
           a={
             <>
-              <Num value={s.done} /> <span className="small muted">{tr('مهمة')}</span>
+              <Num value={s.done} /> <span className="small muted">{isEn() ? 'tasks' : 'مهمة'}</span>
             </>
           }
           note={
