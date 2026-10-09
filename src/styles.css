@@ -320,13 +320,19 @@ html[data-theme='dark'][data-bg='minimal'] { --bg: #000000; --card: #141615; --m
 .textarea { height: auto; min-height: 90px; padding: 12px 14px; resize: vertical; line-height: 1.6; }
 .input:focus, .select:focus, .textarea:focus { background: var(--card); border-color: rgba(var(--primary-rgb), 0.55); box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.12); }
 .input::placeholder, .textarea::placeholder { color: var(--dim); }
-.input[type='time'], .input[type='date'], .input[type='number'] { direction: ltr; text-align: right; }
+.input[type='time'], .input[type='date'], .input[type='number'] { direction: ltr; text-align: end; }
+/* حقول اللاتينية (بريد/كلمة مرور) تُكتب من اليسار وتُحاذى مع اتجاه الصفحة */
+.input[dir='ltr'] { text-align: end; }
+[dir='ltr'] .input[dir='ltr'] { text-align: start; }
 .select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: 18px 19px, 13px 19px; background-size: 5px 5px; background-repeat: no-repeat; padding-inline: 14px; }
 .select option { background: var(--elev); color: var(--text); }
 .input-icon { position: relative; }
 .input-icon > svg { position: absolute; top: 50%; inset-inline-start: 13px; transform: translateY(-50%); width: 17px; height: 17px; color: var(--dim); pointer-events: none; }
-.input-icon .input { padding-right: 40px; padding-left: 14px; }
+.input-icon .input { padding-inline-start: 40px; padding-inline-end: 14px; }
+.input-icon .input[dir='ltr'] { padding-right: 40px; padding-left: 14px; }
+[dir='ltr'] .input-icon .input[dir='ltr'] { padding-left: 40px; padding-right: 14px; }
 .input-icon .trail ~ .input, .input-icon .input:has(+ .trail) { padding-left: 46px; }
+[dir='ltr'] .input-icon .trail ~ .input, [dir='ltr'] .input-icon .input:has(+ .trail) { padding-left: 40px; padding-right: 46px; }
 .input-icon .trail { position: absolute; top: 50%; inset-inline-end: 5px; transform: translateY(-50%); }
 .err { color: var(--red); font-size: 0.84rem; }
 
@@ -425,7 +431,7 @@ html[data-theme='dark'] .tab.on { background: #4a504d; }
 .task .t-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s ease; }
 .task:hover .t-actions, .task:focus-within .t-actions { opacity: 1; }
 .prio { width: 4px; align-self: stretch; border-radius: 4px; flex-shrink: 0; }
-.prio-bar { position: absolute; inset-inline-start: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; }
+.prio-bar { position: absolute; inset-inline-start: 0; top: 14px; bottom: 14px; width: 3px; border-start-end-radius: 3px; border-end-end-radius: 3px; }
 .task.done .prio-bar { opacity: 0.25; }
 .drag-handle { color: var(--dim); cursor: grab; touch-action: none; display: grid; place-items: center; padding: 4px; border-radius: 8px; }
 .drag-handle:hover { color: var(--text); background: var(--fill); }
@@ -675,6 +681,8 @@ html[data-theme='dark'] .toast { background: rgba(58, 63, 61, 0.92); }
 .steps i.on { background: var(--primary); }
 .onb-step { animation: stepIn 0.35s var(--ease) backwards; }
 @keyframes stepIn { from { opacity: 0; transform: translateX(-16px); } }
+[dir='ltr'] .onb-step { animation-name: stepInL; }
+@keyframes stepInL { from { opacity: 0; transform: translateX(16px); } }
 .build-anim { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 30px 0; }
 .spinner { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--fill); border-top-color: var(--muted); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -723,6 +731,7 @@ html[data-theme='dark'] .toast { background: rgba(58, 63, 61, 0.92); }
 /* ================= القوائم المنبثقة — تنبثق من الزر الذي فتحها ================= */
 .pop-wrap { position: relative; display: inline-flex; }
 .pop-menu { position: absolute; z-index: 40; top: calc(100% + 6px); inset-inline-end: 0; min-width: 190px; padding: 5px; border-radius: 14px; background: var(--material); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); border: 1px solid var(--border); box-shadow: var(--shadow-lg); animation: popIn 0.18s var(--ease) backwards; transform-origin: top left; }
+[dir='ltr'] .pop-menu { transform-origin: top right; }
 .pop-menu button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; font-size: 0.9rem; color: var(--text); text-align: start; }
 .pop-menu button:hover, .pop-menu button:focus-visible { background: var(--primary); color: #fff; }
 .pop-menu button svg { color: var(--muted); }
@@ -1027,3 +1036,7 @@ html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='
 @media (max-width: 760px) { .session-date { width: 56px; } .wt-day { width: 60px; } }
 .heat .c { font-size: 0.7rem; font-weight: 600; }
 .heat .c.l3 .num, .heat .c.l2 .num { color: #fff; }
+
+/* الإنجليزية: الأسهم تنعكس مع اتجاه الصفحة */
+[dir='ltr'] .lucide-arrow-left, [dir='ltr'] .lucide-arrow-right, [dir='ltr'] .lucide-chevron-left, [dir='ltr'] .lucide-chevron-right { transform: scaleX(-1); }
+[dir='ltr'] .select { background-position: calc(100% - 13px) 19px, calc(100% - 18px) 19px; }

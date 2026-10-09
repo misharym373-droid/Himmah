@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useLang, changeLang, getLang, tr, trf } from './i18n/index.js';
 import { useStore } from './store.js';
 import { useRoute, navigate } from './router.js';
 import { session } from './lib/storage.js';
@@ -96,7 +97,7 @@ export default function App() {
       if (!alive) return;
       if (data?.session?.user) start(toUser(data.session.user));
       else {
-        if (error) setNotice('تعذر استعادة جلستك. سجّل دخولك مرة أخرى.');
+        if (error) setNotice(tr('تعذر استعادة جلستك. سجّل دخولك مرة أخرى.'));
         setPhase('auth');
       }
     })();
@@ -109,7 +110,7 @@ export default function App() {
         if (event === 'SIGNED_OUT' && userRef.current && !userRef.current.demo) {
           const expired = !manualLogout.current;
           manualLogout.current = false;
-          endSession(expired ? 'انتهت جلستك. سجّل دخولك مرة أخرى للمتابعة.' : '');
+          endSession(expired ? tr('انتهت جلستك. سجّل دخولك مرة أخرى للمتابعة.') : '');
         }
       }, 0);
     });
@@ -125,61 +126,76 @@ export default function App() {
   useEffect(() => {
     if (!sessionExpired) return;
     useStore.getState().closeSession();
-    supabase.auth.signOut({ scope: 'local' }).finally(() => endSession('انتهت جلستك. سجّل دخولك مرة أخرى — تغييراتك غير المرفوعة محفوظة على هذا الجهاز.'));
+    supabase.auth.signOut({ scope: 'local' }).finally(() => endSession(tr('انتهت جلستك. سجّل دخولك مرة أخرى — تغييراتك غير المرفوعة محفوظة على هذا الجهاز.')));
   }, [sessionExpired]);
 
   useApplySettings(settings);
+  const lang = useLang();
+  const ready = useStore((s) => s.ready);
+  // اللغة: إذا اختارها المستخدم من شاشة الدخول نحفظها في حسابه، وإلا نطبّق لغة حسابه
+  useEffect(() => {
+    if (!ready) return;
+    let picked = false;
+    try {
+      picked = sessionStorage.getItem('himmah:lang-picked') === '1';
+      sessionStorage.removeItem('himmah:lang-picked');
+    } catch (e) {
+      console.warn('[himmah:lang]', e?.message || e);
+    }
+    if (picked && settings.language !== getLang()) useStore.getState().setSetting('language', getLang());
+    else if (settings.language) changeLang(settings.language);
+  }, [ready, settings.language]);
 
   const recoveryModal = recovery && <RecoveryModal onClose={() => setRecovery(false)} />;
   if (phase === 'boot' || phase === 'loading')
     return (
-      <>
+      <Fragment key={lang}>
         <Scene />
-        <FullLoader text={phase === 'loading' ? 'جاري تحميل بياناتك…' : ''} />
-      </>
+        <FullLoader text={phase === 'loading' ? tr('جاري تحميل بياناتك…') : ''} />
+      </Fragment>
     );
   if (phase === 'auth')
     return (
-      <>
+      <Fragment key={lang}>
         <Scene />
         <Auth notice={notice} onLoggedIn={(u) => start(toUser(u))} onDemo={() => (session.set('demo', true), start(DEMO_USER))} />
         {recoveryModal}
-      </>
+      </Fragment>
     );
   if (phase === 'error')
     return (
-      <>
+      <Fragment key={lang}>
         <Scene />
         <div className="onb">
           <div className="card onb-card" style={{ textAlign: 'center' }}>
-            <h2>تعذر تحميل بياناتك</h2>
-            <p className="muted mt-s">تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى. بياناتك محفوظة في حسابك ولن تضيع.</p>
+            <h2>{tr('تعذر تحميل بياناتك')}</h2>
+            <p className="muted mt-s">{tr('تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى. بياناتك محفوظة في حسابك ولن تضيع.')}</p>
             <div className="row mt" style={{ justifyContent: 'center' }}>
               <button className="btn btn-primary" onClick={() => start(userRef.current)}>
-                حاول مرة أخرى
+                {tr('حاول مرة أخرى')}
               </button>
               <button className="btn btn-ghost" onClick={logout}>
-                تسجيل الخروج
+                {tr('تسجيل الخروج')}
               </button>
             </div>
           </div>
         </div>
-      </>
+      </Fragment>
     );
   if (!onboarded)
     return (
-      <>
+      <Fragment key={lang}>
         <Scene />
         <Onboarding />
         <Toasts />
         {recoveryModal}
-      </>
+      </Fragment>
     );
   return (
-    <>
+    <Fragment key={lang}>
       <Shell />
       {recoveryModal}
-    </>
+    </Fragment>
   );
 }
 
@@ -198,12 +214,12 @@ function RecoveryModal({ onClose }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   async function save() {
-    if (pw.length < 8) return setErr('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+    if (pw.length < 8) return setErr(tr('كلمة المرور يجب أن تكون 8 أحرف على الأقل'));
     setBusy(true);
     setErr('');
     try {
       await updatePassword(pw);
-      useStore.getState().toast('تم تغيير كلمة المرور بنجاح', { icon: 'check' });
+      useStore.getState().toast(tr('تم تغيير كلمة المرور بنجاح'), { icon: 'check' });
       onClose();
     } catch (e) {
       setErr(e.message);
@@ -212,10 +228,10 @@ function RecoveryModal({ onClose }) {
     }
   }
   return (
-    <Modal title="تعيين كلمة مرور جديدة" onClose={onClose} footer={<button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? 'جاري الحفظ…' : 'حفظ كلمة المرور'}</button>}>
+    <Modal title={tr('تعيين كلمة مرور جديدة')} onClose={onClose} footer={<button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? tr('جاري الحفظ…') : tr('حفظ كلمة المرور')}</button>}>
       <label className="field">
-        <span>كلمة المرور الجديدة</span>
-        <input className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" dir="ltr" style={{ textAlign: 'right' }} />
+        <span>{tr('كلمة المرور الجديدة')}</span>
+        <input className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" dir="ltr" />
       </label>
       {err && <div className="err mt-s" role="alert">{err}</div>}
     </Modal>
@@ -340,25 +356,25 @@ function useReminders() {
         if (!t.time) continue;
         const diff = toMin(t.time) - now;
         if (diff > 0 && diff <= 15 && !notified[t.id]) {
-          st.notify('upcoming', 'bell', 'مهمتك القادمة', `بعد ${diff} دقيقة: ${t.title}`);
+          st.notify('upcoming', 'bell', tr('مهمتك القادمة'), trf('بعد {n} دقيقة: {title}', { n: diff, title: t.title }));
           mark(t.id);
         }
       }
       // 2) المهام المتأخرة — تنبيه واحد مجمّع يوميًا بدل تنبيه لكل مهمة
       const overdue = st.tasks.filter((t) => isOverdue(t));
       if (overdue.length && notified.overdue !== T && hour >= 9) {
-        st.notify('overdue', 'alarm', overdue.length > 1 ? `${overdue.length} مهام متأخرة` : 'مهمة متأخرة', `${overdue.slice(0, 2).map((t) => t.title).join('، ')} — أعد جدولتها أو انقلها لوقت آخر`);
+        st.notify('overdue', 'alarm', overdue.length > 1 ? trf('{n} مهام متأخرة', { n: overdue.length }) : tr('مهمة متأخرة'), trf('{titles} — أعد جدولتها أو انقلها لوقت آخر', { titles: overdue.slice(0, 2).map((t) => t.title).join(tr('، ')) }));
         mark('overdue');
       }
       // 3) تذكير الـStreak مساءً
       if (hour >= 19 && st.streak.count > 0 && st.streak.lastDate !== T && open.length && notified.streakWarn !== T) {
-        st.notify('streak', 'flame', 'حافظ على الـStreak', `أكمل مهام اليوم لتحافظ على سلسلة ${st.streak.count} يوم`);
+        st.notify('streak', 'flame', tr('حافظ على الـStreak'), trf('أكمل مهام اليوم لتحافظ على سلسلة {n} يوم', { n: st.streak.count }));
         mark('streakWarn');
       }
       // 4) نهاية اليوم: قبل موعد النوم بساعة إذا بقيت مهام
       const sleep = toMin(st.profile.sleep || '23:00') ?? 23 * 60;
       if (open.length && now >= sleep - 60 && now < sleep && notified.endOfDay !== T) {
-        st.notify('endOfDay', 'sunset', 'قارب يومك على الانتهاء', `باقي ${open.length} مهام — انقل غير الضروري لبكرة وارتح`);
+        st.notify('endOfDay', 'sunset', tr('قارب يومك على الانتهاء'), trf('باقي {n} مهام — انقل غير الضروري لبكرة وارتح', { n: open.length }));
         mark('endOfDay');
       }
       // تنظيف المعرفات القديمة

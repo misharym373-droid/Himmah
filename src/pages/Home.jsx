@@ -3,6 +3,7 @@ import { useStore } from '../store.js';
 import { navigate } from '../router.js';
 import { QuickInput } from '../components/Layout.jsx';
 import { WIDGETS } from '../lib/seed.js';
+import { tr } from '../i18n/index.js';
 import {
   Greeting, SummaryStrip, Insights, TopThree, NextTask, GoalsShortcut, FocusCard, Collapsible, DayMap, HabitsWidget, StatsWidget, XpWidget, AIWidget,
   BalanceWidget, TimeMachineWidget,
@@ -43,14 +44,14 @@ export default function Home() {
       </div>
 
       <div className="row between" style={{ margin: '34px 0 12px' }}>
-        <h2 style={{ fontSize: '1.15rem' }}>المزيد من يومك</h2>
+        <h2 style={{ fontSize: '1.15rem' }}>{tr('المزيد من يومك')}</h2>
         <button className="btn btn-sm btn-ghost" onClick={() => navigate('settings?tab=dashboard')}>
-          <SlidersHorizontal /> تخصيص الرئيسية
+          <SlidersHorizontal /> {tr('تخصيص الرئيسية')}
         </button>
       </div>
       <div className="dash" style={{ marginTop: 0, gap: 12 }}>
         {more.map((id) => (
-          <Collapsible key={id} id={id} title={label(id)} icon={MORE[id].icon} hint={MORE[id].hint} defaultOpen={!!MORE[id].open}>
+          <Collapsible key={id} id={id} title={tr(label(id))} icon={MORE[id].icon} hint={tr(MORE[id].hint)} defaultOpen={!!MORE[id].open}>
             {MORE[id].render()}
           </Collapsible>
         ))}

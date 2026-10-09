@@ -42,7 +42,7 @@ function Password({ value, onChange, placeholder = 'كلمة المرور', auto
   return (
     <div className="input-icon">
       <KeyRound />
-      <input className="input" type={show ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} autoComplete={autoComplete} dir="ltr" style={{ textAlign: 'right' }} />
+      <input className="input" type={show ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} autoComplete={autoComplete} dir="ltr" />
       <button type="button" className="icon-btn sm plain trail" onClick={() => setShow(!show)} aria-label={show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}>
         {show ? <EyeOff /> : <Eye />}
       </button>
@@ -87,7 +87,7 @@ function Login({ notice, onLoggedIn, onDemo, toSignup }) {
         <span>البريد الإلكتروني</span>
         <div className="input-icon">
           <Mail />
-          <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" dir="ltr" style={{ textAlign: 'right' }} autoFocus />
+          <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoComplete="email" dir="ltr" autoFocus />
         </div>
       </label>
       <label className="field">
@@ -167,14 +167,14 @@ function Signup({ onLoggedIn, onNeedsConfirm, toLogin }) {
         <span>البريد الإلكتروني</span>
         <div className="input-icon">
           <Mail />
-          <input className="input" type="email" value={f.email} onChange={set('email')} placeholder="name@example.com" autoComplete="email" dir="ltr" style={{ textAlign: 'right' }} />
+          <input className="input" type="email" value={f.email} onChange={set('email')} placeholder="name@example.com" autoComplete="email" dir="ltr" />
         </div>
       </label>
       <label className="field">
         <span>رقم الجوال — اختياري</span>
         <div className="input-icon">
           <Phone />
-          <input className="input" type="tel" value={f.phone} onChange={set('phone')} placeholder="05xxxxxxxx" autoComplete="tel" dir="ltr" style={{ textAlign: 'right' }} />
+          <input className="input" type="tel" value={f.phone} onChange={set('phone')} placeholder="05xxxxxxxx" autoComplete="tel" dir="ltr" />
         </div>
       </label>
       <label className="field">
@@ -291,7 +291,7 @@ function ForgotModal({ initial, onClose }) {
         <>
           <label className="field">
             <span>البريد الإلكتروني</span>
-            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" style={{ textAlign: 'right' }} autoComplete="email" />
+            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" autoComplete="email" />
           </label>
           {err && <div className="err mt-s" role="alert">{err}</div>}
         </>

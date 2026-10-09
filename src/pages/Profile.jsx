@@ -238,11 +238,11 @@ export default function Profile() {
             </label>
             <label className="field">
               <span>البريد الإلكتروني</span>
-              <input className="input" type="email" value={f.email} onChange={set('email')} dir="ltr" style={{ textAlign: 'right' }} />
+              <input className="input" type="email" value={f.email} onChange={set('email')} dir="ltr" />
             </label>
             <label className="field">
               <span>رقم الجوال</span>
-              <input className="input" type="tel" value={f.phone} onChange={set('phone')} dir="ltr" style={{ textAlign: 'right' }} />
+              <input className="input" type="tel" value={f.phone} onChange={set('phone')} dir="ltr" />
             </label>
             <label className="field">
               <span>المدينة</span>

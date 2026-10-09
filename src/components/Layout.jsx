@@ -8,6 +8,7 @@ import { guessMeta } from '../lib/nlp.js';
 import { previewTasks, analyzeInput } from '../lib/smartInput.js';
 import { relativeDay, formatDuration } from '../lib/date.js';
 import { TAGLINE, SURRA_URL, AREAS, PRIORITIES } from '../config.js';
+import { tr, trf } from '../i18n/index.js';
 
 // الصفحات الأساسية تظهر دائمًا، والباقي داخل "المزيد"
 export const NAV = [
@@ -52,31 +53,31 @@ export function Rail() {
   useDismiss(more, setMore, ref);
   const inMore = SECONDARY.some((n) => n.id === name);
   return (
-    <aside className="rail" aria-label="القائمة الرئيسية">
-      <button onClick={() => navigate('home')} aria-label="مسار — الرئيسية" className="rail-logo-btn">
+    <aside className="rail" aria-label={tr('القائمة الرئيسية')}>
+      <button onClick={() => navigate('home')} aria-label={tr('مسار — الرئيسية')} className="rail-logo-btn">
         <span className="brand-mark rail-logo" aria-hidden />
         <span className="brand-name rail-name" aria-hidden />
       </button>
-      <nav aria-label="الصفحات الأساسية">
+      <nav aria-label={tr('الصفحات الأساسية')}>
         {PRIMARY.map(({ id, label, icon: Icon }) => (
           <button key={id} className={`rail-item ${name === id ? 'active' : ''}`} onClick={() => navigate(id)} aria-current={name === id ? 'page' : undefined}>
             <Icon />
-            <span>{label}</span>
+            <span>{tr(label)}</span>
           </button>
         ))}
         <div className="rail-more" ref={ref}>
           <button className={`rail-item ${inMore || more ? 'active-soft' : ''}`} onClick={() => setMore(!more)} aria-haspopup="menu" aria-expanded={more}>
             <Ellipsis />
-            <span>{inMore ? SECONDARY.find((n) => n.id === name).label : 'المزيد'}</span>
+            <span>{inMore ? tr(SECONDARY.find((n) => n.id === name).label) : tr('المزيد')}</span>
           </button>
           {more && (
-            <div className="rail-pop" role="menu" aria-label="المزيد من الصفحات">
+            <div className="rail-pop" role="menu" aria-label={tr('المزيد من الصفحات')}>
               {SECONDARY.map(({ id, label, desc, icon: Icon }) => (
                 <button key={id} role="menuitem" className={name === id ? 'on' : ''} onClick={() => (navigate(id), setMore(false))}>
                   <Icon size={18} />
                   <span className="grow">
-                    <span className="bold" style={{ display: 'block' }}>{label}</span>
-                    <span className="tiny muted">{desc}</span>
+                    <span className="bold" style={{ display: 'block' }}>{tr(label)}</span>
+                    <span className="tiny muted">{tr(desc)}</span>
                   </span>
                 </button>
               ))}
@@ -85,9 +86,9 @@ export function Rail() {
         </div>
       </nav>
       <div className="rail-foot">
-        <button className="rail-me" onClick={() => navigate('profile')} aria-label="الملف الشخصي">
+        <button className="rail-me" onClick={() => navigate('profile')} aria-label={tr('الملف الشخصي')}>
           <Avatar name={profile.name} src={profile.avatar} size="sm" />
-          <span className="rail-me-name ellipsis">{profile.name || 'ملفي'}</span>
+          <span className="rail-me-name ellipsis">{profile.name || tr('ملفي')}</span>
         </button>
       </div>
     </aside>
@@ -112,7 +113,7 @@ export function QuickInput({ className = 'quick', id, big }) {
       open('created', { ids: created.map((t) => t.id) });
     } else {
       const t = st.addTask({ title: text, ...guessMeta(text) });
-      st.toast(`تمت إضافة "${t.title}"`, { icon: 'check' });
+      st.toast(trf('تمت إضافة "{title}"', { title: t.title }), { icon: 'check' });
     }
   }
   return (
@@ -124,20 +125,20 @@ export function QuickInput({ className = 'quick', id, big }) {
           submit();
         }}
         role="search"
-        aria-label="الإدخال الذكي"
+        aria-label={tr('الإدخال الذكي')}
       >
         <Sparkles size={18} className="spark" aria-hidden />
-        <input id={id} value={v} onChange={(e) => setV(e.target.value)} placeholder="اكتب ماذا لديك ومتى… مثال: النادي اليوم الساعة 8" aria-label="اكتب مهامك وأوقاتها بطريقتك" autoComplete="off" />
-        <button type="button" className="mic-btn" onClick={() => open('voice')} aria-label="إضافة بالصوت" title="إضافة بالصوت (V)">
+        <input id={id} value={v} onChange={(e) => setV(e.target.value)} placeholder={tr('اكتب ماذا لديك ومتى… مثال: النادي اليوم الساعة 8')} aria-label={tr('اكتب مهامك وأوقاتها بطريقتك')} autoComplete="off" />
+        <button type="button" className="mic-btn" onClick={() => open('voice')} aria-label={tr('إضافة بالصوت')} title={tr('إضافة بالصوت (V)')}>
           <Mic />
         </button>
-        <button type="submit" className="icon-btn sm primary" aria-label="إضافة المهام" disabled={!v.trim()}>
+        <button type="submit" className="icon-btn sm primary" aria-label={tr('إضافة المهام')} disabled={!v.trim()}>
           <ArrowLeft />
         </button>
       </form>
       {focused && preview.length > 0 && (
         <div className="quick-preview" role="status" aria-live="polite">
-          <div className="tiny muted bold">سيتم إنشاء {preview.length > 1 ? `${preview.length} مهام` : 'مهمة'} — اضغط Enter</div>
+          <div className="tiny muted bold">{preview.length > 1 ? trf('سيتم إنشاء {n} مهام — اضغط Enter', { n: preview.length }) : tr('سيتم إنشاء مهمة — اضغط Enter')}</div>
           {preview.slice(0, 4).map((t, i) => (
             <div className="qp-item" key={i}>
               <Glyph name={t.icon} size={16} className="purple" />
@@ -145,8 +146,8 @@ export function QuickInput({ className = 'quick', id, big }) {
               <span className="qp-chip"><Calendar size={12} /> {relativeDay(t.date)}</span>
               {t.time && <span className="qp-chip num"><Clock size={12} /> {t.time}</span>}
               <span className="qp-chip"><Timer size={12} /> {formatDuration(t.duration)}</span>
-              {t.priority !== 'med' && <span className="prio-tag" style={{ '--c': PRIORITIES[t.priority].color }}>{PRIORITIES[t.priority].label}</span>}
-              <span className="qp-chip hide-mobile" style={{ color: AREAS[t.area]?.color }}>{AREAS[t.area]?.label}</span>
+              {t.priority !== 'med' && <span className="prio-tag" style={{ '--c': PRIORITIES[t.priority].color }}>{tr(PRIORITIES[t.priority].label)}</span>}
+              <span className="qp-chip hide-mobile" style={{ color: AREAS[t.area]?.color }}>{tr(AREAS[t.area]?.label)}</span>
             </div>
           ))}
         </div>
@@ -166,17 +167,17 @@ export function Header() {
       {name !== 'home' ? <QuickInput id="quick-input" /> : <div className="grow" />}
       <div className="header-actions">
         <SyncBadge />
-        <button className="icon-btn hide-m" onClick={() => setDrawer('command')} aria-label="بحث وأوامر" title="بحث (Ctrl+K)">
+        <button className="icon-btn hide-m" onClick={() => setDrawer('command')} aria-label={tr('بحث وأوامر')} title={tr('بحث (Ctrl+K)')}>
           <Search />
         </button>
-        <button className="icon-btn" onClick={() => setDrawer('assistant')} aria-label="اسأل مسار" title="اسأل مسار (A)">
+        <button className="icon-btn" onClick={() => setDrawer('assistant')} aria-label={tr('اسأل مسار')} title={tr('اسأل مسار (A)')}>
           <Sparkles />
         </button>
-        <button className="icon-btn" onClick={() => setDrawer('notifications')} aria-label={`الإشعارات${unread ? ` (${unread} جديدة)` : ''}`}>
+        <button className="icon-btn" onClick={() => setDrawer('notifications')} aria-label={unread ? trf('الإشعارات ({n} جديدة)', { n: unread }) : tr('الإشعارات')}>
           <Bell />
           {unread > 0 && <span className="badge-dot num">{unread > 9 ? '9+' : unread}</span>}
         </button>
-        <button className="hide-m" onClick={() => navigate('profile')} aria-label="الملف الشخصي">
+        <button className="hide-m" onClick={() => navigate('profile')} aria-label={tr('الملف الشخصي')}>
           <Avatar name={profile.name} src={profile.avatar} />
         </button>
       </div>
@@ -191,10 +192,10 @@ function SyncBadge() {
   const { mode, status, pending } = useStore((s) => s.sync);
   if (mode !== 'remote' || (status === 'synced' && !pending)) return null;
   const map = {
-    saving: [Loader2, 'جاري الحفظ…', 'sync-saving'],
-    offline: [CloudOff, pending ? `غير متصل · ${pending} تغييرات بانتظار الرفع` : 'غير متصل', 'sync-offline'],
-    error: [CloudOff, 'تعذر الحفظ', 'sync-offline'],
-    synced: [Loader2, 'جاري الحفظ…', 'sync-saving'],
+    saving: [Loader2, tr('جاري الحفظ…'), 'sync-saving'],
+    offline: [CloudOff, pending ? trf('غير متصل · {n} تغييرات بانتظار الرفع', { n: pending }) : tr('غير متصل'), 'sync-offline'],
+    error: [CloudOff, tr('تعذر الحفظ'), 'sync-offline'],
+    synced: [Loader2, tr('جاري الحفظ…'), 'sync-saving'],
   };
   const [I, label, cls] = map[status] || map.saving;
   return (
@@ -213,22 +214,22 @@ export function BottomNav() {
   const inMore = !BOTTOM.includes(name);
   return (
     <>
-      <nav className="bottom-nav" aria-label="التنقل">
+      <nav className="bottom-nav" aria-label={tr('التنقل')}>
         {items.map((it) =>
           it ? (
             <button key={it.id} className={`bn-item ${name === it.id ? 'active' : ''}`} onClick={() => navigate(it.id)} aria-current={name === it.id ? 'page' : undefined}>
               <it.icon />
-              {it.label}
+              {tr(it.label)}
             </button>
           ) : (
-            <button key="add" className="bn-add" onClick={() => open('task')} aria-label="مهمة جديدة">
+            <button key="add" className="bn-add" onClick={() => open('task')} aria-label={tr('مهمة جديدة')}>
               <Plus />
             </button>
           )
         )}
         <button className={`bn-item ${inMore ? 'active' : ''}`} onClick={() => setMore(true)} aria-haspopup="dialog" aria-expanded={more}>
           <Ellipsis />
-          المزيد
+          {tr('المزيد')}
         </button>
       </nav>
       {more && <MoreSheet onClose={() => setMore(false)} />}
@@ -243,18 +244,18 @@ function MoreSheet({ onClose }) {
   const go = (id) => (navigate(id), onClose());
   const pages = NAV.filter((n) => !BOTTOM.includes(n.id));
   const actions = [
-    [Mic, 'بالصوت', () => open('voice')],
-    [ImagePlus, 'من صورة', () => open('image')],
-    [Sparkles, 'اسأل مسار', () => setDrawer('assistant')],
-    [Search, 'بحث', () => setDrawer('command')],
+    [Mic, tr('بالصوت'), () => open('voice')],
+    [ImagePlus, tr('من صورة'), () => open('image')],
+    [Sparkles, tr('اسأل مسار'), () => setDrawer('assistant')],
+    [Search, tr('بحث'), () => setDrawer('command')],
   ];
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal sheet" role="dialog" aria-modal="true" aria-label="المزيد">
+      <div className="modal sheet" role="dialog" aria-modal="true" aria-label={tr('المزيد')}>
         <div className="sheet-grip" aria-hidden />
         <div className="modal-hd">
-          <h3>المزيد</h3>
-          <button className="icon-btn sm" onClick={onClose} aria-label="إغلاق">
+          <h3>{tr('المزيد')}</h3>
+          <button className="icon-btn sm" onClick={onClose} aria-label={tr('إغلاق')}>
             <X />
           </button>
         </div>
@@ -271,8 +272,8 @@ function MoreSheet({ onClose }) {
             <button key={id} className={name === id ? 'on' : ''} onClick={() => go(id)} aria-current={name === id ? 'page' : undefined}>
               <span className="sa-ico"><Icon size={19} /></span>
               <span className="grow" style={{ textAlign: 'start' }}>
-                <span className="bold" style={{ display: 'block' }}>{label === 'ملفي' ? 'الملف الشخصي' : label}</span>
-                {desc && <span className="tiny muted">{desc}</span>}
+                <span className="bold" style={{ display: 'block' }}>{label === 'ملفي' ? tr('الملف الشخصي') : tr(label)}</span>
+                {desc && <span className="tiny muted">{tr(desc)}</span>}
               </span>
               <ArrowLeft size={16} className="dim" />
             </button>
@@ -295,16 +296,16 @@ export function Footer() {
   return (
     <footer className="footer">
       <Logo className="header-logo" onClick={() => navigate('home')} />
-      <div className="tag">مسار — {TAGLINE}</div>
-      <nav className="flinks" aria-label="روابط الموقع">
+      <div className="tag">{tr('مسار')} — {tr(TAGLINE)}</div>
+      <nav className="flinks" aria-label={tr('روابط الموقع')}>
         {links.map(([id, l]) => (
           <button key={id} onClick={() => navigate(id)}>
-            {l}
+            {tr(l)}
           </button>
         ))}
         <SurraLink className="gold" />
       </nav>
-      <p className="tiny dim">© {new Date().getFullYear()} مسار · صُنع بشغف لحياة أكثر تنظيمًا</p>
+      <p className="tiny dim">© {new Date().getFullYear()} {tr('مسار · صُنع بشغف لحياة أكثر تنظيمًا')}</p>
     </footer>
   );
 }
@@ -317,16 +318,16 @@ export function SurraLink({ className = '', children }) {
       <a href={url} target="_blank" rel="noopener noreferrer" className={className}>
         {children || (
           <>
-            <Wallet size={14} style={{ verticalAlign: -2 }} /> صُرّة لإدارة الأموال <ExternalLink size={12} style={{ verticalAlign: -1 }} />
+            <Wallet size={14} style={{ verticalAlign: -2 }} /> {tr('صُرّة لإدارة الأموال')} <ExternalLink size={12} style={{ verticalAlign: -1 }} />
           </>
         )}
       </a>
     );
   return (
-    <button className={className} onClick={() => (navigate('settings?tab=account'), toast('أضف رابط صُرّة من الإعدادات ← الحساب'))}>
+    <button className={className} onClick={() => (navigate('settings?tab=account'), toast(tr('أضف رابط صُرّة من الإعدادات ← الحساب')))}>
       {children || (
         <>
-          <Wallet size={14} style={{ verticalAlign: -2 }} /> صُرّة لإدارة الأموال
+          <Wallet size={14} style={{ verticalAlign: -2 }} /> {tr('صُرّة لإدارة الأموال')}
         </>
       )}
     </button>

@@ -14,6 +14,7 @@ import { deleteAccount } from '../lib/auth.js';
 import { requestLogout } from '../lib/appSession.js';
 import { todayKey } from '../lib/date.js';
 import { Glyph } from '../components/Glyph.jsx';
+import { tr, trf, changeLang, useLang } from '../i18n/index.js';
 
 // مجموعات واضحة — والروابط القديمة (sound/language/privacy/data) تُوجَّه لمجموعتها الجديدة
 const TABS = [
@@ -38,26 +39,26 @@ export default function Settings() {
             <span className="ico">
               <SettingsIcon />
             </span>
-            الإعدادات
+            {tr('الإعدادات')}
           </h1>
-          <p>خصّص مسار ليناسبك — كل تغيير يُطبّق ويُحفظ فورًا</p>
+          <p>{tr('خصّص مسار ليناسبك — كل تغيير يُطبّق ويُحفظ فورًا')}</p>
         </div>
       </div>
       <div className="settings">
-        <nav className="card settings-nav" aria-label="أقسام الإعدادات">
+        <nav className="card settings-nav" aria-label={tr('أقسام الإعدادات')}>
           {TABS.map(([k, l, I]) => (
             <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} aria-current={tab === k ? 'true' : undefined}>
-              <I /> {l}
+              <I /> {tr(l)}
             </button>
           ))}
           <button onClick={() => useStore.getState().openModal('shortcuts')} className="hide-mobile">
-            <Keyboard /> الاختصارات
+            <Keyboard /> {tr('الاختصارات')}
           </button>
           <button
             className="red"
-            onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => requestLogout() })}
+            onClick={() => confirm({ title: tr('تسجيل الخروج'), body: tr('هل تريد تسجيل الخروج؟'), danger: true, confirmLabel: tr('تسجيل الخروج'), onConfirm: () => requestLogout() })}
           >
-            <LogOut /> تسجيل الخروج
+            <LogOut /> {tr('تسجيل الخروج')}
           </button>
         </nav>
         <div className="card reveal" key={tab}>
@@ -105,37 +106,37 @@ function Account() {
       useStore.getState().abandonSession();
       requestLogout();
     } catch (e) {
-      useStore.getState().toast(e.message || 'تعذر حذف البيانات، حاول مرة أخرى.', { icon: 'clock' });
+      useStore.getState().toast(e.message || tr('تعذر حذف البيانات، حاول مرة أخرى.'), { icon: 'clock' });
       setDeleting(false);
     }
   };
   return (
     <>
-      <CardTitle icon={<User size={18} />}>الحساب</CardTitle>
-      <Row t="الاسم" d={profile.name} />
-      <Row t="البريد الإلكتروني" d={profile.email || '—'} />
-      <Row t="نوع الحساب" d={isDemo ? 'تجربة بدون حساب — البيانات محفوظة على هذا الجهاز فقط' : 'حساب مسار — بياناتك محفوظة بأمان في السحابة ومتزامنة بين أجهزتك'} />
-      <Row t="تسجيل الخروج" d={isDemo ? 'بيانات التجربة تبقى على هذا الجهاز' : 'بياناتك تبقى محفوظة في حسابك'}>
-        <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'تسجيل الخروج', body: 'هل تريد تسجيل الخروج؟', danger: true, confirmLabel: 'تسجيل الخروج', onConfirm: () => requestLogout() })}>
-          <LogOut /> تسجيل الخروج
+      <CardTitle icon={<User size={18} />}>{tr('الحساب')}</CardTitle>
+      <Row t={tr('الاسم')} d={profile.name} />
+      <Row t={tr('البريد الإلكتروني')} d={profile.email || '—'} />
+      <Row t={tr('نوع الحساب')} d={isDemo ? tr('تجربة بدون حساب — البيانات محفوظة على هذا الجهاز فقط') : tr('حساب مسار — بياناتك محفوظة بأمان في السحابة ومتزامنة بين أجهزتك')} />
+      <Row t={tr('تسجيل الخروج')} d={isDemo ? tr('بيانات التجربة تبقى على هذا الجهاز') : tr('بياناتك تبقى محفوظة في حسابك')}>
+        <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: tr('تسجيل الخروج'), body: tr('هل تريد تسجيل الخروج؟'), danger: true, confirmLabel: tr('تسجيل الخروج'), onConfirm: () => requestLogout() })}>
+          <LogOut /> {tr('تسجيل الخروج')}
         </button>
       </Row>
       {!isDemo && (
-        <Row t="حذف بياناتي" d="حذف كل مهامك وأهدافك وعاداتك في مسار نهائيًا">
+        <Row t={tr('حذف بياناتي')} d={tr('حذف كل مهامك وأهدافك وعاداتك في مسار نهائيًا')}>
           <button
             className="btn btn-sm btn-danger"
             disabled={deleting}
             onClick={() =>
               confirm({
-                title: 'حذف بياناتك نهائيًا',
-                body: 'سيتم حذف كل بياناتك في مسار وتسجيل خروجك. لا يمكن التراجع.',
+                title: tr('حذف بياناتك نهائيًا'),
+                body: tr('سيتم حذف كل بياناتك في مسار وتسجيل خروجك. لا يمكن التراجع.'),
                 danger: true,
-                confirmLabel: 'حذف نهائي',
+                confirmLabel: tr('حذف نهائي'),
                 onConfirm: removeAccount,
               })
             }
           >
-            <Trash2 /> حذف بياناتي
+            <Trash2 /> {tr('حذف بياناتي')}
           </button>
         </Row>
       )}
@@ -148,57 +149,57 @@ function Appearance() {
   const set = useSet();
   return (
     <>
-      <CardTitle icon={<Palette size={18} />} sub="كل تغيير يُطبّق فورًا">المظهر</CardTitle>
-      <Row t="المظهر" d="الافتراضي: تلقائي حسب إعداد جهازك">
+      <CardTitle icon={<Palette size={18} />} sub={tr('كل تغيير يُطبّق فورًا')}>{tr('المظهر')}</CardTitle>
+      <Row t={tr('المظهر')} d={tr('الافتراضي: تلقائي حسب إعداد جهازك')}>
         {[
           ['auto', 'تلقائي', SunMoon],
           ['light', 'فاتح', Sun],
           ['dark', 'داكن', Moon],
         ].map(([k, l, I]) => (
           <button key={k} className={`chip ${s.theme === k ? 'on' : ''}`} onClick={() => set('theme', k)}>
-            <I /> {l}
+            <I /> {tr(l)}
           </button>
         ))}
       </Row>
-      <Row t="لون التمييز (Accent)" d="يتغير لون الأزرار والتقدم والعناصر النشطة">
+      <Row t={tr('لون التمييز (Accent)')} d={tr('يتغير لون الأزرار والتقدم والعناصر النشطة')}>
         <div className="swatches">
           {Object.entries(ACCENTS).map(([k, a]) => (
-            <button key={k} className={`swatch-btn ${s.accent === k ? 'on' : ''}`} style={{ background: a.color, color: a.color }} onClick={() => set('accent', k)} aria-label={a.label} title={a.label}>
+            <button key={k} className={`swatch-btn ${s.accent === k ? 'on' : ''}`} style={{ background: a.color, color: a.color }} onClick={() => set('accent', k)} aria-label={tr(a.label)} title={tr(a.label)}>
               {s.accent === k && <Check size={18} color="#fff" />}
             </button>
           ))}
         </div>
       </Row>
-      <Row t="حجم الواجهة">
+      <Row t={tr('حجم الواجهة')}>
         {[
           ['sm', 'صغير'],
           ['md', 'متوسط'],
           ['lg', 'كبير'],
         ].map(([k, l]) => (
           <button key={k} className={`chip ${s.scale === k ? 'on' : ''}`} onClick={() => set('scale', k)}>
-            {l}
+            {tr(l)}
           </button>
         ))}
       </Row>
-      <Row t="الخلفية">
+      <Row t={tr('الخلفية')}>
         {[
           ['neon', 'هادئة'],
           ['gradient', 'دافئة'],
           ['minimal', 'سادة'],
         ].map(([k, l]) => (
           <button key={k} className={`chip ${s.background === k ? 'on' : ''}`} onClick={() => set('background', k)}>
-            {l}
+            {tr(l)}
           </button>
         ))}
       </Row>
-      <Row t="الحركة" d="الوضع الخفيف أو الإيقاف مناسب لتقليل التشتت — ويُحترم إعداد تقليل الحركة في جهازك">
+      <Row t={tr('الحركة')} d={tr('الوضع الخفيف أو الإيقاف مناسب لتقليل التشتت — ويُحترم إعداد تقليل الحركة في جهازك')}>
         {[
           ['full', 'كاملة'],
           ['lite', 'خفيفة'],
           ['off', 'إيقاف'],
         ].map(([k, l]) => (
           <button key={k} className={`chip ${s.motion === k ? 'on' : ''}`} onClick={() => set('motion', k)}>
-            {l}
+            {tr(l)}
           </button>
         ))}
       </Row>
@@ -222,16 +223,16 @@ function Notifications() {
   ];
   return (
     <>
-      <CardTitle icon={<Bell size={18} />} sub="تنبيهات قليلة ومفيدة — فعّل ما تحتاجه فقط">الإشعارات والتذكيرات</CardTitle>
+      <CardTitle icon={<Bell size={18} />} sub={tr('تنبيهات قليلة ومفيدة — فعّل ما تحتاجه فقط')}>{tr('الإشعارات والتذكيرات')}</CardTitle>
       {types.map(([k, t, d]) => (
-        <Row key={k} t={t} d={d}>
-          <Switch on={s.notif[k] !== false} onChange={(v) => setN(k, v)} label={t} />
+        <Row key={k} t={tr(t)} d={tr(d)}>
+          <Switch on={s.notif[k] !== false} onChange={(v) => setN(k, v)} label={tr(t)} />
         </Row>
       ))}
-      <Row t="إشعارات المتصفح" d={perm === 'denied' ? 'محظورة من إعدادات المتصفح' : perm === 'unsupported' ? 'غير مدعومة في هذا المتصفح' : 'تظهر حتى لو كان التبويب في الخلفية'}>
+      <Row t={tr('إشعارات المتصفح')} d={perm === 'denied' ? tr('محظورة من إعدادات المتصفح') : perm === 'unsupported' ? tr('غير مدعومة في هذا المتصفح') : tr('تظهر حتى لو كان التبويب في الخلفية')}>
         <Switch
           on={s.browserNotifications && perm === 'granted'}
-          label="إشعارات المتصفح"
+          label={tr('إشعارات المتصفح')}
           onChange={async (v) => {
             if (!v) return set('browserNotifications', false);
             if (perm === 'unsupported') return;
@@ -241,11 +242,11 @@ function Notifications() {
           }}
         />
       </Row>
-      <Row t="أصوات الإنجاز" d="صوت خفيف عند إكمال مهمة أو انتهاء جلسة التركيز">
-        <Switch on={s.sounds} onChange={(v) => set('sounds', v)} label="أصوات الإنجاز" />
+      <Row t={tr('أصوات الإنجاز')} d={tr('صوت خفيف عند إكمال مهمة أو انتهاء جلسة التركيز')}>
+        <Switch on={s.sounds} onChange={(v) => set('sounds', v)} label={tr('أصوات الإنجاز')} />
       </Row>
-      <Row t="الاهتزاز" d="على الجوال عند الإنجاز">
-        <Switch on={s.vibration} onChange={(v) => set('vibration', v)} label="الاهتزاز" />
+      <Row t={tr('الاهتزاز')} d={tr('على الجوال عند الإنجاز')}>
+        <Switch on={s.vibration} onChange={(v) => set('vibration', v)} label={tr('الاهتزاز')} />
       </Row>
     </>
   );
@@ -256,34 +257,46 @@ function Assistant() {
   const set = useSet();
   return (
     <>
-      <CardTitle icon={<Sparkles size={18} />} sub="تتغير طريقة صياغة رسائل المساعد حسب الشخصية">
-        شخصية مساعد مسار
+      <CardTitle icon={<Sparkles size={18} />} sub={tr('تتغير طريقة صياغة رسائل المساعد حسب الشخصية')}>
+        {tr('شخصية مساعد مسار')}
       </CardTitle>
       <div className="grid g2 mt">
         {Object.entries(PERSONAS).map(([k, p]) => (
           <button key={k} className={`seg-btn ${persona === k ? 'on' : ''}`} onClick={() => set('persona', k)} style={{ padding: 18 }}>
             <Glyph name={p.icon} size={22} className="purple" />
-            {p.label}
-            <span className="tiny dim">{p.desc}</span>
+            {tr(p.label)}
+            <span className="tiny dim">{tr(p.desc)}</span>
           </button>
         ))}
       </div>
       <div className="msg ai mt" style={{ maxWidth: '100%' }}>
-        <b>مثال:</b> {say(persona, 'hi')} {say(persona, 'push')}
+        <b>{tr('مثال:')}</b> {say(persona, 'hi')} {say(persona, 'push')}
       </div>
     </>
   );
 }
 
+// أسماء اللغات تظهر بلغتها دائمًا (بدون ترجمة)
+const LANGS = [
+  ['ar', 'العربية'],
+  ['en', 'English'],
+];
+
 function Language() {
+  const lang = useLang();
+  const pick = (code) => {
+    useStore.getState().setSetting('language', code);
+    changeLang(code);
+  };
   return (
     <>
-      <CardTitle icon={<Languages size={18} />}>اللغة</CardTitle>
-      <Row t="لغة الواجهة" d="الأرقام تظهر بالإنجليزية (123) لوضوح أكبر">
-        <button className="chip on">العربية</button>
-        <button className="chip" disabled title="قريبًا">
-          English — قريبًا
-        </button>
+      <CardTitle icon={<Languages size={18} />}>{tr('اللغة')}</CardTitle>
+      <Row t={tr('لغة الواجهة')} d={tr('تتغير لغة الواجهة كاملة واتجاهها فورًا — الأرقام تظهر بالإنجليزية (123) لوضوح أكبر')}>
+        {LANGS.map(([code, label]) => (
+          <button key={code} className={`chip ${lang === code ? 'on' : ''}`} onClick={() => pick(code)} lang={code} aria-pressed={lang === code}>
+            {label}
+          </button>
+        ))}
       </Row>
     </>
   );
@@ -296,19 +309,19 @@ function Privacy() {
   const set = useSet();
   return (
     <>
-      <CardTitle icon={<Shield size={18} />}>الخصوصية</CardTitle>
+      <CardTitle icon={<Shield size={18} />}>{tr('الخصوصية')}</CardTitle>
       <Row
-        t="أين تُحفظ بياناتي؟"
+        t={tr('أين تُحفظ بياناتي؟')}
         d={
           s.__demo
-            ? 'في وضع التجربة بدون حساب: البيانات محفوظة على هذا الجهاز فقط ولا تُرسل لأي خادم.'
-            : 'بياناتك محفوظة في حسابك على خوادم آمنة (Supabase) ومشفّرة أثناء النقل، وكل مستخدم يرى بياناته فقط. ونحتفظ بنسخة مؤقتة على جهازك للعمل بدون إنترنت.'
+            ? tr('في وضع التجربة بدون حساب: البيانات محفوظة على هذا الجهاز فقط ولا تُرسل لأي خادم.')
+            : tr('بياناتك محفوظة في حسابك على خوادم آمنة (Supabase) ومشفّرة أثناء النقل، وكل مستخدم يرى بياناته فقط. ونحتفظ بنسخة مؤقتة على جهازك للعمل بدون إنترنت.')
         }
       />
-      <Row t="إخفاء الإحصائيات من الرئيسية" d="مفيد عند مشاركة الشاشة">
-        <Switch on={s.privacy?.hideStatsOnHome} onChange={(v) => set('privacy', { ...s.privacy, hideStatsOnHome: v })} label="إخفاء الإحصائيات" />
+      <Row t={tr('إخفاء الإحصائيات من الرئيسية')} d={tr('مفيد عند مشاركة الشاشة')}>
+        <Switch on={s.privacy?.hideStatsOnHome} onChange={(v) => set('privacy', { ...s.privacy, hideStatsOnHome: v })} label={tr('إخفاء الإحصائيات')} />
       </Row>
-      <Row t="قراءة الصور" d="الصور التي ترفعها تُعالج داخل متصفحك ولا تُرفع لأي مكان" />
+      <Row t={tr('قراءة الصور')} d={tr('الصور التي ترفعها تُعالج داخل متصفحك ولا تُرفع لأي مكان')} />
     </>
   );
 }
@@ -318,8 +331,8 @@ function SortableRow({ w, hidden, onToggle }) {
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`sortable-item ${isDragging ? 'dragging' : ''}`}>
       <DragHandle {...attributes} {...listeners} />
-      <span className="grow bold small" style={{ opacity: hidden ? 0.5 : 1 }}>{w.label}</span>
-      <Switch on={!hidden} onChange={onToggle} label={`إظهار ${w.label}`} />
+      <span className="grow bold small" style={{ opacity: hidden ? 0.5 : 1 }}>{tr(w.label)}</span>
+      <Switch on={!hidden} onChange={onToggle} label={trf('إظهار {name}', { name: tr(w.label) })} />
     </div>
   );
 }
@@ -331,8 +344,8 @@ function Dashboard() {
   const items = dash.order.map((id) => WIDGETS.find((w) => w.id === id)).filter(Boolean);
   return (
     <>
-      <CardTitle icon={<LayoutDashboard size={18} />} sub="اختر البطاقات التي تظهر في الرئيسية واسحبها لتغيير ترتيبها — يُحفظ تلقائيًا">
-        تخصيص الصفحة الرئيسية
+      <CardTitle icon={<LayoutDashboard size={18} />} sub={tr('اختر البطاقات التي تظهر في الرئيسية واسحبها لتغيير ترتيبها — يُحفظ تلقائيًا')}>
+        {tr('تخصيص الصفحة الرئيسية')}
       </CardTitle>
       <div className="mt">
         <DndContext
@@ -351,7 +364,7 @@ function Dashboard() {
         </DndContext>
       </div>
       <button className="btn btn-sm btn-ghost mt" onClick={() => setDash({ order: WIDGETS.map((w) => w.id), hidden: [] })}>
-        <RotateCcw /> استعادة الافتراضي
+        <RotateCcw /> {tr('استعادة الافتراضي')}
       </button>
     </>
   );
@@ -376,35 +389,35 @@ function Data() {
       try {
         const j = JSON.parse(r.result);
         if (j.app !== 'himmah' || !j.data?.tasks) throw new Error();
-        confirm({ title: 'استيراد البيانات', body: 'سيتم استبدال بياناتك الحالية بالنسخة المستوردة.', confirmLabel: 'استيراد', onConfirm: () => (st().importData(j.data), st().toast('تم استيراد البيانات', { icon: 'check' })) });
+        confirm({ title: tr('استيراد البيانات'), body: tr('سيتم استبدال بياناتك الحالية بالنسخة المستوردة.'), confirmLabel: tr('استيراد'), onConfirm: () => (st().importData(j.data), st().toast(tr('تم استيراد البيانات'), { icon: 'check' })) });
       } catch {
-        st().toast('الملف غير صالح');
+        st().toast(tr('الملف غير صالح'));
       }
     };
     r.readAsText(file);
   }
   return (
     <>
-      <CardTitle icon={<Database size={18} />}>إدارة البيانات</CardTitle>
-      <Row t="تصدير نسخة احتياطية" d="ملف JSON يحتوي كل بياناتك">
+      <CardTitle icon={<Database size={18} />}>{tr('إدارة البيانات')}</CardTitle>
+      <Row t={tr('تصدير نسخة احتياطية')} d={tr('ملف JSON يحتوي كل بياناتك')}>
         <button className="btn btn-sm" onClick={exportData}>
-          <Download /> تصدير
+          <Download /> {tr('تصدير')}
         </button>
       </Row>
-      <Row t="استيراد نسخة احتياطية">
+      <Row t={tr('استيراد نسخة احتياطية')}>
         <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => importData(e.target.files[0])} />
         <button className="btn btn-sm" onClick={() => fileRef.current.click()}>
-          <Upload /> استيراد
+          <Upload /> {tr('استيراد')}
         </button>
       </Row>
-      <Row t="تحميل البيانات التجريبية" d="مهام وأهداف وعادات تجريبية لاستكشاف مسار">
-        <button className="btn btn-sm" onClick={() => confirm({ title: 'البيانات التجريبية', body: 'سيتم استبدال بياناتك الحالية ببيانات تجريبية.', confirmLabel: 'تحميل', onConfirm: () => st().resetData(true) })}>
-          <Sparkles /> تحميل
+      <Row t={tr('تحميل البيانات التجريبية')} d={tr('مهام وأهداف وعادات تجريبية لاستكشاف مسار')}>
+        <button className="btn btn-sm" onClick={() => confirm({ title: tr('البيانات التجريبية'), body: tr('سيتم استبدال بياناتك الحالية ببيانات تجريبية.'), confirmLabel: tr('تحميل'), onConfirm: () => st().resetData(true) })}>
+          <Sparkles /> {tr('تحميل')}
         </button>
       </Row>
-      <Row t="مسح كل البيانات" d="البدء من جديد بصفحة فارغة (الإعدادات تبقى)">
-        <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'مسح كل البيانات', body: 'سيتم حذف كل المهام والأهداف والعادات والإنجازات. لا يمكن التراجع.', danger: true, confirmLabel: 'مسح الكل', onConfirm: () => (st().resetData(false), st().toast('تم مسح البيانات')) })}>
-          <Trash2 /> مسح
+      <Row t={tr('مسح كل البيانات')} d={tr('البدء من جديد بصفحة فارغة (الإعدادات تبقى)')}>
+        <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: tr('مسح كل البيانات'), body: tr('سيتم حذف كل المهام والأهداف والعادات والإنجازات. لا يمكن التراجع.'), danger: true, confirmLabel: tr('مسح الكل'), onConfirm: () => (st().resetData(false), st().toast(tr('تم مسح البيانات'))) })}>
+          <Trash2 /> {tr('مسح')}
         </button>
       </Row>
     </>

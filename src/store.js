@@ -8,6 +8,7 @@ import { emptyData, demoData, makeTask, WIDGETS, DEFAULT_SETTINGS } from './lib/
 import { playSound, vibrate } from './lib/fx.js';
 import { remapIds } from './lib/migrate.js';
 import { planSessions } from './lib/goalPlan.js';
+import { tr, trf, isEn } from './i18n/index.js';
 
 const PERSIST_KEYS = [
   'version', 'onboarded', 'user', 'profile', 'settings', 'dashboard', 'tasks', 'goals', 'habits', 'challenges', 'rewards',
@@ -69,8 +70,8 @@ export const useStore = create((set, get) => ({
       onStatus: ({ status, pending }) => set({ sync: { mode: 'remote', status, pending } }),
       onDataError: () => dataErrorNotice(),
       onSessionExpired: () => set({ sessionExpired: true }),
-      onOffline: () => get().toast('أنت غير متصل — تغييراتك محفوظة على جهازك وستُرفع تلقائيًا عند عودة الاتصال', { icon: 'clock', duration: 5000 }),
-      onOnline: () => get().toast('عاد الاتصال وتمت مزامنة تغييراتك', { icon: 'check' }),
+      onOffline: () => get().toast(tr('أنت غير متصل — تغييراتك محفوظة على جهازك وستُرفع تلقائيًا عند عودة الاتصال'), { icon: 'clock', duration: 5000 }),
+      onOnline: () => get().toast(tr('عاد الاتصال وتمت مزامنة تغييراتك'), { icon: 'check' }),
     });
     const cache = loadCache(user.id);
     let remote = null;
@@ -181,7 +182,7 @@ export const useStore = create((set, get) => ({
     const notifications = [...s.notifications];
     const broke = streak.count > 0 && streak.lastDate && streak.lastDate < addDays(T, -1);
     if (broke) {
-      notifications.unshift(notif('streak', 'flame', 'انقطع الـStreak', `كانت سلسلتك ${streak.count} يوم. ابدأ من جديد اليوم!`));
+      notifications.unshift(notif('streak', 'flame', tr('انقطع الـStreak'), trf('كانت سلسلتك {n} يوم. ابدأ من جديد اليوم!', { n: streak.count })));
       streak.count = 0;
     }
     // لا نغيّر المراجع إذا لم يتغير شيء (حتى لا نرسل تحديثات بلا داعٍ)
@@ -196,7 +197,7 @@ export const useStore = create((set, get) => ({
   toast(text, opts = {}) {
     const id = uid();
     // لا نوهم المستخدم أن الحفظ وصل للخادم وهو غير متصل
-    if (mode === 'remote' && get().sync.status === 'offline' && opts.icon === 'check') text += ' — محفوظة على جهازك وستُرفع عند عودة الاتصال';
+    if (mode === 'remote' && get().sync.status === 'offline' && opts.icon === 'check') text += tr(' — محفوظة على جهازك وستُرفع عند عودة الاتصال');
     set((s) => ({ toasts: [...s.toasts, { id, text, ...opts }].slice(-4) }));
     setTimeout(() => get().dismissToast(id), opts.duration || (opts.action ? 6000 : 3200));
     return id;
@@ -263,14 +264,15 @@ export const useStore = create((set, get) => ({
     if (s.settings.vibration) vibrate([20, 40, 20]);
     if (!silent) {
       const left = get().tasks.filter((x) => !x.deletedAt && !x.template && !x.done && x.date === todayKey()).length;
-      const cheer = ['أحسنت!', 'إنجاز رائع', 'خطوة ممتازة', 'استمر كذا'][Math.floor(Math.random() * 4)];
-      get().toast(`${cheer} ${t.date === todayKey() ? (left ? `باقي ${left} مهام اليوم` : 'أكملت كل مهام اليوم') : ''} · +${xp} XP`, { icon: 'check', tone: 'success' });
+      const cheer = tr(['أحسنت!', 'إنجاز رائع', 'خطوة ممتازة', 'استمر كذا'][Math.floor(Math.random() * 4)]);
+      const rest = t.date === todayKey() ? (left ? trf('باقي {n} مهام اليوم', { n: left }) : tr('أكملت كل مهام اليوم')) : '';
+      get().toast(`${cheer} ${rest} · +${xp} XP`, { icon: 'check', tone: 'success' });
     }
     const after = levelInfo(get().user.totalXp).level;
     if (after > before) {
       get().pushFx({ type: 'level', level: after });
       if (s.settings.sounds) setTimeout(() => playSound('level'), 300);
-      get().notify('achievements', 'sparkles', 'Level Up!', `وصلت إلى المستوى ${after}`);
+      get().notify('achievements', 'sparkles', 'Level Up!', trf('وصلت إلى المستوى {n}', { n: after }));
     }
     get().updateStreak();
     get().checkAchievements();
@@ -279,12 +281,12 @@ export const useStore = create((set, get) => ({
     const t = get().tasks.find((x) => x.id === id);
     if (!t) return;
     set((s) => ({ tasks: s.tasks.map((x) => (x.id === id ? { ...x, deletedAt: Date.now() } : x)) }));
-    get().toast(`تم نقل "${t.title}" إلى المحذوفات`, { action: { label: 'تراجع', run: () => get().restoreTask(id) }, icon: 'trash' });
+    get().toast(trf('تم نقل "{title}" إلى المحذوفات', { title: t.title }), { action: { label: tr('تراجع'), run: () => get().restoreTask(id) }, icon: 'trash' });
   },
   deleteTasks(ids) {
     const now = Date.now();
     set((s) => ({ tasks: s.tasks.map((x) => (ids.includes(x.id) ? { ...x, deletedAt: now } : x)) }));
-    get().toast(`تم حذف ${ids.length} مهام`, { action: { label: 'تراجع', run: () => ids.forEach((i) => get().restoreTask(i)) }, icon: 'trash' });
+    get().toast(trf('تم حذف {n} مهام', { n: ids.length }), { action: { label: tr('تراجع'), run: () => ids.forEach((i) => get().restoreTask(i)) }, icon: 'trash' });
   },
   restoreTask(id) {
     set((s) => ({ tasks: s.tasks.map((x) => (x.id === id ? { ...x, deletedAt: null } : x)) }));
@@ -312,8 +314,8 @@ export const useStore = create((set, get) => ({
         x.id === id ? { ...x, ...patch, postponed: when === 'now' ? x.postponed : (x.postponed || 0) + 1, archived: false } : x
       ),
     }));
-    const labels = { now: 'الآن', later: 'لاحقًا اليوم', tomorrow: 'غدًا', week: 'هذا الأسبوع' };
-    get().toast(`تم نقل المهمة إلى ${labels[when]}`, { icon: 'clock' });
+    const msgs = { now: 'تم نقل المهمة إلى الآن', later: 'تم نقل المهمة إلى لاحقًا اليوم', tomorrow: 'تم نقل المهمة إلى غدًا', week: 'تم نقل المهمة إلى هذا الأسبوع' };
+    get().toast(tr(msgs[when]), { icon: 'clock' });
   },
   moveTaskToDate(id, date, time) {
     set((s) => ({ tasks: s.tasks.map((x) => (x.id === id ? { ...x, date, ...(time !== undefined ? { time } : {}) } : x)) }));
@@ -347,7 +349,7 @@ export const useStore = create((set, get) => ({
       ),
       flags: { ...s.flags, rescued: true },
     }));
-    get().toast('تم تحديث جدولك', { icon: 'sparkles' });
+    get().toast(tr('تم تحديث جدولك'), { icon: 'sparkles' });
     get().checkAchievements();
   },
   setSubtasks(id, titles) {
@@ -373,7 +375,7 @@ export const useStore = create((set, get) => ({
       })
     );
     set((s) => ({ tasks: [...s.tasks, ...tasks] }));
-    get().toast(`تم إنشاء خطة من ${tasks.length} أيام في جدولك`, { icon: 'sparkles' });
+    get().toast(trf('تم إنشاء خطة من {n} أيام في جدولك', { n: tasks.length }), { icon: 'sparkles' });
   },
 
   // ————— التركيز —————
@@ -394,7 +396,7 @@ export const useStore = create((set, get) => ({
     set((s) => ({ focus: { ...f, running: false, remainingSec: 0, finished: true, logged: true, minimized: false }, focusLog: [...s.focusLog, { id: uid(), date: todayKey(), minutes, taskId: f.taskId }] }));
     if (get().settings.sounds) playSound('timer');
     if (get().settings.vibration) vibrate([60, 60, 60]);
-    get().notify('focus', 'timer', 'انتهت جلسة التركيز', `${minutes} دقيقة تركيز${t ? ` على "${t.title}"` : ''}`, { force: true });
+    get().notify('focus', 'timer', tr('انتهت جلسة التركيز'), t ? trf('{n} دقيقة تركيز على "{title}"', { n: minutes, title: t.title }) : trf('{n} دقيقة تركيز', { n: minutes }), { force: true });
     get().checkAchievements();
   },
   pauseFocus() {
@@ -428,7 +430,7 @@ export const useStore = create((set, get) => ({
       const count = s.streak.lastDate === addDays(T, -1) ? s.streak.count + 1 : 1;
       set({ streak: { ...s.streak, count, best: Math.max(s.streak.best || 0, count), lastDate: T, days: { ...s.streak.days, [T]: true } } });
       get().pushFx({ type: 'streak', count });
-      get().notify('streak', 'flame', 'أكملت يومك!', `الـStreak الآن ${count} يوم متتالي`);
+      get().notify('streak', 'flame', tr('أكملت يومك!'), trf('الـStreak الآن {n} يوم متتالي', { n: count }));
     }
   },
 
@@ -445,7 +447,7 @@ export const useStore = create((set, get) => ({
         get().pushFx({ type: 'achievement', ach: a });
         if (get().settings.sounds) playSound('achievement');
       }, 600 + i * 1800);
-      get().notify('achievements', 'trophy', 'إنجاز جديد', `فتحت إنجاز "${a.title}"`);
+      get().notify('achievements', 'trophy', tr('إنجاز جديد'), trf('فتحت إنجاز "{title}"', { title: tr(a.title) }));
     });
   },
 
@@ -457,7 +459,7 @@ export const useStore = create((set, get) => ({
     set({ notifications: [notif(type, icon, title, body), ...s.notifications].slice(0, 60) });
     if (s.settings.browserNotifications && typeof Notification !== 'undefined' && Notification.permission === 'granted' && (document.hidden || force)) {
       try {
-        new Notification(title, { body, icon: './brand/icon-192.png', lang: 'ar', dir: 'rtl' });
+        new Notification(title, { body, icon: './brand/icon-192.png', lang: isEn() ? 'en' : 'ar', dir: isEn() ? 'ltr' : 'rtl' });
       } catch (e) {
         // ميزة ثانوية غير متاحة في هذا المتصفح — لا توقف التطبيق
         console.warn('[himmah:browser-notification]', e?.message || e);
@@ -485,7 +487,7 @@ export const useStore = create((set, get) => ({
       return g;
     }
     const milestones = breakdown
-      ? breakdown.months.map((m) => ({ id: uid(), title: m.title.replace(/^الشهر \d+: /, ''), level: 'month', total: m.weeks.length, done: 0, weeks: m.weeks }))
+      ? breakdown.months.map((m) => ({ id: uid(), title: m.title.replace(/^(الشهر|Month) \d+: /, ''), level: 'month', total: m.weeks.length, done: 0, weeks: m.weeks }))
       : [];
     const g = { id: uid(), title, area, icon, deadline: deadline || addDays(todayKey(), months * 30), months, milestones, daily: breakdown?.daily || [], createdAt: Date.now(), lastActivity: Date.now() };
     set((s) => ({ goals: [...s.goals, g] }));
@@ -518,8 +520,8 @@ export const useStore = create((set, get) => ({
     const removed = get().tasks.filter((t) => t.goalId === id);
     set((s) => ({ goals: s.goals.filter((x) => x.id !== id), tasks: s.tasks.filter((t) => t.goalId !== id) }));
     if (g)
-      get().toast(`تم حذف الهدف "${g.title}" و${removed.length} من مهامه`, {
-        action: { label: 'تراجع', run: () => set((s) => ({ goals: [...s.goals, g], tasks: [...s.tasks, ...removed] })) },
+      get().toast(trf('تم حذف الهدف "{title}" و{n} من مهامه', { title: g.title, n: removed.length }), {
+        action: { label: tr('تراجع'), run: () => set((s) => ({ goals: [...s.goals, g], tasks: [...s.tasks, ...removed] })) },
       });
   },
   stepMilestone(goalId, msId, delta) {
@@ -536,8 +538,8 @@ export const useStore = create((set, get) => ({
       get().pushFx({ type: 'xp', amount: xp });
       const g = get().goals.find((x) => x.id === goalId);
       const pct = goalProgress(g, get().tasks);
-      if (pct >= 75 && pct < 100) get().notify('goals', 'target', 'اقتربت من تحقيق هدفك', `"${g.title}" وصل ${pct}%`);
-      if (pct === 100) get().notify('goals', 'target', 'حققت هدفك!', `مبروك! أنجزت "${g.title}"`);
+      if (pct >= 75 && pct < 100) get().notify('goals', 'target', tr('اقتربت من تحقيق هدفك'), trf('"{title}" وصل {pct}%', { title: g.title, pct }));
+      if (pct === 100) get().notify('goals', 'target', tr('حققت هدفك!'), trf('مبروك! أنجزت "{title}"', { title: g.title }));
     }
   },
   addMilestone(goalId, title, total = 1) {
@@ -548,12 +550,12 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— العادات —————
-  addHabit: (h) => set((s) => ({ habits: [...s.habits, { id: uid(), log: {}, target: 1, unit: 'مرة', color: '#2E6B57', createdAt: Date.now(), ...h }] })),
+  addHabit: (h) => set((s) => ({ habits: [...s.habits, { id: uid(), log: {}, target: 1, unit: tr('مرة'), color: '#2E6B57', createdAt: Date.now(), ...h }] })),
   updateHabit: (id, patch) => set((s) => ({ habits: s.habits.map((h) => (h.id === id ? { ...h, ...patch } : h)) })),
   deleteHabit(id) {
     const h = get().habits.find((x) => x.id === id);
     set((s) => ({ habits: s.habits.filter((x) => x.id !== id) }));
-    if (h) get().toast(`تم حذف عادة "${h.title}"`, { action: { label: 'تراجع', run: () => set((s) => ({ habits: [...s.habits, h] })) } });
+    if (h) get().toast(trf('تم حذف عادة "{title}"', { title: h.title }), { action: { label: tr('تراجع'), run: () => set((s) => ({ habits: [...s.habits, h] })) } });
   },
   logHabit(id, date = todayKey(), delta = 1) {
     const h = get().habits.find((x) => x.id === id);
@@ -586,8 +588,8 @@ export const useStore = create((set, get) => ({
       const done = Object.values({ ...c.log, [date]: true }).filter(Boolean).length;
       if (done >= c.days) {
         set((s) => ({ user: { totalXp: s.user.totalXp + 100, xp: s.user.xp + 100 } }));
-        get().notify('achievements', 'medal', 'أكملت التحدي!', `"${c.title}" — +100 XP`);
-        get().pushFx({ type: 'achievement', ach: { icon: c.icon, title: 'تحدي مكتمل', desc: c.title } });
+        get().notify('achievements', 'medal', tr('أكملت التحدي!'), `"${c.title}" — +100 XP`);
+        get().pushFx({ type: 'achievement', ach: { icon: c.icon, title: tr('تحدي مكتمل'), desc: c.title } });
       }
     } else {
       set((s) => ({ user: { totalXp: Math.max(0, s.user.totalXp - 20), xp: Math.max(0, s.user.xp - 20) } }));
@@ -610,7 +612,7 @@ export const useStore = create((set, get) => ({
 
   // ————— المشاريع المشتركة —————
   addProject(name, icon = 'folder') {
-    const me = { id: 'me', name: get().profile.name || 'أنا', color: '#2E6B57' };
+    const me = { id: 'me', name: get().profile.name || tr('أنا'), color: '#2E6B57' };
     set((s) => ({ projects: [...s.projects, { id: uid(), name, icon, members: [me], tasks: [], createdAt: Date.now() }] }));
     get().checkAchievements();
   },
@@ -730,7 +732,7 @@ let lastDataError = 0;
 function dataErrorNotice() {
   if (Date.now() - lastDataError < 8000) return;
   lastDataError = Date.now();
-  useStore.getState().toast('تعذر حفظ بعض التغييرات، أعدنا تحميل آخر نسخة محفوظة.', { icon: 'clock', duration: 5000 });
+  useStore.getState().toast(tr('تعذر حفظ بعض التغييرات، أعدنا تحميل آخر نسخة محفوظة.'), { icon: 'clock', duration: 5000 });
   engine?.whenIdle(10000).then(() => useStore.getState().refreshRemote());
 }
 

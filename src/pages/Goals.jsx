@@ -8,6 +8,7 @@ import { AREAS } from '../config.js';
 import { todayKey, formatShort, diffDays, timeAgo } from '../lib/date.js';
 import { IconTile } from '../components/Glyph.jsx';
 import { GoalPlanModal, PlanGoalCard } from '../components/GoalPlan.jsx';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 export default function Goals() {
   const { params } = useRoute();
@@ -26,17 +27,17 @@ export default function Goals() {
             <span className="ico">
               <Target />
             </span>
-            أهدافي
+            {tr('أهدافي')}
           </h1>
-          <p>كل هدف يتحول إلى خطة: مراحل، ثم أسابيع بتواريخها، ثم جلسة مفصلة لكل يوم — وتقدمك يُحسب تلقائيًا</p>
+          <p>{tr('كل هدف يتحول إلى خطة: مراحل، ثم أسابيع بتواريخها، ثم جلسة مفصلة لكل يوم — وتقدمك يُحسب تلقائيًا')}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          <Plus /> هدف جديد
+          <Plus /> {tr('هدف جديد')}
         </button>
       </div>
       {!goals.length ? (
         <div className="card">
-          <Empty icon={<Target />} title="ما الشيء الذي تريد الوصول إليه؟" text="اكتب هدفك، ومسار يقسمه لخطة واضحة." action={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus /> إنشاء هدف</button>} />
+          <Empty icon={<Target />} title={tr('ما الشيء الذي تريد الوصول إليه؟')} text={tr('اكتب هدفك، ومسار يقسمه لخطة واضحة.')} action={<button className="btn btn-primary" onClick={() => setCreating(true)}><Plus /> {tr('إنشاء هدف')}</button>} />
         </div>
       ) : (
         <div className="grid g2">
@@ -62,7 +63,7 @@ function GoalCard({ g, tasks, open, onToggle, delay }) {
   const left = diffDays(g.deadline, todayKey());
   const currentIdx = g.milestones.findIndex((m) => m.done < m.total);
   const current = g.milestones[currentIdx];
-  const weekLabel = (m, k) => m.weeks?.[k]?.replace(/^الأسبوع \d+: /, '') || `الخطوة ${k + 1}`;
+  const weekLabel = (m, k) => m.weeks?.[k]?.replace(/^(الأسبوع|Week) \d+: /, '') || trf('الخطوة {n}', { n: k + 1 });
   const nextMilestone = current ? weekLabel(current, current.done) : null;
   const color = AREAS[g.area]?.color || 'var(--primary)';
   return (
@@ -76,56 +77,56 @@ function GoalCard({ g, tasks, open, onToggle, delay }) {
             <h3 className="row" style={{ fontSize: '1.12rem', gap: 8 }}>
               <IconTile name={g.icon} color={color} size={32} /> {g.title}
             </h3>
-            <button className="icon-btn sm plain" onClick={onToggle} aria-label={open ? 'إخفاء تفاصيل الهدف' : 'عرض خطة الهدف'} aria-expanded={open}>
+            <button className="icon-btn sm plain" onClick={onToggle} aria-label={open ? tr('إخفاء تفاصيل الهدف') : tr('عرض خطة الهدف')} aria-expanded={open}>
               <ChevronDown style={{ transform: open ? 'rotate(180deg)' : '', transition: 'transform .25s' }} />
             </button>
           </div>
           <div className="goal-now mt-s">
             <div className="small">
-              <span className="muted">المرحلة الحالية: </span>
-              <b>{current ? `${currentIdx + 1}. ${current.title}` : 'كل المراحل مكتملة'}</b>
+              <span className="muted">{tr('المرحلة الحالية:')} </span>
+              <b>{current ? `${currentIdx + 1}. ${current.title}` : tr('كل المراحل مكتملة')}</b>
             </div>
             {nextMilestone && (
               <div className="small">
-                <span className="muted">الإنجاز القادم: </span>
+                <span className="muted">{tr('الإنجاز القادم:')} </span>
                 {nextMilestone}
               </div>
             )}
           </div>
           <div className="row wrap tiny muted mt-s" style={{ gap: 12 }}>
             <span className="meta-item">
-              <CalendarDays size={13} /> {formatShort(g.deadline)} ({left >= 0 ? <>باقي <span className="num">{left}</span> يوم</> : 'انتهى الموعد'})
+              <CalendarDays size={13} /> {formatShort(g.deadline)} ({left >= 0 ? (isEn() ? <><span className="num">{left}</span> days left</> : <>باقي <span className="num">{left}</span> يوم</>) : tr('انتهى الموعد')})
             </span>
             <span className="meta-item">
-              <ListChecks size={13} /> <span className="num">{done}/{gt.length}</span> مهام مرتبطة
+              <ListChecks size={13} /> <span className="num">{done}/{gt.length}</span> {tr('مهام مرتبطة')}
             </span>
             <span className="meta-item">
-              <Clock size={13} /> آخر نشاط {timeAgo(g.lastActivity)}
+              <Clock size={13} /> {trf('آخر نشاط {when}', { when: timeAgo(g.lastActivity) })}
             </span>
           </div>
         </div>
       </div>
       {!open && (
         <button className="btn btn-sm btn-ghost mt" onClick={onToggle}>
-          عرض الخطة والمهام
+          {tr('عرض الخطة والمهام')}
         </button>
       )}
       {open && (
         <div className="mt">
-          <div className="goal-flow" aria-label="هيكل الهدف">
-            <span>الهدف</span>
+          <div className="goal-flow" aria-label={tr('هيكل الهدف')}>
+            <span>{tr('الهدف')}</span>
             <ArrowLeft size={12} />
-            <span>المراحل</span>
+            <span>{tr('المراحل')}</span>
             <ArrowLeft size={12} />
-            <span>الأسابيع</span>
+            <span>{tr('الأسابيع')}</span>
             <ArrowLeft size={12} />
-            <span>المهام</span>
+            <span>{tr('المهام')}</span>
             <ArrowLeft size={12} />
             <span className="purple bold num">{pct}%</span>
           </div>
           <div className="dash" style={{ marginTop: 16 }}>
             <div className="span-7">
-              <div className="bold mb">المراحل</div>
+              <div className="bold mb">{tr('المراحل')}</div>
               <div className="stage-list">
                 {g.milestones.map((m, i) => {
                   const state = m.done >= m.total ? 'done' : i === currentIdx ? 'current' : '';
@@ -141,13 +142,13 @@ function GoalCard({ g, tasks, open, onToggle, delay }) {
                             <span className="tiny muted num">
                               {m.done}/{m.total}
                             </span>
-                            <button className="icon-btn sm plain" aria-label={`تراجع خطوة في ${m.title}`} onClick={() => stepMilestone(g.id, m.id, -1)} disabled={m.done <= 0}>
+                            <button className="icon-btn sm plain" aria-label={trf('تراجع خطوة في {title}', { title: m.title })} onClick={() => stepMilestone(g.id, m.id, -1)} disabled={m.done <= 0}>
                               <Minus />
                             </button>
-                            <button className="icon-btn sm" aria-label={`أنجزت خطوة في ${m.title}`} onClick={() => stepMilestone(g.id, m.id, 1)} disabled={m.done >= m.total}>
+                            <button className="icon-btn sm" aria-label={trf('أنجزت خطوة في {title}', { title: m.title })} onClick={() => stepMilestone(g.id, m.id, 1)} disabled={m.done >= m.total}>
                               <Check />
                             </button>
-                            <button className="icon-btn sm plain" aria-label={`حذف المرحلة ${m.title}`} onClick={() => removeMilestone(g.id, m.id)}>
+                            <button className="icon-btn sm plain" aria-label={trf('حذف المرحلة {title}', { title: m.title })} onClick={() => removeMilestone(g.id, m.id)}>
                               <Trash2 />
                             </button>
                           </span>
@@ -168,23 +169,23 @@ function GoalCard({ g, tasks, open, onToggle, delay }) {
                 })}
               </div>
               <div className="row mt">
-                <input className="input" value={ms} onChange={(e) => setMs(e.target.value)} placeholder="أضف مرحلة جديدة…" aria-label="مرحلة جديدة" onKeyDown={(e) => e.key === 'Enter' && ms.trim() && (addMilestone(g.id, ms.trim(), 1), setMs(''))} />
+                <input className="input" value={ms} onChange={(e) => setMs(e.target.value)} placeholder={tr('أضف مرحلة جديدة…')} aria-label={tr('مرحلة جديدة')} onKeyDown={(e) => e.key === 'Enter' && ms.trim() && (addMilestone(g.id, ms.trim(), 1), setMs(''))} />
                 <button className="btn" onClick={() => ms.trim() && (addMilestone(g.id, ms.trim(), 1), setMs(''))}>
-                  <Plus /> إضافة
+                  <Plus /> {tr('إضافة')}
                 </button>
               </div>
             </div>
             <div className="span-5">
               <div className="row between mb">
-                <div className="bold">المهام المرتبطة</div>
+                <div className="bold">{tr('المهام المرتبطة')}</div>
                 <button className="btn btn-sm" onClick={() => openModal('task', { preset: { goalId: g.id, area: g.area, icon: g.icon } })}>
-                  <Plus /> مهمة للهدف
+                  <Plus /> {tr('مهمة للهدف')}
                 </button>
               </div>
               {g.daily?.length > 0 && (
                 <div className="chips mb">
                   {g.daily.map((d) => (
-                    <button key={d} className="chip" onClick={() => (useStore.getState().addTask({ title: d, goalId: g.id, area: g.area, icon: g.icon, duration: 20 }), useStore.getState().toast(`أضفت "${d}" لليوم وربطتها بالهدف`))}>
+                    <button key={d} className="chip" onClick={() => (useStore.getState().addTask({ title: d, goalId: g.id, area: g.area, icon: g.icon, duration: 20 }), useStore.getState().toast(trf('أضفت "{d}" لليوم وربطتها بالهدف', { d })))}>
                       <Plus size={14} /> {d}
                     </button>
                   ))}
@@ -194,13 +195,13 @@ function GoalCard({ g, tasks, open, onToggle, delay }) {
                 {[...openTasks.slice(0, 4), ...gt.filter((t) => t.done).slice(-2)].map((t) => (
                   <TaskItem key={t.id} task={t} showDate compact />
                 ))}
-                {!gt.length && <p className="small muted">لا توجد مهام مرتبطة بعد — أضف مهمة يومية من الاقتراحات بالأعلى.</p>}
+                {!gt.length && <p className="small muted">{tr('لا توجد مهام مرتبطة بعد — أضف مهمة يومية من الاقتراحات بالأعلى.')}</p>}
               </div>
             </div>
           </div>
           <div className="row mt" style={{ justifyContent: 'flex-end' }}>
-            <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'حذف الهدف', body: `سيتم حذف "${g.title}" وكل مهامه المرتبطة. تقدر تتراجع مباشرة بعد الحذف.`, danger: true, confirmLabel: 'حذف', onConfirm: () => deleteGoal(g.id) })}>
-              <Trash2 /> حذف الهدف
+            <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: tr('حذف الهدف'), body: trf('سيتم حذف "{title}" وكل مهامه المرتبطة. تقدر تتراجع مباشرة بعد الحذف.', { title: g.title }), danger: true, confirmLabel: tr('حذف'), onConfirm: () => deleteGoal(g.id) })}>
+              <Trash2 /> {tr('حذف الهدف')}
             </button>
           </div>
         </div>

@@ -5,9 +5,10 @@ import { useRoute } from '../router.js';
 import TaskItem from '../components/TaskItem.jsx';
 import { Empty, useConfirm } from '../components/ui.jsx';
 import { AREAS, PRIORITIES } from '../config.js';
-import { todayKey, addDays, toMin, relativeDay, timeAgo, DAYS_SHORT } from '../lib/date.js';
+import { todayKey, addDays, toMin, relativeDay, timeAgo, dayShort } from '../lib/date.js';
 import { isOverdue } from '../lib/game.js';
 import { Glyph } from '../components/Glyph.jsx';
+import { tr, trf, isEn } from '../i18n/index.js';
 
 const TABS = [
   ['today', 'اليوم'],
@@ -82,21 +83,29 @@ export default function Tasks() {
             <span className="ico">
               <ListChecks />
             </span>
-            مهامي
+            {tr('مهامي')}
           </h1>
           <p>
-            <span className="num">{base.today.filter((t) => t.done).length}</span> من <span className="num">{base.today.length}</span> مهام اليوم مكتملة
+            {isEn() ? (
+              <>
+                <span className="num">{base.today.filter((t) => t.done).length}</span> of <span className="num">{base.today.length}</span> tasks done today
+              </>
+            ) : (
+              <>
+                <span className="num">{base.today.filter((t) => t.done).length}</span> من <span className="num">{base.today.length}</span> مهام اليوم مكتملة
+              </>
+            )}
           </p>
         </div>
         <div className="row">
           <button className={`btn ${selecting ? 'btn-primary' : ''}`} onClick={() => (setSelecting(!selecting), setSel([]))}>
-            <SquareCheck /> {selecting ? 'إلغاء التحديد' : 'تحديد'}
+            <SquareCheck /> {selecting ? tr('إلغاء التحديد') : tr('تحديد')}
           </button>
           <button className="btn" onClick={() => open('image')}>
-            <ImagePlus /> من صورة
+            <ImagePlus /> {tr('من صورة')}
           </button>
           <button className="btn btn-primary" onClick={() => open('task')}>
-            <Plus /> مهمة جديدة
+            <Plus /> {tr('مهمة جديدة')}
           </button>
         </div>
       </div>
@@ -104,7 +113,7 @@ export default function Tasks() {
       <div className="tabs mb" role="tablist">
         {TABS.map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'on' : ''}`} onClick={() => (setTab(k), setSel([]))}>
-            {l}
+            {tr(l)}
             {base[k]?.length > 0 && k !== 'all' && k !== 'done' && <span className="count num">{base[k].length}</span>}
           </button>
         ))}
@@ -114,29 +123,29 @@ export default function Tasks() {
         <div className="row wrap" style={{ gap: 10 }}>
           <div className="input-icon grow" style={{ minWidth: 200 }}>
             <Search />
-            <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث في المهام…" aria-label="بحث" />
+            <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('ابحث في المهام…')} aria-label={tr('بحث')} />
           </div>
-          <select className="select" style={{ width: 'auto', minWidth: 140 }} value={area} onChange={(e) => setArea(e.target.value)} aria-label="المجال">
-            <option value="">كل المجالات</option>
+          <select className="select" style={{ width: 'auto', minWidth: 140 }} value={area} onChange={(e) => setArea(e.target.value)} aria-label={tr('المجال')}>
+            <option value="">{tr('كل المجالات')}</option>
             {Object.entries(AREAS).map(([k, a]) => (
               <option key={k} value={k}>
-                {a.label}
+                {tr(a.label)}
               </option>
             ))}
           </select>
-          <select className="select" style={{ width: 'auto', minWidth: 140 }} value={prio} onChange={(e) => setPrio(e.target.value)} aria-label="الأولوية">
-            <option value="">كل الأولويات</option>
+          <select className="select" style={{ width: 'auto', minWidth: 140 }} value={prio} onChange={(e) => setPrio(e.target.value)} aria-label={tr('الأولوية')}>
+            <option value="">{tr('كل الأولويات')}</option>
             {Object.entries(PRIORITIES).map(([k, p]) => (
               <option key={k} value={k}>
-                {p.label}
+                {tr(p.label)}
               </option>
             ))}
           </select>
-          <select className="select" style={{ width: 'auto', minWidth: 140 }} value={sort} onChange={(e) => setSort(e.target.value)} aria-label="الترتيب">
-            <option value="time">ترتيب: الوقت</option>
-            <option value="priority">ترتيب: الأولوية</option>
-            <option value="duration">ترتيب: المدة</option>
-            <option value="created">ترتيب: الأحدث</option>
+          <select className="select" style={{ width: 'auto', minWidth: 140 }} value={sort} onChange={(e) => setSort(e.target.value)} aria-label={tr('الترتيب')}>
+            <option value="time">{tr('ترتيب: الوقت')}</option>
+            <option value="priority">{tr('ترتيب: الأولوية')}</option>
+            <option value="duration">{tr('ترتيب: المدة')}</option>
+            <option value="created">{tr('ترتيب: الأحدث')}</option>
           </select>
         </div>
       </div>
@@ -146,36 +155,36 @@ export default function Tasks() {
           <div className="row wrap between">
             <div className="row">
               <button className="btn btn-sm btn-ghost" onClick={() => setSel(sel.length === list.length ? [] : list.map((t) => t.id))}>
-                {sel.length === list.length ? 'إلغاء الكل' : 'تحديد الكل'}
+                {sel.length === list.length ? tr('إلغاء الكل') : tr('تحديد الكل')}
               </button>
               <span className="small muted">
-                محدد: <span className="num bold">{sel.length}</span>
+                {tr('محدد:')} <span className="num bold">{sel.length}</span>
               </span>
             </div>
             <div className="row wrap">
               {tab === 'trash' ? (
                 <>
                   <button className="btn btn-sm" disabled={!sel.length} onClick={() => (sel.forEach(st().restoreTask), setSel([]))}>
-                    <RotateCcw /> استرجاع
+                    <RotateCcw /> {tr('استرجاع')}
                   </button>
                   <button
                     className="btn btn-sm btn-danger"
                     disabled={!sel.length}
-                    onClick={() => confirm({ title: 'حذف نهائي', body: `سيتم حذف ${sel.length} مهام نهائيًا ولا يمكن استرجاعها.`, danger: true, confirmLabel: 'حذف نهائي', onConfirm: () => (sel.forEach(st().purgeTask), setSel([])) })}
+                    onClick={() => confirm({ title: tr('حذف نهائي'), body: trf('سيتم حذف {n} مهام نهائيًا ولا يمكن استرجاعها.', { n: sel.length }), danger: true, confirmLabel: tr('حذف نهائي'), onConfirm: () => (sel.forEach(st().purgeTask), setSel([])) })}
                   >
-                    <Trash2 /> حذف نهائي
+                    <Trash2 /> {tr('حذف نهائي')}
                   </button>
                 </>
               ) : (
                 <>
-                  <button className="btn btn-sm" disabled={!sel.length} onClick={() => (sel.forEach((id) => st().completeTask(id, { silent: true })), st().toast(`تم إكمال ${sel.length} مهام`), setSel([]))}>
-                    <CheckCheck /> إكمال
+                  <button className="btn btn-sm" disabled={!sel.length} onClick={() => (sel.forEach((id) => st().completeTask(id, { silent: true })), st().toast(trf('تم إكمال {n} مهام', { n: sel.length })), setSel([]))}>
+                    <CheckCheck /> {tr('إكمال')}
                   </button>
-                  <button className="btn btn-sm" disabled={!sel.length} onClick={() => (sel.forEach((id) => st().moveTaskToDate(id, addDays(T, 1))), st().toast(`تم نقل ${sel.length} مهام إلى الغد`), setSel([]))}>
-                    <CalendarClock /> نقل للغد
+                  <button className="btn btn-sm" disabled={!sel.length} onClick={() => (sel.forEach((id) => st().moveTaskToDate(id, addDays(T, 1))), st().toast(trf('تم نقل {n} مهام إلى الغد', { n: sel.length })), setSel([]))}>
+                    <CalendarClock /> {tr('نقل للغد')}
                   </button>
                   <button className="btn btn-sm btn-danger" disabled={!sel.length} onClick={() => (st().deleteTasks(sel), setSel([]))}>
-                    <Trash2 /> حذف
+                    <Trash2 /> {tr('حذف')}
                   </button>
                 </>
               )}
@@ -186,9 +195,9 @@ export default function Tasks() {
 
       {tab === 'trash' && base.trash.length > 0 && !selecting && (
         <div className="row between mb wrap">
-          <p className="small muted">المهام المحذوفة تبقى هنا حتى تحذفها نهائيًا.</p>
-          <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: 'إفراغ المحذوفات', body: 'سيتم حذف كل المهام في سلة المحذوفات نهائيًا.', danger: true, confirmLabel: 'إفراغ', onConfirm: () => st().emptyTrash() })}>
-            <Trash2 /> إفراغ المحذوفات
+          <p className="small muted">{tr('المهام المحذوفة تبقى هنا حتى تحذفها نهائيًا.')}</p>
+          <button className="btn btn-sm btn-danger" onClick={() => confirm({ title: tr('إفراغ المحذوفات'), body: tr('سيتم حذف كل المهام في سلة المحذوفات نهائيًا.'), danger: true, confirmLabel: tr('إفراغ'), onConfirm: () => st().emptyTrash() })}>
+            <Trash2 /> {tr('إفراغ المحذوفات')}
           </button>
         </div>
       )}
@@ -196,15 +205,15 @@ export default function Tasks() {
       {!list.length ? (
         <div className="card">
           {tab === 'trash' ? (
-            <Empty icon={<Trash2 />} title="سلة المحذوفات فارغة" text="المهام المحذوفة تظهر هنا ويمكنك استرجاعها." />
+            <Empty icon={<Trash2 />} title={tr('سلة المحذوفات فارغة')} text={tr('المهام المحذوفة تظهر هنا ويمكنك استرجاعها.')} />
           ) : tab === 'overdue' ? (
-            <Empty icon={<CheckCheck />} title="لا توجد مهام متأخرة" text="أنت ماشي على الخطة." />
+            <Empty icon={<CheckCheck />} title={tr('لا توجد مهام متأخرة')} text={tr('أنت ماشي على الخطة.')} />
           ) : tab === 'recurring' ? (
-            <Empty icon={<Repeat />} title="لا توجد مهام متكررة" text="مثل: النادي كل الأحد والثلاثاء والخميس" action={<button className="btn btn-primary" onClick={() => open('task', { preset: { repeat: { type: 'days', days: [0, 2, 4] } } })}><Plus /> مهمة متكررة</button>} />
+            <Empty icon={<Repeat />} title={tr('لا توجد مهام متكررة')} text={tr('مثل: النادي كل الأحد والثلاثاء والخميس')} action={<button className="btn btn-primary" onClick={() => open('task', { preset: { repeat: { type: 'days', days: [0, 2, 4] } } })}><Plus /> {tr('مهمة متكررة')}</button>} />
           ) : q || area || prio ? (
-            <Empty icon={<Search />} title="لا توجد نتائج" text="جرّب تغيير البحث أو الفلاتر." action={<button className="btn btn-sm" onClick={() => (setQ(''), setArea(''), setPrio(''))}><X /> مسح الفلاتر</button>} />
+            <Empty icon={<Search />} title={tr('لا توجد نتائج')} text={tr('جرّب تغيير البحث أو الفلاتر.')} action={<button className="btn btn-sm" onClick={() => (setQ(''), setArea(''), setPrio(''))}><X /> {tr('مسح الفلاتر')}</button>} />
           ) : (
-            <Empty icon={<ListChecks />} title="يومك جاهز لك." text="أضف أول مهمة وابدأ." action={<button className="btn btn-primary" onClick={() => open('task')}><Plus /> إضافة مهمة</button>} />
+            <Empty icon={<ListChecks />} title={tr('يومك جاهز لك.')} text={tr('أضف أول مهمة وابدأ.')} action={<button className="btn btn-primary" onClick={() => open('task')}><Plus /> {tr('إضافة مهمة')}</button>} />
           )}
         </div>
       ) : (
@@ -240,19 +249,19 @@ function TrashRow({ t, selecting, selected, onSelect }) {
   const { restoreTask, purgeTask } = useStore.getState();
   return (
     <div className="task" style={{ cursor: 'default' }}>
-      {selecting && <input type="checkbox" checked={selected} onChange={() => onSelect(t.id)} aria-label="تحديد" style={{ width: 18, height: 18, accentColor: 'var(--primary)' }} />}
+      {selecting && <input type="checkbox" checked={selected} onChange={() => onSelect(t.id)} aria-label={tr('تحديد')} style={{ width: 18, height: 18, accentColor: 'var(--primary)' }} />}
       <span className="t-icon"><Glyph name={t.icon} size={18} /></span>
       <div className="grow">
         <div className="t-title ellipsis">{t.title}</div>
-        <div className="t-meta">حُذفت {timeAgo(t.deletedAt)}</div>
+        <div className="t-meta">{trf('حُذفت {when}', { when: timeAgo(t.deletedAt) })}</div>
       </div>
       <button className="btn btn-sm" onClick={() => restoreTask(t.id)}>
-        <RotateCcw /> استرجاع
+        <RotateCcw /> {tr('استرجاع')}
       </button>
       <button
         className="icon-btn sm"
-        aria-label="حذف نهائي"
-        onClick={() => confirm({ title: 'حذف نهائي', body: `هل تريد حذف "${t.title}" نهائيًا؟ لا يمكن التراجع.`, danger: true, confirmLabel: 'حذف نهائي', onConfirm: () => purgeTask(t.id) })}
+        aria-label={tr('حذف نهائي')}
+        onClick={() => confirm({ title: tr('حذف نهائي'), body: trf('هل تريد حذف "{title}" نهائيًا؟ لا يمكن التراجع.', { title: t.title }), danger: true, confirmLabel: tr('حذف نهائي'), onConfirm: () => purgeTask(t.id) })}
       >
         <Trash2 />
       </button>
@@ -264,31 +273,31 @@ function RecurringRow({ t }) {
   const open = useStore((s) => s.openModal);
   const confirm = useConfirm();
   const r = t.repeat;
-  const label = r.type === 'daily' ? 'يوميًا' : r.type === 'weekly' ? 'أسبوعيًا' : r.type === 'monthly' ? 'شهريًا' : `كل ${r.days.map((d) => DAYS_SHORT[d]).join('، ')}`;
+  const label = r.type === 'daily' ? tr('يوميًا') : r.type === 'weekly' ? tr('أسبوعيًا') : r.type === 'monthly' ? tr('شهريًا') : trf('كل {days}', { days: r.days.map((d) => dayShort(d)).join(isEn() ? ', ' : '، ') });
   return (
     <div className="task" onClick={() => open('task', { task: t })} role="button" tabIndex={0}>
       <span className="t-icon"><Glyph name={t.icon} size={18} /></span>
       <div className="grow">
         <div className="t-title">{t.title}</div>
         <div className="t-meta">
-          <Repeat size={12} /> {label} {t.time && <span className="num">· {t.time}</span>} · {t.duration} دقيقة
+          <Repeat size={12} /> {label} {t.time && <span className="num">· {t.time}</span>} · {trf('{n} دقيقة', { n: t.duration })}
         </div>
       </div>
       <button
         className="icon-btn sm"
-        aria-label="حذف التكرار"
+        aria-label={tr('حذف التكرار')}
         onClick={(e) => {
           e.stopPropagation();
           confirm({
-            title: 'إيقاف المهمة المتكررة',
-            body: `سيتم إيقاف تكرار "${t.title}" وحذف نسخها القادمة غير المكتملة.`,
+            title: tr('إيقاف المهمة المتكررة'),
+            body: trf('سيتم إيقاف تكرار "{title}" وحذف نسخها القادمة غير المكتملة.', { title: t.title }),
             danger: true,
-            confirmLabel: 'إيقاف وحذف',
+            confirmLabel: tr('إيقاف وحذف'),
             onConfirm: () => {
               const s = useStore.getState();
               const T = todayKey();
               useStore.setState({ tasks: s.tasks.filter((x) => x.id !== t.id && !(x.seriesId === t.id && !x.done && x.date >= T)) });
-              s.toast('تم إيقاف التكرار');
+              s.toast(tr('تم إيقاف التكرار'));
             },
           });
         }}

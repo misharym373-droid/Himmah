@@ -1,4 +1,5 @@
 // أدوات التاريخ والوقت — كل الأرقام بأرقام إنجليزية
+import { tr, isEn } from '../i18n/index.js';
 export const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 export const DAYS_SHORT = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 export const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -21,21 +22,25 @@ export function addDays(key, n) {
 export function diffDays(a, b) {
   return Math.round((fromKey(a) - fromKey(b)) / 86400000);
 }
+// أسماء الأيام والأشهر باللغة الحالية
+export const dayName = (i) => tr(DAYS[i]);
+export const dayShort = (i) => tr(DAYS_SHORT[i]);
+export const monthName = (i) => tr(MONTHS[i]);
 export function formatLong(key) {
   const d = fromKey(key);
-  return `${DAYS[d.getDay()]}، ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return isEn() ? `${dayName(d.getDay())}, ${monthName(d.getMonth())} ${d.getDate()}` : `${DAYS[d.getDay()]}، ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 export function formatShort(key) {
   const d = fromKey(key);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return isEn() ? `${monthName(d.getMonth())} ${d.getDate()}` : `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 export function relativeDay(key) {
   const t = todayKey();
   const diff = diffDays(key, t);
-  if (diff === 0) return 'اليوم';
-  if (diff === 1) return 'غدًا';
-  if (diff === -1) return 'أمس';
-  if (diff > 1 && diff < 7) return DAYS[fromKey(key).getDay()];
+  if (diff === 0) return tr('اليوم');
+  if (diff === 1) return tr('غدًا');
+  if (diff === -1) return tr('أمس');
+  if (diff > 1 && diff < 7) return dayName(fromKey(key).getDay());
   return formatShort(key);
 }
 export function toMin(hhmm) {
@@ -56,6 +61,12 @@ export function roundUp5(min) {
 }
 export function formatDuration(min) {
   if (!min) return '—';
+  if (isEn()) {
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
   if (min < 60) return `${min} دقيقة`;
   const h = Math.floor(min / 60);
   const m = min % 60;
@@ -75,6 +86,14 @@ export function formatHM(min) {
 }
 export function timeAgo(ts) {
   const s = Math.round((Date.now() - ts) / 1000);
+  if (isEn()) {
+    if (s < 60) return 'just now';
+    const m = Math.round(s / 60);
+    if (m < 60) return `${m} min ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${h} h ago`;
+    return `${Math.round(h / 24)} d ago`;
+  }
   if (s < 60) return 'الآن';
   const m = Math.round(s / 60);
   if (m < 60) return `قبل ${m} د`;
