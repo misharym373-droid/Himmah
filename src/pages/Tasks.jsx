@@ -3,6 +3,7 @@ import { ListChecks, Plus, Search, Trash2, RotateCcw, CheckCheck, CalendarClock,
 import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import TaskItem from '../components/TaskItem.jsx';
+import HabitTasks from '../components/HabitTasks.jsx';
 import { Empty, useConfirm } from '../components/ui.jsx';
 import { AREAS, PRIORITIES } from '../config.js';
 import { todayKey, addDays, toMin, relativeDay, timeAgo, dayShort, clock12, formatShort } from '../lib/date.js';
@@ -240,6 +241,8 @@ export default function Tasks() {
           ))}
         </div>
       )}
+
+      {tab === 'today' && !q && !area && !prio && !selecting && <HabitTasks className="mt" />}
     </>
   );
 }

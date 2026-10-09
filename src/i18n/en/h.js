@@ -65,4 +65,9 @@ export default {
   'تنتهي {date} · {n} مرة': 'Ends {date} · {n} times',
   'انتهى التكرار': 'Repeat ended',
   'حتى {date}': 'until {date}',
+  // العادات كمهام
+  'عاداتي اليوم': 'My habits today',
+  'عادة': 'Habit',
+  'إنقاص {title}': 'Decrease {title}',
+  'زيادة {title}': 'Increase {title}',
 };

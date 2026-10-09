@@ -1,5 +1,6 @@
 // بطاقات الصفحة الرئيسية — الأساسية في الأعلى، والتفاصيل في أقسام قابلة للطي
 import { useEffect, useMemo, useRef, useState } from 'react';
+import HabitTasks from './HabitTasks.jsx';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -293,6 +294,7 @@ export function TopThree({ span = 'span-7' }) {
           ))}
         </div>
       )}
+      <HabitTasks className="mt" />
       <button className="btn btn-ghost btn-sm mt" onClick={() => navigate('tasks')}>
         {trf('كل مهام اليوم ({n})', { n: progress.total })} <ArrowLeft />
       </button>

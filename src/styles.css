@@ -1138,3 +1138,13 @@ div.scene-media iframe { position: absolute; top: 50%; left: 50%; width: 177.78v
 .pp-adhkar.on { color: #30a46c; }
 @keyframes adhkarIn { from { opacity: 0; transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .adhkar { animation: none; } }
+
+/* العادات داخل مهام اليوم */
+.habit-tasks { display: flex; flex-direction: column; gap: 8px; }
+.habit-tasks-hd { display: flex; align-items: center; gap: 8px; padding: 6px 4px; color: var(--text); background: none; border: 0; text-align: start; width: 100%; }
+.habit-tasks-hd .count { font-size: 0.75rem; padding: 1px 8px; border-radius: 999px; background: var(--card-2); color: var(--muted); }
+.habit-tasks-hd .count.all { background: rgba(48, 164, 108, 0.15); color: #30a46c; }
+.habit-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(var(--primary-rgb), 0.1); color: var(--primary); }
+.habit-count { min-width: 38px; height: 26px; flex: none; display: inline-grid; place-items: center; border-radius: 8px; font-size: 0.78rem; font-weight: 700; background: var(--card-2); color: var(--muted); }
+.habit-count.on { background: #30a46c; color: #fff; }
+.habit-task.done .t-title { text-decoration: line-through; color: var(--muted); }
