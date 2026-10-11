@@ -26,6 +26,7 @@ export const WIDGETS = [
   { id: 'top3', label: 'أهم 3 مهام اليوم', section: 'core' },
   { id: 'next', label: 'المهمة القادمة', section: 'core' },
   { id: 'prayer', label: 'صلوات اليوم', section: 'core' },
+  { id: 'meals', label: 'وجبات اليوم', section: 'core' },
   { id: 'goals', label: 'اختصار الأهداف', section: 'core' },
   { id: 'focus', label: 'التركيز', section: 'core' },
   { id: 'dayMap', label: 'خريطة اليوم', section: 'more' },

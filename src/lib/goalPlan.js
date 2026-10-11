@@ -247,10 +247,28 @@ export function detectKind(title) {
 }
 const kindDef = (kind) => KINDS[kind] || GENERIC;
 
-// أيام الإجازة الافتراضية: الجمعة للتمارين، ولا شيء لغيرها
-export function defaultRestDays(kind) {
-  return kind === 'fitness' ? [5] : kind === 'exam' ? [5] : [];
+// شدة الخطة: عدد أيام العمل في الأسبوع + معامل الكمية/المدة
+export const INTENSITIES = [
+  { key: 'light', label: 'خفيفة', factor: 0.75, sets: -1, fitDays: 3, days: 4 },
+  { key: 'medium', label: 'متوسطة', factor: 1, sets: 0, fitDays: 4, days: 5 },
+  { key: 'strong', label: 'قوية', factor: 1.2, sets: 0, fitDays: 5, days: 6 },
+  { key: 'max', label: 'مكثفة', factor: 1.4, sets: 1, fitDays: 6, days: 7 },
+];
+export const intensityOf = (key) => INTENSITIES.find((i) => i.key === key) || INTENSITIES[1];
+export const workDays = (kind, key) => (kind === 'fitness' ? intensityOf(key).fitDays : intensityOf(key).days);
+// ترتيب أيام الإجازة (الجمعة أولًا) بحيث تتوزع أيام العمل على الأسبوع
+const REST_ORDER = [5, 1, 3, 6, 2, 4, 0];
+export function defaultRestDays(kind, intensity = 'medium') {
+  return REST_ORDER.slice(0, 7 - workDays(kind, intensity)).sort();
 }
+// تمارين الأسبوع حسب عدد الأيام (أيام أقل = تمرين كامل للجسم)
+const FIT_SPLIT = {
+  3: ['full', 'hiit', 'full'],
+  4: ['push', 'legs', 'pull', 'hiit'],
+  5: ['push', 'legs', 'cardio', 'pull', 'full'],
+  6: ['push', 'legs', 'cardio', 'pull', 'full', 'hiit'],
+  7: ['push', 'legs', 'cardio', 'pull', 'full', 'hiit', 'cardio'],
+};
 
 // توزيع المراحل على الأسابيع (4 مراحل كحد أقصى، كل مرحلة 4 أسابيع على الأقل إن أمكن)
 function phaseRanges(totalWeeks, count) {
@@ -271,13 +289,16 @@ function phaseRanges(totalWeeks, count) {
  * يبني خطة الهدف كاملة
  * @param {{title:string, months:number, restDays:number[], time?:string|null, startDate?:string, weekly?:Array}} o
  */
-export function buildGoalPlan({ title, months = 3, restDays, time = null, startDate = todayKey(), weekly }) {
+export function buildGoalPlan({ title, months = 3, restDays, time = null, startDate = todayKey(), weekly, intensity = 'medium', nutrition = null }) {
   const kind = detectKind(title);
   const def = kindDef(kind);
+  const int = intensityOf(intensity);
   const days = Math.max(7, Math.round(months * 30.4));
   const endDate = addDays(startDate, days - 1);
   const totalWeeks = Math.ceil(days / 7);
-  const rest = restDays ?? defaultRestDays(kind);
+  const rest = restDays ?? defaultRestDays(kind, int.key);
+  const workCount = 7 - rest.length;
+  const focuses = kind === 'fitness' ? (FIT_SPLIT[workCount] || FIT_SPLIT[5]).map((k) => def.focuses.find((f) => f.key === k)) : def.focuses;
   const ranges = phaseRanges(totalWeeks, def.phases.length);
   const phases = ranges.map((r, i) => ({
     ...r,
@@ -294,10 +315,11 @@ export function buildGoalPlan({ title, months = 3, restDays, time = null, startD
     Array.from({ length: 7 }, (_, i) => {
       const dow = (startDow + i) % 7;
       if (rest.includes(dow)) return { dow, rest: true, focus: tr(def.rest) };
-      const f = def.focuses[k++ % def.focuses.length];
+      const f = focuses[k++ % focuses.length];
       return { dow, rest: false, key: f.key, focus: tr(f.title) };
     });
-  return { kind, label: tr(def.label), icon: def.icon, area: def.area, duration: def.duration, startDate, endDate, totalWeeks, restDays: schedule.filter((d) => d.rest).map((d) => d.dow), time, weekly: schedule, phases, tips: def.tips.map((x) => tr(x)) };
+  const tips = def.tips.map((x) => tr(x));
+  return { kind, label: tr(def.label), icon: def.icon, area: def.area, duration: Math.round((def.duration * int.factor) / 5) * 5, intensity: int.key, nutrition, startDate, endDate, totalWeeks, restDays: schedule.filter((d) => d.rest).map((d) => d.dow), time, weekly: schedule, phases, tips };
 }
 
 // معلومات الأسبوع والمرحلة لتاريخ معيّن داخل الخطة
@@ -305,6 +327,15 @@ export function weekOf(plan, date) {
   const week = Math.floor(diffDays(date, plan.startDate) / 7) + 1;
   const pIdx = Math.max(0, plan.phases.findIndex((p) => week >= p.fromWeek && week <= p.toWeek));
   return { week, phaseIndex: pIdx, phase: plan.phases[pIdx], inPhaseWeek: week - plan.phases[pIdx].fromWeek + 1 };
+}
+
+// الشدة تغيّر الكميات: المجموعات والكارديو والصفحات والكلمات والأسئلة
+function scalePhase(ph, int) {
+  if (int.key === 'medium') return ph;
+  const out = { ...ph };
+  for (const k of ['cardio', 'words', 'minutes', 'pages', 'q']) if (typeof ph[k] === 'number') out[k] = Math.max(1, Math.round(ph[k] * int.factor));
+  if (typeof ph.sets === 'number') out.sets = Math.max(2, ph.sets + int.sets);
+  return out;
 }
 
 // المهام المفصلة لكل يوم عمل من تاريخ معيّن حتى نهاية الخطة
@@ -316,7 +347,7 @@ export function planSessions(plan, title, from = plan.startDate) {
     const slot = byDow[fromKey(date).getDay()];
     if (!slot || slot.rest) continue;
     const { week, phaseIndex, inPhaseWeek } = weekOf(plan, date);
-    const phDef = def.phases[Math.min(phaseIndex, def.phases.length - 1)];
+    const phDef = scalePhase(def.phases[Math.min(phaseIndex, def.phases.length - 1)], intensityOf(plan.intensity));
     const focusDef = def.focuses.find((f) => f.key === slot.key) || { key: slot.key || 'do', title: slot.focus, ex: [] };
     const dayInWeek = diffDays(date, plan.startDate) % 7;
     let desc = '';
@@ -325,6 +356,8 @@ export function planSessions(plan, title, from = plan.startDate) {
     } catch (e) {
       console.warn('[himmah:plan]', e?.message || e);
     }
+    const n = plan.nutrition;
+    if (n?.calories) desc += `\n${trf('اليوم: ~{kcal} سعرة · بروتين {p} جم · {steps} خطوة', { kcal: n.calories, p: n.protein, steps: n.steps.toLocaleString('en') })}`;
     out.push({
       title: trf('{focus} — الأسبوع {week}', { focus: slot.focus, week }),
       desc: `${trf('المرحلة {n}: {title}', { n: phaseIndex + 1, title: plan.phases[phaseIndex].title })}\n${desc}`.trim(),

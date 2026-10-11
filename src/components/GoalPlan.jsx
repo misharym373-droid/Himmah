@@ -1,31 +1,65 @@
 // واجهة الأهداف ذات الخطة: إنشاء الخطة، الجدول الأسبوعي، المراحل والأسابيع بالتفصيل
 import { useMemo, useState } from 'react';
-import { Check, Wand2, CalendarDays, ListChecks, ChevronDown, Pencil, Trash2, Coffee, Clock, Sparkles, Target } from 'lucide-react';
+import { Check, Wand2, CalendarDays, ListChecks, ChevronDown, Pencil, Trash2, Coffee, Clock, Sparkles, Target, Scale, TriangleAlert, Shuffle, Utensils, Gauge } from 'lucide-react';
 import { useStore, goalProgress } from '../store.js';
 import { Modal, Bar, Ring, Switch, useConfirm } from './ui.jsx';
 import { IconTile, Glyph } from './Glyph.jsx';
 import { AREAS, GOAL_ICONS } from '../config.js';
 import { DAYS, dayName, todayKey, addDays, formatShort, diffDays, fromKey, clock12 } from '../lib/date.js';
-import { buildGoalPlan, planSessions, detectKind, defaultRestDays, weekOf } from '../lib/goalPlan.js';
+import { buildGoalPlan, planSessions, detectKind, defaultRestDays, weekOf, INTENSITIES, intensityOf, workDays } from '../lib/goalPlan.js';
+import { calcBody, mealsForDay, MEAL_MODES } from '../lib/nutrition.js';
 import { monthsFromText } from '../lib/assistant.js';
 import { tr, trf, isEn } from '../i18n/index.js';
 
 const DURATIONS = [1, 2, 3, 6, 12];
 const monthsLabel = (m) => (isEn() ? (m === 12 ? '1 year' : m === 1 ? '1 month' : `${m} months`) : m === 12 ? 'سنة' : m === 1 ? 'شهر' : m === 2 ? 'شهرين' : `${m} أشهر`);
 
-// ————— إنشاء هدف بخطة كاملة —————
-export function GoalPlanModal({ onClose }) {
+// ————— إنشاء/تعديل هدف بخطة كاملة —————
+const normT = (s) => String(s || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase();
+const LOSE_RE = /وزن|تخسيس|نزول|انقاص|نقص|حرق|تنشيف|رشاق|كرش|دهون|lose|weight|fat|slim|cut/;
+const GAIN_RE = /ضخام|تضخيم|زياده وزن|زيادة وزن|bulk|gain/;
+// "أنقص 20-25 كيلو" => 25
+function kgFromText(t) {
+  const m = normT(t).match(/(\d+(?:\.\d+)?)\s*(?:(?:-|–|الى|إلى|to|او)\s*(\d+(?:\.\d+)?))?\s*(كيلو|كيلوات|كجم|كغ|كيلوجرام|kg|kilo)/);
+  return m ? Math.max(+m[1], +(m[2] || 0)) : null;
+}
+// شدة الخطة القديمة (قبل خاصية الشدة) حسب عدد أيام العمل
+function guessIntensity(g) {
+  if (g?.plan?.intensity) return g.plan.intensity;
+  if (!g?.plan) return 'medium';
+  const n = 7 - (g.plan.restDays?.length || 0);
+  const list = g.plan.kind === 'fitness' ? [3, 4, 5, 6] : [4, 5, 6, 7];
+  return INTENSITIES[Math.max(0, list.findIndex((d) => d >= n))].key;
+}
+
+export function GoalPlanModal({ onClose, goal }) {
+  const editing = !!goal?.plan;
   const addGoal = useStore((s) => s.addGoal);
-  const [title, setTitle] = useState('');
-  const [months, setMonths] = useState(3);
+  const profile = useStore((s) => s.profile);
+  const [title, setTitle] = useState(goal?.title || '');
+  const [months, setMonths] = useState(goal?.months || 3);
   const kind = useMemo(() => detectKind(title), [title]);
-  const [rest, setRest] = useState(null); // null = افتراضي حسب نوع الهدف
-  const restDays = rest ?? defaultRestDays(kind);
-  const [fixedTime, setFixedTime] = useState(false);
-  const [time, setTime] = useState('18:00');
-  const [icon, setIcon] = useState(null);
-  const plan = useMemo(() => (title.trim().length > 2 ? buildGoalPlan({ title, months, restDays, time: fixedTime ? time : null }) : null), [title, months, restDays, fixedTime, time]);
-  const sessions = useMemo(() => (plan ? planSessions(plan, title) : []), [plan, title]);
+  const [intensity, setIntensity] = useState(() => guessIntensity(goal));
+  const [rest, setRest] = useState(editing ? goal.plan.restDays : null); // null = افتراضي حسب نوع الهدف والشدة
+  const restDays = rest ?? defaultRestDays(kind, intensity);
+  const [fixedTime, setFixedTime] = useState(!!goal?.plan?.time);
+  const [time, setTime] = useState(goal?.plan?.time || '18:00');
+  const [icon, setIcon] = useState(goal?.icon || null);
+  // الوزن والأكل (لخطط اللياقة)
+  const [bodyOn, setBodyOn] = useState(editing ? !!goal.plan.nutrition : null);
+  const bodyActive = kind === 'fitness' && (bodyOn ?? (LOSE_RE.test(normT(title)) || GAIN_RE.test(normT(title))));
+  const [body, setBody] = useState(() => goal?.plan?.nutrition?.body || { mode: 'lose', sex: 'm', weight: profile.weight || '', height: profile.height || '', age: profile.age || '', change: '' });
+  const [meals, setMeals] = useState(goal?.plan?.nutrition?.meals || '2');
+  const setB = (k, v) => setBody((b) => ({ ...b, [k]: v }));
+  const days = Math.max(7, Math.round(months * 30.4));
+  const calc = useMemo(() => (bodyActive ? calcBody(body, { days, intensity }) : null), [bodyActive, body, days, intensity]);
+  const nutrition = calc ? { body, meals, ...calc } : null;
+  const plan = useMemo(
+    () => (title.trim().length > 2 ? buildGoalPlan({ title, months, restDays, time: fixedTime ? time : null, intensity, nutrition, ...(editing ? { startDate: goal.plan.startDate } : {}) }) : null),
+    [title, months, restDays, fixedTime, time, intensity, JSON.stringify(nutrition), editing] // eslint-disable-line
+  );
+  const T = todayKey();
+  const sessions = useMemo(() => (plan ? planSessions(plan, title, editing ? T : plan.startDate) : []), [plan, title, editing, T]);
 
   function onTitle(v) {
     setTitle(v);
@@ -34,23 +68,43 @@ export function GoalPlanModal({ onClose }) {
     const en = v.toLowerCase().match(/(\d+)\s*(months?|weeks?|years?)\b/);
     if (en) setMonths(Math.max(1, Math.min(12, en[2].startsWith('year') ? 12 * +en[1] : en[2].startsWith('week') ? Math.round(+en[1] / 4.3) || 1 : +en[1])));
     else if (/\b(a|one) year\b/i.test(v)) setMonths(12);
+    const kg = kgFromText(v);
+    if (kg) setB('change', kg);
+    if (GAIN_RE.test(normT(v))) setB('mode', 'gain');
   }
   function toggleRest(d) {
     const cur = restDays.includes(d) ? restDays.filter((x) => x !== d) : [...restDays, d];
     if (cur.length >= 7) return;
     setRest(cur);
   }
+  function pickIntensity(k) {
+    setIntensity(k);
+    setRest(null);
+  }
   function save() {
     if (!plan) return;
+    const st = useStore.getState();
+    if (nutrition) {
+      const p = {};
+      for (const k of ['weight', 'height', 'age']) if (body[k] && String(profile[k]) !== String(body[k])) p[k] = body[k];
+      if (Object.keys(p).length) st.setProfile(p);
+    }
+    if (editing) {
+      const n = st.replanGoal(goal.id, { plan });
+      st.updateGoal(goal.id, { months, ...(icon ? { icon } : {}) });
+      st.toast(trf('تم تحديث الخطة: {n} جلسة قادمة', { n }), { icon: 'check' });
+      return onClose(goal);
+    }
     const g = addGoal({ title: title.trim().replace(/\s*(خلال|لمدة|in|for|within)\s+\d.*$/i, '').replace(/\s*(خلال|لمدة)\s.*$/, '') || title.trim(), months, area: plan.area, icon: icon || plan.icon, plan });
-    useStore.getState().toast(trf('تم إنشاء الهدف وخطته: {n} جلسة حتى {date}', { n: sessions.length, date: formatShort(plan.endDate) }), { icon: 'sparkles' });
+    st.toast(trf('تم إنشاء الهدف وخطته: {n} جلسة حتى {date}', { n: sessions.length, date: formatShort(plan.endDate) }), { icon: 'sparkles' });
     onClose(g);
   }
+  const suggestMonths = calc?.tooFast && calc.weeksNeeded ? Math.min(12, Math.ceil(calc.weeksNeeded / 4.3)) : null;
 
   return (
     <Modal
-      title={tr('هدف جديد')}
-      sub={tr('اكتب هدفك، واختر المدة وأيام الإجازة — ومسار يبني لك جدولًا يوميًا مفصلًا لكل المدة')}
+      title={editing ? tr('تعديل الخطة') : tr('هدف جديد')}
+      sub={editing ? tr('غيّر الشدة أو أيام الإجازة أو هدف الوزن — يُطبَّق على الأيام القادمة، والجلسات المنجزة تبقى') : tr('اكتب هدفك، واختر المدة وأيام الإجازة — ومسار يبني لك جدولًا يوميًا مفصلًا لكل المدة')}
       onClose={() => onClose()}
       size="xl"
       footer={
@@ -59,7 +113,12 @@ export function GoalPlanModal({ onClose }) {
             {tr('إلغاء')}
           </button>
           <button className="btn btn-primary" onClick={save} disabled={!plan}>
-            <Check /> {isEn() ? <>Create goal and {sessions.length ? <span className="num">{sessions.length}</span> : ''} tasks</> : <>إنشاء الهدف و{sessions.length ? <span className="num">{sessions.length}</span> : ''} مهمة</>}
+            <Check />{' '}
+            {editing
+              ? tr('حفظ التعديلات')
+              : isEn()
+                ? <>Create goal and {sessions.length ? <span className="num">{sessions.length}</span> : ''} tasks</>
+                : <>إنشاء الهدف و{sessions.length ? <span className="num">{sessions.length}</span> : ''} مهمة</>}
           </button>
         </>
       }
@@ -67,13 +126,33 @@ export function GoalPlanModal({ onClose }) {
       <div className="col" style={{ gap: 18 }}>
         <label className="field">
           <span>{tr('الهدف')}</span>
-          <input className="input" value={title} onChange={(e) => onTitle(e.target.value)} placeholder={tr('مثال: النادي — إنقاص الوزن وبناء العضل')} autoFocus />
+          <input className="input" value={title} onChange={(e) => onTitle(e.target.value)} placeholder={tr('مثال: أنقص 10 كيلو وأبني عضل خلال 3 شهور')} autoFocus={!editing} disabled={editing} />
           {plan && (
             <span className="tiny muted">
               <Sparkles size={12} style={{ verticalAlign: -2 }} /> {tr('نوع الخطة:')} <b>{plan.label}</b>
             </span>
           )}
         </label>
+        <div className="field">
+          <span>{tr('شدة الخطة')}</span>
+          <div className="int-grid">
+            {INTENSITIES.map((it) => {
+              const n = workDays(kind, it.key);
+              const dur = Math.round(((plan?.duration || 60) / intensityOf(intensity).factor) * it.factor / 5) * 5;
+              return (
+                <button key={it.key} className={`int-opt ${intensity === it.key ? 'on' : ''}`} onClick={() => pickIntensity(it.key)} aria-pressed={intensity === it.key}>
+                  <span className="int-bars" aria-hidden>
+                    {[0, 1, 2, 3].map((b) => (
+                      <i key={b} className={b <= INTENSITIES.indexOf(it) ? 'on' : ''} />
+                    ))}
+                  </span>
+                  <b className="small">{tr(it.label)}</b>
+                  <span className="tiny muted">{trf('{n} أيام/أسبوع · ~{m} د', { n, m: dur })}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="grid g2">
           <div className="field">
             <span>{tr('المدة')}</span>
@@ -96,6 +175,115 @@ export function GoalPlanModal({ onClose }) {
             </div>
           </div>
         </div>
+        {kind === 'fitness' && (
+          <div className="body-box">
+            <div className="set-row" style={{ padding: 0, borderBottom: 0 }}>
+              <div className="grow">
+                <div className="t row" style={{ gap: 6 }}>
+                  <Scale size={16} /> {tr('هدف الوزن والأكل')}
+                </div>
+                <div className="d">{tr('نحسب سعراتك اليومية بأمان ونرتب لك وجبات بسيطة ورخيصة')}</div>
+              </div>
+              <Switch on={bodyActive} onChange={setBodyOn} label={tr('هدف الوزن والأكل')} />
+            </div>
+            {bodyActive && (
+              <div className="col mt" style={{ gap: 14 }}>
+                <div className="row wrap" style={{ gap: 14 }}>
+                  <div className="chips">
+                    {[['lose', 'إنقاص الوزن'], ['gain', 'زيادة عضل ووزن'], ['keep', 'ثبات الوزن']].map(([k, l]) => (
+                      <button key={k} className={`chip ${body.mode === k ? 'on' : ''}`} onClick={() => setB('mode', k)}>
+                        {tr(l)}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="chips">
+                    {[['m', 'ذكر'], ['f', 'أنثى']].map(([k, l]) => (
+                      <button key={k} className={`chip ${body.sex === k ? 'on' : ''}`} onClick={() => setB('sex', k)}>
+                        {tr(l)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="body-inputs">
+                  <label className="field">
+                    <span>{tr('وزنك الحالي (كجم)')}</span>
+                    <input className="input num" type="number" inputMode="decimal" min="35" max="300" value={body.weight} onChange={(e) => setB('weight', e.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>{tr('الطول (سم)')}</span>
+                    <input className="input num" type="number" inputMode="numeric" min="120" max="230" value={body.height} onChange={(e) => setB('height', e.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>{tr('العمر')}</span>
+                    <input className="input num" type="number" inputMode="numeric" min="13" max="90" value={body.age} onChange={(e) => setB('age', e.target.value)} />
+                  </label>
+                  {body.mode !== 'keep' && (
+                    <label className="field">
+                      <span>{body.mode === 'lose' ? tr('كم تبغى تنزل؟ (كجم)') : tr('كم تبغى تزيد؟ (كجم)')}</span>
+                      <input className="input num" type="number" inputMode="decimal" min="0" max="80" value={body.change} onChange={(e) => setB('change', e.target.value)} placeholder={tr('اختياري')} />
+                    </label>
+                  )}
+                </div>
+                {!calc ? (
+                  <p className="small muted">{tr('اكتب وزنك وطولك وعمرك عشان نحسب سعراتك.')}</p>
+                ) : (
+                  <>
+                    <div className="kpis">
+                      <div className="mini-stat">
+                        <div className="v num">{calc.calories.toLocaleString('en')}</div>
+                        <div className="l">{tr('سعرة باليوم')}</div>
+                      </div>
+                      <div className="mini-stat">
+                        <div className="v num">{calc.protein}</div>
+                        <div className="l">{tr('جم بروتين')}</div>
+                      </div>
+                      <div className="mini-stat">
+                        <div className="v num">{calc.water}</div>
+                        <div className="l">{tr('لتر ماء')}</div>
+                      </div>
+                      <div className="mini-stat">
+                        <div className="v num">{calc.steps.toLocaleString('en')}</div>
+                        <div className="l">{tr('خطوة باليوم')}</div>
+                      </div>
+                    </div>
+                    <p className="tiny muted">{trf('حرقك اليومي التقريبي مع التمرين: {n} سعرة', { n: calc.tdee.toLocaleString('en') })}</p>
+                    {body.mode === 'lose' &&
+                      (calc.tooFast ? (
+                        <div className="notice warn">
+                          <TriangleAlert size={18} />
+                          <div className="grow small" style={{ minWidth: 220 }}>
+                            {trf('نزول {change} كجم في {months} يحتاج {rate} كجم بالأسبوع، وهذا أسرع من الآمن لجسمك (الحد الآمن لك تقريبًا {safe} كجم/أسبوع). الخطة الآمنة توصلك تقريبًا {expected} كجم في هالمدة، وتكمل الباقي بعدها.', { change: body.change, months: monthsLabel(months), rate: calc.requiredRate, safe: calc.safeRate, expected: calc.expected })}
+                          </div>
+                          {suggestMonths && suggestMonths > months && (
+                            <button className="btn btn-xs" onClick={() => setMonths(suggestMonths)}>
+                              {trf('خلّ المدة {m}', { m: monthsLabel(suggestMonths) })}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="notice">
+                          <Check size={18} className="green" />
+                          <span className="small">{trf('المتوقع تنزل تقريبًا {expected} كجم بهالمدة — معدل آمن.', { expected: calc.expected })}</span>
+                        </div>
+                      ))}
+                    <div className="field">
+                      <span>{tr('عدد الوجبات')}</span>
+                      <div className="chips">
+                        {MEAL_MODES.map(([k, l]) => (
+                          <button key={k} className={`chip ${meals === k ? 'on' : ''}`} onClick={() => setMeals(k)}>
+                            {tr(l)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {plan && <MealDay plan={plan} date={editing && T > plan.startDate ? T : plan.startDate} />}
+                    <p className="tiny dim">{tr('الأرقام تقريبية وليست استشارة طبية. إذا عندك سكر أو ضغط أو أي مرض مزمن، استشر طبيب قبل الدايت.')}</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <div className="set-row" style={{ padding: '2px 0', borderBottom: 0 }}>
           <div className="grow">
             <div className="t">{tr('وقت ثابت للجلسة')}</div>
@@ -104,19 +292,56 @@ export function GoalPlanModal({ onClose }) {
           {fixedTime && <input className="input" type="time" style={{ width: 130 }} value={time} onChange={(e) => setTime(e.target.value)} aria-label={tr('وقت الجلسة')} />}
           <Switch on={fixedTime} onChange={setFixedTime} label={tr('وقت ثابت للجلسة')} />
         </div>
-        <div className="field">
-          <span>{tr('الأيقونة')}</span>
-          <div className="chips">
-            {GOAL_ICONS.map((i) => (
-              <button key={i} className={`chip icon-chip ${(icon || plan?.icon) === i ? 'on' : ''}`} onClick={() => setIcon(i)} aria-label={i}>
-                <Glyph name={i} size={17} />
-              </button>
-            ))}
+        {!editing && (
+          <div className="field">
+            <span>{tr('الأيقونة')}</span>
+            <div className="chips">
+              {GOAL_ICONS.map((i) => (
+                <button key={i} className={`chip icon-chip ${(icon || plan?.icon) === i ? 'on' : ''}`} onClick={() => setIcon(i)} aria-label={i}>
+                  <Glyph name={i} size={17} />
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         {plan ? <PlanPreview plan={plan} sessions={sessions} /> : <p className="small muted">{tr('اكتب هدفك لتظهر الخطة المقترحة هنا مباشرة.')}</p>}
       </div>
     </Modal>
+  );
+}
+
+// وجبات يوم واحد (مع زر تبديل كل وجبة)
+export function MealDay({ plan, date, onSwap, compact }) {
+  const day = mealsForDay(plan, date);
+  if (!day) return null;
+  return (
+    <div className={`meal-day ${compact ? 'compact' : ''}`}>
+      {day.meals.map((m) => (
+        <div className="meal" key={m.key}>
+          <div className="row between" style={{ gap: 8 }}>
+            <span className="tiny muted bold">{m.label}</span>
+            <span className="tiny muted num">
+              {m.kcal} {tr('سعرة')} · {m.protein} {tr('جم بروتين')}
+            </span>
+          </div>
+          <div className="row between" style={{ gap: 8, alignItems: 'flex-start' }}>
+            <div className="grow" style={{ minWidth: 0 }}>
+              <div className="bold small">{m.name}</div>
+              <div className="tiny muted meal-items">{m.items.join(' + ')}</div>
+            </div>
+            {onSwap && (
+              <button className="btn btn-xs btn-ghost" onClick={() => onSwap(m.key)} aria-label={trf('بدّل {meal}', { meal: m.label })}>
+                <Shuffle size={13} /> {tr('بدّل')}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {day.gap > 0 && <div className="tiny gold">{trf('باقي لك ~{n} سعرة: أضف سناك (تمر وحليب، زبادي، أو حفنة مكسرات) عشان ما تنزل تحت الحد الآمن.', { n: day.gap })}</div>}
+      <div className="tiny muted num">
+        {trf('المجموع: ~{kcal} سعرة · {p} جم بروتين (هدفك {target})', { kcal: day.kcal.toLocaleString('en'), p: day.protein, target: day.target.toLocaleString('en') })}
+      </div>
+    </div>
   );
 }
 
@@ -219,6 +444,9 @@ export function PlanGoalCard({ g, tasks, open, onToggle, delay }) {
   const [draft, setDraft] = useState(g.plan.weekly);
   const [openPhase, setOpenPhase] = useState(now ? now.phaseIndex : 0);
   const [openWeek, setOpenWeek] = useState(now ? now.week : 1);
+  const [editPlan, setEditPlan] = useState(false);
+  const n = g.plan.nutrition;
+  const mealDate = T < g.plan.startDate ? g.plan.startDate : T;
 
   function applyWeekly() {
     const n = replanGoal(g.id, { weekly: draft.map((d) => ({ ...d, focus: d.rest ? tr('إجازة') : d.focus.trim() || tr('جلسة'), key: d.key || 'do' })) });
@@ -269,16 +497,43 @@ export function PlanGoalCard({ g, tasks, open, onToggle, delay }) {
                 <Clock size={13} /> <span className="num">{clock12(g.plan.time)}</span>
               </span>
             )}
+            {g.plan.intensity && (
+              <span className="meta-item">
+                <Gauge size={13} /> {trf('شدة {level}', { level: tr(intensityOf(g.plan.intensity).label) })}
+              </span>
+            )}
+            {n?.calories && (
+              <span className="meta-item">
+                <Utensils size={13} /> <span className="num">{n.calories.toLocaleString('en')}</span> {tr('سعرة باليوم')}
+              </span>
+            )}
           </div>
         </div>
       </div>
       {!open && (
-        <button className="btn btn-sm btn-ghost mt" onClick={onToggle}>
-          {tr('عرض الخطة بالتفصيل')}
-        </button>
+        <div className="row wrap mt" style={{ gap: 8 }}>
+          <button className="btn btn-sm btn-ghost" onClick={onToggle}>
+            {tr('عرض الخطة بالتفصيل')}
+          </button>
+          <button className="btn btn-sm" onClick={() => setEditPlan(true)}>
+            <Pencil size={14} /> {tr('تعديل الخطة')}
+          </button>
+        </div>
       )}
+      {editPlan && <GoalPlanModal goal={g} onClose={() => setEditPlan(false)} />}
       {open && (
         <div className="mt">
+          {n?.calories && mealDate <= g.plan.endDate && (
+            <div className="meals-box mb">
+              <div className="row between wrap" style={{ gap: 6, marginBottom: 10 }}>
+                <div className="bold row" style={{ gap: 6 }}>
+                  <Utensils size={16} /> {mealDate === T ? tr('وجبات اليوم') : trf('وجبات {date}', { date: formatShort(mealDate) })}
+                </div>
+                <span className="tiny muted">{tr('بسيطة ورخيصة — اضغط «بدّل» إذا ما تبغاها')}</span>
+              </div>
+              <MealDay plan={g.plan} date={mealDate} onSwap={(slot) => useStore.getState().swapMeal(g.id, mealDate, slot)} />
+            </div>
+          )}
           <div className="dash" style={{ marginTop: 6 }}>
             <div className="span-4">
               <div className="row between mb">
@@ -388,7 +643,10 @@ export function PlanGoalCard({ g, tasks, open, onToggle, delay }) {
               </div>
             </div>
           </div>
-          <div className="row mt" style={{ justifyContent: 'flex-end' }}>
+          <div className="row mt" style={{ justifyContent: 'flex-end', gap: 8 }}>
+            <button className="btn btn-sm" onClick={() => setEditPlan(true)}>
+              <Pencil size={14} /> {tr('تعديل الخطة')}
+            </button>
             <button
               className="btn btn-sm btn-danger"
               onClick={() => confirm({ title: tr('حذف الهدف'), body: trf('سيتم حذف "{title}" وكل مهامه ({n} مهمة). تقدر تتراجع مباشرة بعد الحذف.', { title: g.title, n: gt.length }), danger: true, confirmLabel: tr('حذف الهدف ومهامه'), onConfirm: () => deleteGoal(g.id) })}
@@ -398,6 +656,31 @@ export function PlanGoalCard({ g, tasks, open, onToggle, delay }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// بطاقة الرئيسية: وجبات اليوم من خطة اللياقة الفعّالة
+export function MealsToday({ span = 'span-12' }) {
+  const goals = useStore((s) => s.goals);
+  const swapMeal = useStore((s) => s.swapMeal);
+  const T = todayKey();
+  const g = goals.find((x) => x.plan?.nutrition?.calories && T >= x.plan.startDate && T <= x.plan.endDate);
+  if (!g) return null;
+  return (
+    <div className={`card ${span} meals-card`}>
+      <div className="row between wrap" style={{ gap: 8, marginBottom: 12 }}>
+        <span className="card-title" style={{ margin: 0 }}>
+          <span className="ico">
+            <Utensils size={17} />
+          </span>
+          {tr('وجبات اليوم')}
+        </span>
+        <span className="small muted">
+          <span className="num">{g.plan.nutrition.calories.toLocaleString('en')}</span> {tr('سعرة')} · {g.title}
+        </span>
+      </div>
+      <MealDay plan={g.plan} date={T} onSwap={(slot) => swapMeal(g.id, T, slot)} compact />
     </div>
   );
 }

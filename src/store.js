@@ -506,15 +506,29 @@ export const useStore = create((set, get) => ({
     return g;
   },
   // تعديل الجدول الأسبوعي/الوقت: يُطبَّق على كل الأيام القادمة (المهام المنجزة والمضافة يدويًا تبقى كما هي)
-  replanGoal(goalId, { weekly, time }) {
+  // plan كاملة = تعديل الخطة (الشدة/الوزن/الوجبات/المدة) مع الحفاظ على تاريخ البداية
+  replanGoal(goalId, { weekly, time, plan: full }) {
     const g = get().goals.find((x) => x.id === goalId);
     if (!g?.plan) return 0;
     const T = todayKey();
-    const plan = { ...g.plan, weekly, time: time ?? g.plan.time, restDays: weekly.filter((d) => d.rest).map((d) => d.dow) };
+    const plan = full ? { ...full, mealPick: g.plan.mealPick } : { ...g.plan, weekly, time: time ?? g.plan.time, restDays: weekly.filter((d) => d.rest).map((d) => d.dow) };
     const keep = (t) => !(t.goalId === goalId && t.source === 'plan' && !t.done && t.date >= T);
     const created = planSessions(plan, g.title, T).map((p) => makeTask({ ...p, goalId, area: g.area, icon: g.icon, priority: 'med', source: 'plan', repeat: { type: 'none', days: [] } }));
-    set((s) => ({ goals: s.goals.map((x) => (x.id === goalId ? { ...x, plan, lastActivity: Date.now() } : x)), tasks: [...s.tasks.filter(keep), ...created] }));
+    set((s) => ({ goals: s.goals.map((x) => (x.id === goalId ? { ...x, plan, deadline: plan.endDate, lastActivity: Date.now() } : x)), tasks: [...s.tasks.filter(keep), ...created] }));
     return created.length;
+  },
+  // تبديل وجبة اليوم بخيار آخر
+  swapMeal(goalId, date, slot) {
+    set((s) => ({
+      goals: s.goals.map((g) => {
+        if (g.id !== goalId || !g.plan) return g;
+        const day = { ...(g.plan.mealPick?.[date] || {}) };
+        day[slot] = (day[slot] || 0) + 1;
+        // نحتفظ بآخر 14 يومًا فقط من التبديلات
+        const keep = Object.fromEntries(Object.entries({ ...(g.plan.mealPick || {}), [date]: day }).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 14));
+        return { ...g, plan: { ...g.plan, mealPick: keep } };
+      }),
+    }));
   },
   updateGoal: (id, patch) => set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, ...patch, lastActivity: Date.now() } : g)) })),
   // حذف الهدف يحذف كل مهامه (مع إمكانية التراجع)
