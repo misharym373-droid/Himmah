@@ -287,7 +287,24 @@ export function FocusStartModal({ taskId }) {
   // المهمة اختيارية: «تركيز حر» بدون ربط بمهمة
   const [pick, setPick] = useState(taskId || '');
   const task = tasks.find((t) => t.id === pick);
-  const open = useMemo(() => tasks.filter((t) => !t.done && !t.deletedAt && !t.template && t.date === todayKey()).slice(0, 30), [tasks]);
+  // المهام المفتوحة: المتأخرة + اليوم + الأسبوع القادم (مثلاً تذاكر لاختبار بعد يومين)
+  const groups = useMemo(() => {
+    const T = todayKey();
+    const end = addDays(T, 7);
+    const list = tasks
+      .filter((t) => !t.done && !t.deletedAt && !t.template && t.date <= end && t.date >= addDays(T, -7))
+      .sort((a, b) => (a.date === b.date ? (toMin(a.time) ?? 9999) - (toMin(b.time) ?? 9999) : a.date < b.date ? -1 : 1));
+    const out = [];
+    for (const t of list) {
+      const key = t.date < T ? 'late' : t.date;
+      let g = out.find((x) => x.key === key);
+      if (!g) out.push((g = { key, label: key === 'late' ? tr('متأخرة') : `${relativeDay(t.date)} · ${formatShort(t.date)}`, items: [] }));
+      if (g.items.length < (key === 'late' ? 10 : 25)) g.items.push(t);
+    }
+    // اليوم والأيام القادمة أولًا، والمتأخرة آخر القائمة
+    return [...out.filter((g) => g.key !== 'late'), ...out.filter((g) => g.key === 'late')];
+  }, [tasks]);
+  const open = useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const [custom, setCustom] = useState(task?.duration || 25);
   const cfg = useSceneSettings();
   const media = useCustomMedia();
@@ -300,12 +317,18 @@ export function FocusStartModal({ taskId }) {
         <select className="select" value={pick} onChange={(e) => setPick(e.target.value)}>
           <option value="">{tr('تركيز حر (بدون مهمة)')}</option>
           {task && !open.includes(task) && <option value={task.id}>{task.title}</option>}
-          {open.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.title}
-            </option>
+          {groups.map((g) => (
+            <optgroup key={g.key} label={g.label}>
+              {g.items.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                  {t.time ? ` — ${clock12(t.time)}` : ''}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
+        {task && task.date !== todayKey() && <span className="tiny muted">{trf('مهمة {day} — التركيز يُحسب لها من الآن', { day: relativeDay(task.date) })}</span>}
       </label>
       <div className="focus-presets mt">
         {presets.map((m) => (
