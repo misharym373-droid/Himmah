@@ -1182,3 +1182,21 @@ div.scene-media.vertical iframe { width: 100vw; height: 177.78vw; min-width: 56.
   .focus-top { flex-wrap: nowrap; }
   .focus-top .ft-label { display: none; }
 }
+/* وضع الضغط على المقطع: النصوص ما تحجب الضغط عن الفيديو */
+.focus-mode.yt-tap > .badge, .focus-mode.yt-tap h2, .focus-mode.yt-tap .timer, .focus-mode.yt-tap > div:not(.row):not(.col):not(.focus-top):not(.scene-media):not(.scene-picker) { pointer-events: none; }
+.focus-mode.yt-tap .bar { pointer-events: none; }
+/* الجوال فقط (طولي أو بالعرض) — اللابتوب والآيباد ما يتغيرون */
+@media (max-height: 520px) and (orientation: landscape) {
+  .focus-mode { gap: 10px; padding: 12px 24px; }
+  .focus-mode .timer { font-size: clamp(2.6rem, 17vh, 4.4rem); }
+  .focus-mode h2 { font-size: 1.15rem !important; }
+  .focus-mode .muted.small { display: none; }
+  .focus-mode > .badge:not(.yt-hint) { display: none; }
+  .focus-mode .btn-lg { height: 42px; padding: 0 16px; font-size: 0.9rem; }
+  .focus-top { top: calc(10px + env(safe-area-inset-top)); inset-inline: max(12px, env(safe-area-inset-left)); flex-wrap: nowrap; }
+  .focus-top .ft-label { display: none; }
+  .focus-mode > .yt-hint { top: calc(56px + env(safe-area-inset-top)); }
+}
+@media (max-width: 560px) {
+  .focus-mode .timer { font-size: clamp(3.6rem, 19vw, 5rem); }
+}

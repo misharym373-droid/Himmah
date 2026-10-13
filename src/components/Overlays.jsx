@@ -96,8 +96,10 @@ export function FocusMode() {
   const media = useCustomMedia();
   const [picker, setPicker] = useState(false);
   // صوت مقطع يوتيوب: إذا منعه المتصفح نعرض زر، وإذا ما نفع نخلي المستخدم يضغط على المقطع نفسه
-  const [ytMuted, setYtMuted] = useState(false);
+  // ytNeed: 'play' (المقطع ما اشتغل — يصير في الجوال) | 'sound' (مكتوم) | null
+  const [ytNeed, setYtNeed] = useState(null);
   const [ytTap, setYtTap] = useState(false);
+  const ytMuted = ytNeed === 'sound';
   const [fs, setFs] = useState(() => !!document.fullscreenElement);
   const canFs = !!document.documentElement.requestFullscreen;
   useEffect(() => {
@@ -110,8 +112,10 @@ export function FocusMode() {
     if ((!focus || focus.minimized) && document.fullscreenElement) document.exitFullscreen().catch((e) => console.warn('[himmah:focus]', e?.message || e));
   }, [!!focus, focus?.minimized]); // eslint-disable-line
   useEffect(() => {
-    if (!ytMuted) setYtTap(false);
-  }, [ytMuted]);
+    // المقطع ما اشتغل: نخلي المستخدم يضغط عليه مباشرة؛ وإذا اشتغل وصوته شغال نرجع للوضع العادي
+    if (ytNeed === 'play') setYtTap(true);
+    else if (!ytNeed) setYtTap(false);
+  }, [ytNeed]);
   function toggleFs() {
     const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen({ navigationUI: 'hide' });
     p?.catch?.((e) => console.warn('[himmah:focus]', e?.message || e));
@@ -167,7 +171,7 @@ export function FocusMode() {
 
   return (
     <div className={`focus-mode ${ytTap ? 'yt-tap' : ''}`} role="dialog" aria-modal="true" aria-label={tr('وضع التركيز')}>
-      <SceneBackground cfg={cfg} customBg={media.bg} onYtMuted={setYtMuted} />
+      <SceneBackground cfg={cfg} customBg={media.bg} onYtNeed={setYtNeed} />
       <div className={`focus-scrim ${cfg.custom ? 'light' : ''}`} aria-hidden />
       {!cfg.custom && cfg.scene === 'minimal' && <div className="breath" />}
       <div className="focus-top">
@@ -196,7 +200,7 @@ export function FocusMode() {
           <Palette /> <span className="ft-label">{tr('الأجواء')}</span>
         </button>
       </div>
-      {ytMuted && ytTap && <span className="badge yt-hint">{tr('اضغط على المقطع مرة لتشغيل الصوت')}</span>}
+      {ytNeed && ytTap && <span className="badge yt-hint">{ytNeed === 'play' ? tr('اضغط على المقطع لتشغيله') : tr('اضغط على المقطع مرة لتشغيل الصوت')}</span>}
       {picker && <ScenePicker cfg={cfg} media={media} onClose={() => setPicker(false)} />}
       <div className="badge purple" style={{ fontSize: '.85rem', padding: '4px 14px' }}>
         {finished ? (

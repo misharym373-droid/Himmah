@@ -331,31 +331,56 @@ export function ytUnmute(volume = 0.5) {
 }
 export const ytVolume = (v) => ytPost('setVolume', [Math.round(v * 100)]);
 
-function YouTubeBg({ id, vertical, wantSound, volume, onMuted }) {
+function YouTubeBg({ id, vertical, wantSound, volume, onNeed }) {
   const ref = useRef(null);
+  const box = useRef(null);
+  const [size, setSize] = useState(null);
+  // مقاس "cover" بالبكسل حسب حجم الشاشة الفعلي (وحدات vh/vw غير دقيقة في الجوال بالعرض)
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ratio = vertical ? 9 / 16 : 16 / 9;
+    const fit = () => {
+      const cw = el.clientWidth;
+      const ch = el.clientHeight;
+      let w = cw;
+      let h = w / ratio;
+      if (h < ch) (h = ch), (w = h * ratio);
+      setSize({ w: Math.ceil(w) + 2, h: Math.ceil(h) + 2 });
+    };
+    fit();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
+    ro?.observe(el);
+    window.addEventListener('orientationchange', fit);
+    return () => (ro?.disconnect(), window.removeEventListener('orientationchange', fit));
+  }, [vertical]);
   useEffect(() => {
     ytFrame = ref.current;
     let muted = true;
+    let playing = false;
+    let heard = false; // المشغل رد علينا بحالته
+    const report = () => onNeed?.(heard && !playing ? 'play' : wantSound && muted ? 'sound' : null);
     const onMsg = (e) => {
       if (!/youtube/.test(e.origin || '') || e.source !== ref.current?.contentWindow) return;
       try {
         const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        if (d?.info && typeof d.info.muted === 'boolean') {
-          muted = d.info.muted;
-          onMuted?.(wantSound && muted);
-        }
+        if (!d?.info) return;
+        heard = true;
+        if (typeof d.info.muted === 'boolean') muted = d.info.muted;
+        if (typeof d.info.playerState === 'number') playing = d.info.playerState === 1 || d.info.playerState === 3;
+        if (playing || typeof d.info.muted === 'boolean') report();
       } catch (err) {
         console.warn('[himmah:yt]', err?.message || err);
       }
     };
     window.addEventListener('message', onMsg);
-    // نتأكد بعد ثانيتين: إذا لسا مكتوم والمستخدم يبغى الصوت نعرض زر التشغيل
-    const t = setTimeout(() => wantSound && muted && onMuted?.(true), 2500);
+    // بعد 3 ثوانٍ: إذا المقطع ما اشتغل (يصير في الجوال) أو لسا مكتوم نطلب ضغطة من المستخدم
+    const t = setTimeout(report, 3000);
     return () => {
       window.removeEventListener('message', onMsg);
       clearTimeout(t);
       if (ytFrame === ref.current) ytFrame = null;
-      onMuted?.(false);
+      onNeed?.(null);
     };
   }, [id, wantSound]); // eslint-disable-line
   useEffect(() => {
@@ -364,16 +389,18 @@ function YouTubeBg({ id, vertical, wantSound, volume, onMuted }) {
   function onLoad() {
     // نطلب من المشغل يرسل حالته (مكتوم/يعمل) ثم نفك الكتم
     ref.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening', id: 'masar', channel: 'widget' }), '*');
+    ytPost('playVideo');
     if (wantSound) setTimeout(() => ytUnmute(volume), 400);
     else ytPost('mute');
   }
   const origin = encodeURIComponent(window.location.origin);
   return (
-    <div className={`scene-media ${vertical ? 'vertical' : ''}`} aria-hidden>
+    <div ref={box} className={`scene-media ${vertical ? 'vertical' : ''}`} aria-hidden>
       <iframe
         ref={ref}
         title="background"
         onLoad={onLoad}
+        style={size ? { width: size.w, height: size.h, minWidth: 0, minHeight: 0 } : undefined}
         src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=${origin}`}
         allow="autoplay; encrypted-media; fullscreen"
       />
@@ -381,9 +408,9 @@ function YouTubeBg({ id, vertical, wantSound, volume, onMuted }) {
   );
 }
 
-export function SceneBackground({ cfg, customBg, onYtMuted }) {
+export function SceneBackground({ cfg, customBg, onYtNeed }) {
   const yt = cfg.custom === 'link' ? youtubeId(cfg.link) : null;
-  if (cfg.custom === 'link' && yt) return <YouTubeBg id={yt} vertical={/\/shorts\//.test(cfg.link)} wantSound={cfg.sound === 'video'} volume={cfg.volume} onMuted={onYtMuted} />;
+  if (cfg.custom === 'link' && yt) return <YouTubeBg id={yt} vertical={/\/shorts\//.test(cfg.link)} wantSound={cfg.sound === 'video'} volume={cfg.volume} onNeed={onYtNeed} />;
   if (cfg.custom === 'link' && isDirectVideo(cfg.link)) return <video className="scene-media" src={cfg.link} autoPlay loop playsInline muted={cfg.sound !== 'video'} aria-hidden />;
   if (cfg.custom === 'file' && customBg) {
     return customBg.type?.startsWith('video/') ? <video className="scene-media" src={customBg.url} autoPlay loop playsInline muted={cfg.sound !== 'video'} aria-hidden /> : <img className="scene-media" src={customBg.url} alt="" aria-hidden />;

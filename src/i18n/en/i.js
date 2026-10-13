@@ -83,4 +83,5 @@ export default {
   'تشغيل صوت المقطع': 'Play video sound',
   'اضغط على المقطع مرة لتشغيل الصوت': 'Tap the video once to turn on the sound',
   'مهمة {day} — التركيز يُحسب لها من الآن': 'Task for {day} — focus time counts toward it from now',
+  'اضغط على المقطع لتشغيله': 'Tap the video to play it',
 };
