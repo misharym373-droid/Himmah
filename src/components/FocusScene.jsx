@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CloudRain, CloudLightning, Trees, Waves, Moon, Flame, Circle, Upload, Link2, Volume2, VolumeX, X, Music, Film } from 'lucide-react';
 import { useStore } from '../store.js';
 import { tr } from '../i18n/index.js';
-import { playAmbient, stopAmbient, setAmbientVolume, audioBlocked } from '../lib/ambient.js';
+import { playAmbient, stopAmbient, setAmbientVolume, audioBlocked, unlockAudio } from '../lib/ambient.js';
 import { saveMedia, loadMedia, removeMedia } from '../lib/mediaStore.js';
 
 export const SCENES = [
@@ -320,20 +320,70 @@ function SceneCanvas({ scene }) {
 }
 
 // ————— الخلفية حسب الاختيار —————
-export function SceneBackground({ cfg, customBg }) {
-  const yt = cfg.custom === 'link' ? youtubeId(cfg.link) : null;
-  if (cfg.custom === 'link' && yt) {
-    const mute = cfg.sound === 'video' ? 0 : 1;
-    return (
-      <div className="scene-media" aria-hidden>
-        <iframe
-          title="background"
-          src={`https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&mute=${mute}&loop=1&playlist=${yt}&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3`}
-          allow="autoplay; encrypted-media"
-        />
-      </div>
-    );
+// يوتيوب: يبدأ مكتومًا (حتى يشتغل تلقائيًا في كل المتصفحات) ثم نفك الكتم عبر واجهة يوتيوب
+// إذا اخترت «صوت الفيديو». لو المتصفح منع الصوت يظهر زر «تشغيل صوت المقطع».
+let ytFrame = null;
+const ytPost = (func, args = []) => ytFrame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+export function ytUnmute(volume = 0.5) {
+  ytPost('unMute');
+  ytPost('setVolume', [Math.round(volume * 100)]);
+  ytPost('playVideo');
+}
+export const ytVolume = (v) => ytPost('setVolume', [Math.round(v * 100)]);
+
+function YouTubeBg({ id, vertical, wantSound, volume, onMuted }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    ytFrame = ref.current;
+    let muted = true;
+    const onMsg = (e) => {
+      if (!/youtube/.test(e.origin || '') || e.source !== ref.current?.contentWindow) return;
+      try {
+        const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        if (d?.info && typeof d.info.muted === 'boolean') {
+          muted = d.info.muted;
+          onMuted?.(wantSound && muted);
+        }
+      } catch (err) {
+        console.warn('[himmah:yt]', err?.message || err);
+      }
+    };
+    window.addEventListener('message', onMsg);
+    // نتأكد بعد ثانيتين: إذا لسا مكتوم والمستخدم يبغى الصوت نعرض زر التشغيل
+    const t = setTimeout(() => wantSound && muted && onMuted?.(true), 2500);
+    return () => {
+      window.removeEventListener('message', onMsg);
+      clearTimeout(t);
+      if (ytFrame === ref.current) ytFrame = null;
+      onMuted?.(false);
+    };
+  }, [id, wantSound]); // eslint-disable-line
+  useEffect(() => {
+    if (wantSound) ytVolume(volume);
+  }, [volume, wantSound]);
+  function onLoad() {
+    // نطلب من المشغل يرسل حالته (مكتوم/يعمل) ثم نفك الكتم
+    ref.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening', id: 'masar', channel: 'widget' }), '*');
+    if (wantSound) setTimeout(() => ytUnmute(volume), 400);
+    else ytPost('mute');
   }
+  const origin = encodeURIComponent(window.location.origin);
+  return (
+    <div className={`scene-media ${vertical ? 'vertical' : ''}`} aria-hidden>
+      <iframe
+        ref={ref}
+        title="background"
+        onLoad={onLoad}
+        src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=${origin}`}
+        allow="autoplay; encrypted-media; fullscreen"
+      />
+    </div>
+  );
+}
+
+export function SceneBackground({ cfg, customBg, onYtMuted }) {
+  const yt = cfg.custom === 'link' ? youtubeId(cfg.link) : null;
+  if (cfg.custom === 'link' && yt) return <YouTubeBg id={yt} vertical={/\/shorts\//.test(cfg.link)} wantSound={cfg.sound === 'video'} volume={cfg.volume} onMuted={onYtMuted} />;
   if (cfg.custom === 'link' && isDirectVideo(cfg.link)) return <video className="scene-media" src={cfg.link} autoPlay loop playsInline muted={cfg.sound !== 'video'} aria-hidden />;
   if (cfg.custom === 'file' && customBg) {
     return customBg.type?.startsWith('video/') ? <video className="scene-media" src={customBg.url} autoPlay loop playsInline muted={cfg.sound !== 'video'} aria-hidden /> : <img className="scene-media" src={customBg.url} alt="" aria-hidden />;
@@ -353,7 +403,7 @@ export function useAmbient(active, cfg, customAudio) {
     return () => ((off = true), stopAmbient());
   }, [active, kind, fileUrl]); // eslint-disable-line
   useEffect(() => setAmbientVolume(cfg.volume), [cfg.volume]);
-  const unblock = () => playAmbient(cfg.sound === 'file' ? 'file' : kind, { volume: cfg.volume, fileUrl }).then((ok) => setBlocked(!ok || audioBlocked()));
+  const unblock = () => (unlockAudio(), playAmbient(cfg.sound === 'file' ? 'file' : kind, { volume: cfg.volume, fileUrl }).then((ok) => setBlocked(!ok || audioBlocked())));
   return { blocked, unblock };
 }
 
@@ -405,7 +455,7 @@ export function ScenePicker({ cfg, media, onClose, compact }) {
   function applyLink() {
     const v = link.trim();
     if (!youtubeId(v) && !isDirectVideo(v)) return toast(tr('الصق رابط يوتيوب أو رابط فيديو مباشر (mp4)'));
-    saveScene({ custom: 'link', link: v });
+    saveScene({ custom: 'link', link: v, sound: 'video' });
   }
   const hasVideo = (cfg.custom === 'link' && (youtubeId(cfg.link) || isDirectVideo(cfg.link))) || (cfg.custom === 'file' && media.bg?.type?.startsWith('video/'));
   return (

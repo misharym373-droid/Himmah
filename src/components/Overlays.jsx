@@ -1,6 +1,6 @@
 // الطبقات العائمة: التنبيهات المنبثقة، الاحتفالات، وضع التركيز، قائمة الأوامر، الإشعارات، المساعد
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Palette, Volume2, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
+import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Palette, Volume2, Maximize, Minimize, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
 import { Glyph, IconTile } from './Glyph.jsx';
 import { useStore } from '../store.js';
 import { navigate } from '../router.js';
@@ -12,7 +12,7 @@ import { formatClock, timeAgo, relativeDay, clock12 } from '../lib/date.js';
 import { chat, say } from '../lib/assistant.js';
 import { PERSONAS } from '../config.js';
 import { tr, trf, isEn } from '../i18n/index.js';
-import { SceneBackground, ScenePicker, useSceneSettings, useAmbient, useCustomMedia } from './FocusScene.jsx';
+import { SceneBackground, ScenePicker, useSceneSettings, useAmbient, useCustomMedia, ytUnmute } from './FocusScene.jsx';
 
 const TOAST_ICONS = { check: Check, trash: Trash2, clock: Clock, sparkles: Sparkles };
 
@@ -95,6 +95,32 @@ export function FocusMode() {
   const cfg = useSceneSettings();
   const media = useCustomMedia();
   const [picker, setPicker] = useState(false);
+  // صوت مقطع يوتيوب: إذا منعه المتصفح نعرض زر، وإذا ما نفع نخلي المستخدم يضغط على المقطع نفسه
+  const [ytMuted, setYtMuted] = useState(false);
+  const [ytTap, setYtTap] = useState(false);
+  const [fs, setFs] = useState(() => !!document.fullscreenElement);
+  const canFs = !!document.documentElement.requestFullscreen;
+  useEffect(() => {
+    const on = () => setFs(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', on);
+    return () => document.removeEventListener('fullscreenchange', on);
+  }, []);
+  // الخروج من ملء الشاشة عند إنهاء الجلسة أو تصغيرها
+  useEffect(() => {
+    if ((!focus || focus.minimized) && document.fullscreenElement) document.exitFullscreen().catch((e) => console.warn('[himmah:focus]', e?.message || e));
+  }, [!!focus, focus?.minimized]); // eslint-disable-line
+  useEffect(() => {
+    if (!ytMuted) setYtTap(false);
+  }, [ytMuted]);
+  function toggleFs() {
+    const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    p?.catch?.((e) => console.warn('[himmah:focus]', e?.message || e));
+  }
+  function playYtSound() {
+    ytUnmute(cfg.volume);
+    // آيفون غالبًا يحتاج ضغطة على المقطع نفسه
+    setTimeout(() => setYtTap(true), 1200);
+  }
   // الصوت يستمر حتى لو صغّرت الجلسة، ويتوقف عند الإيقاف المؤقت أو الانتهاء
   const ambient = useAmbient(!!focus && focus.running && !focus.finished, cfg, media.audio);
   // Esc يصغّر وضع التركيز ويرجعك للموقع (الجلسة تستمر)
@@ -140,14 +166,14 @@ export function FocusMode() {
     );
 
   return (
-    <div className="focus-mode" role="dialog" aria-modal="true" aria-label={tr('وضع التركيز')}>
-      <SceneBackground cfg={cfg} customBg={media.bg} />
-      <div className="focus-scrim" aria-hidden />
+    <div className={`focus-mode ${ytTap ? 'yt-tap' : ''}`} role="dialog" aria-modal="true" aria-label={tr('وضع التركيز')}>
+      <SceneBackground cfg={cfg} customBg={media.bg} onYtMuted={setYtMuted} />
+      <div className={`focus-scrim ${cfg.custom ? 'light' : ''}`} aria-hidden />
       {!cfg.custom && cfg.scene === 'minimal' && <div className="breath" />}
       <div className="focus-top">
         {!finished && (
-          <button className="btn btn-sm btn-glass" onClick={() => minimizeFocus(true)} title="Esc">
-            <Minimize2 /> {tr('تصغير والرجوع للموقع')}
+          <button className="btn btn-sm btn-glass" onClick={() => minimizeFocus(true)} title="Esc" aria-label={tr('تصغير والرجوع للموقع')}>
+            <Minimize2 /> <span className="ft-label">{tr('تصغير والرجوع للموقع')}</span>
           </button>
         )}
         <span className="grow" />
@@ -156,10 +182,21 @@ export function FocusMode() {
             <Volume2 /> {tr('تشغيل الصوت')}
           </button>
         )}
-        <button className="btn btn-sm btn-glass" onClick={() => setPicker(!picker)} aria-expanded={picker}>
-          <Palette /> {tr('الأجواء')}
+        {ytMuted && !ytTap && (
+          <button className="btn btn-sm btn-glass" onClick={playYtSound}>
+            <Volume2 /> {tr('تشغيل صوت المقطع')}
+          </button>
+        )}
+        {canFs && (
+          <button className="btn btn-sm btn-glass" onClick={toggleFs} aria-label={fs ? tr('خروج من ملء الشاشة') : tr('ملء الشاشة')} title={fs ? tr('خروج من ملء الشاشة') : tr('ملء الشاشة')}>
+            {fs ? <Minimize /> : <Maximize />}
+          </button>
+        )}
+        <button className="btn btn-sm btn-glass" onClick={() => setPicker(!picker)} aria-expanded={picker} aria-label={tr('الأجواء')}>
+          <Palette /> <span className="ft-label">{tr('الأجواء')}</span>
         </button>
       </div>
+      {ytMuted && ytTap && <span className="badge yt-hint">{tr('اضغط على المقطع مرة لتشغيل الصوت')}</span>}
       {picker && <ScenePicker cfg={cfg} media={media} onClose={() => setPicker(false)} />}
       <div className="badge purple" style={{ fontSize: '.85rem', padding: '4px 14px' }}>
         {finished ? (

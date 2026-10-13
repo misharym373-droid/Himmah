@@ -237,5 +237,55 @@ export function setAmbientVolume(v) {
   if (fileAudio) fileAudio.volume = Math.min(1, v);
 }
 
+// فتح الصوت داخل ضغطة المستخدم نفسها (شرط في متصفحات الجوال، خصوصًا آيفون)
+// + ملف صامت يعمل بالخلفية حتى لا يكتم زر الوضع الصامت في الآيفون أصوات Web Audio
+let silent = null;
+function silentUrl() {
+  const rate = 8000;
+  const n = rate / 2;
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  str(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+export function unlockAudio() {
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+  } catch (e) {
+    console.warn('[himmah:ambient]', e?.message || e);
+  }
+  const c = ac();
+  if (c) {
+    if (c.state !== 'running') c.resume().catch((e) => console.warn('[himmah:ambient]', e?.message || e));
+    // مصدر صامت قصير: يفتح الصوت في متصفحات iOS القديمة
+    try {
+      const b = c.createBuffer(1, 1, 22050);
+      const src = c.createBufferSource();
+      src.buffer = b;
+      src.connect(c.destination);
+      src.start(0);
+    } catch (e) {
+      console.warn('[himmah:ambient]', e?.message || e);
+    }
+  }
+  try {
+    if (!silent) {
+      silent = new Audio(silentUrl());
+      silent.loop = true;
+      silent.setAttribute('playsinline', '');
+    }
+    silent.play().catch((e) => console.warn('[himmah:ambient]', e?.message || e));
+  } catch (e) {
+    console.warn('[himmah:ambient]', e?.message || e);
+  }
+}
+export function releaseAudio() {
+  if (silent) silent.pause();
+}
+
 // هل الصوت محجوب حتى يضغط المستخدم (سياسة المتصفح بعد تحديث الصفحة)؟
 export const audioBlocked = () => !!ctx && ctx.state === 'suspended';

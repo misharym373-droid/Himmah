@@ -1170,3 +1170,15 @@ div.scene-media iframe { position: absolute; top: 50%; left: 50%; width: 177.78v
 @media (max-width: 760px) {
   .int-grid, .body-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* يوتيوب في التركيز: مقاطع Shorts العمودية تغطي الشاشة، ووضع "اضغط على المقطع" لتشغيل الصوت في الجوال */
+div.scene-media.vertical iframe { width: 100vw; height: 177.78vw; min-width: 56.25vh; min-height: 100vh; }
+.focus-mode.yt-tap div.scene-media, .focus-mode.yt-tap div.scene-media iframe { pointer-events: auto; }
+.focus-scrim.light { background: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.35)); }
+.focus-top { flex-wrap: wrap; }
+.yt-hint { background: rgba(0, 0, 0, 0.55); color: #fff; padding: 6px 12px; animation: popIn 0.2s var(--ease) backwards; }
+.focus-mode > .yt-hint { position: absolute; top: calc(70px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 3; white-space: nowrap; }
+@media (max-width: 560px) {
+  .focus-top { flex-wrap: nowrap; }
+  .focus-top .ft-label { display: none; }
+}

@@ -6,6 +6,7 @@ import { todayKey, addDays, fromKey, toMin, fromMin, nowMin, roundUp5, uid } fro
 import { levelInfo, taskXp, ACHIEVEMENTS, dayProgress } from './lib/game.js';
 import { emptyData, demoData, makeTask, WIDGETS, DEFAULT_SETTINGS } from './lib/seed.js';
 import { playSound, vibrate } from './lib/fx.js';
+import { unlockAudio, releaseAudio } from './lib/ambient.js';
 import { remapIds } from './lib/migrate.js';
 import { planSessions } from './lib/goalPlan.js';
 import { prayerDayId } from './lib/prayer.js';
@@ -383,6 +384,7 @@ export const useStore = create((set, get) => ({
 
   // ————— التركيز —————
   startFocus(taskId, minutes) {
+    unlockAudio(); // لازم داخل ضغطة المستخدم حتى يشتغل الصوت في الجوال
     const t = get().tasks.find((x) => x.id === taskId);
     const total = Math.round((minutes || t?.duration || 25) * 60);
     const session = get().focus?.taskId === taskId ? (get().focus.session || 1) + 1 : 1;
@@ -410,6 +412,7 @@ export const useStore = create((set, get) => ({
   resumeFocus() {
     const f = get().focus;
     if (!f || f.running) return;
+    unlockAudio();
     set({ focus: { ...f, running: true, endAt: Date.now() + f.remainingSec * 1000 } });
   },
   minimizeFocus: (v = true) => set((s) => (s.focus ? { focus: { ...s.focus, minimized: v } } : {})),
@@ -418,6 +421,7 @@ export const useStore = create((set, get) => ({
     if (!f) return;
     const remaining = f.running ? Math.max(0, (f.endAt - Date.now()) / 1000) : f.remainingSec;
     const minutes = Math.round((f.totalSec - remaining) / 60);
+    releaseAudio();
     set((s) => ({ focus: null, focusLog: minutes > 0 && !f.logged ? [...s.focusLog, { id: uid(), date: todayKey(), minutes, taskId: f.taskId }] : s.focusLog }));
     if (complete && f.taskId) get().completeTask(f.taskId);
     get().checkAchievements();

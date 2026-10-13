@@ -77,4 +77,9 @@ export default {
   'مكسرات': 'Nuts',
   'بيض مسلوق': 'Boiled eggs',
   'باقي لك ~{n} سعرة: أضف سناك (تمر وحليب، زبادي، أو حفنة مكسرات) عشان ما تنزل تحت الحد الآمن.': "You still have ~{n} kcal: add a snack (dates and milk, yogurt, or a handful of nuts) so you don't drop below the safe limit.",
+  // التركيز: يوتيوب وملء الشاشة
+  'ملء الشاشة': 'Full screen',
+  'خروج من ملء الشاشة': 'Exit full screen',
+  'تشغيل صوت المقطع': 'Play video sound',
+  'اضغط على المقطع مرة لتشغيل الصوت': 'Tap the video once to turn on the sound',
 };
