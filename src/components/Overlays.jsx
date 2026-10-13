@@ -1,6 +1,6 @@
 // الطبقات العائمة: التنبيهات المنبثقة، الاحتفالات، وضع التركيز، قائمة الأوامر، الإشعارات، المساعد
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Palette, Volume2, Maximize, Minimize, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
+import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Palette, Volume2, Maximize, Minimize, Coffee, SkipForward, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
 import { Glyph, IconTile } from './Glyph.jsx';
 import { useStore } from '../store.js';
 import { navigate } from '../router.js';
@@ -148,15 +148,20 @@ export function FocusMode() {
   const remaining = finished ? 0 : focus.running ? Math.max(0, (focus.endAt - Date.now()) / 1000) : focus.remainingSec;
   const pct = 100 - (remaining / focus.totalSec) * 100;
   const minutes = Math.round(focus.totalSec / 60);
+  const segs = focus.segs || [{ type: 'focus', min: minutes }];
+  const segIdx = focus.seg || 0;
+  const onBreak = !finished && segs[segIdx]?.type === 'break';
+  const nextSeg = segs[segIdx + 1];
+  const focusTotal = segs.filter((x) => x.type === 'focus').reduce((a, x) => a + x.min, 0);
   const completeTask = () => endFocus(true);
-  const another = () => startFocus(focus.taskId, minutes);
+  const another = () => startFocus(focus.taskId, focus.planMin || minutes);
 
   if (focus.minimized && !finished)
     return (
       <div className="focus-mini" role="status" aria-label={tr('جلسة تركيز جارية')}>
         <span className="pulse-dot" />
         <div className="grow" style={{ minWidth: 0 }}>
-          <div className="tiny muted">{tr('تركيز')}</div>
+          <div className="tiny muted">{onBreak ? tr('استراحة') : tr('تركيز')}</div>
           <div className="bold ellipsis small">{task?.title || tr('جلسة تركيز')}</div>
         </div>
         <span className="xbold num" style={{ fontSize: '1.2rem' }}>{formatClock(remaining)}</span>
@@ -170,7 +175,7 @@ export function FocusMode() {
     );
 
   return (
-    <div className={`focus-mode ${ytTap ? 'yt-tap' : ''}`} role="dialog" aria-modal="true" aria-label={tr('وضع التركيز')}>
+    <div className={`focus-mode ${ytTap ? 'yt-tap' : ''} ${onBreak ? 'on-break' : ''}`} role="dialog" aria-modal="true" aria-label={tr('وضع التركيز')}>
       <SceneBackground cfg={cfg} customBg={media.bg} onYtNeed={setYtNeed} />
       <div className={`focus-scrim ${cfg.custom ? 'light' : ''}`} aria-hidden />
       {!cfg.custom && cfg.scene === 'minimal' && <div className="breath" />}
@@ -207,6 +212,10 @@ export function FocusMode() {
           <>
             <CircleCheck size={14} /> {tr('انتهت الجلسة')}
           </>
+        ) : onBreak ? (
+          <>
+            <Coffee size={14} /> {tr('استراحة')}
+          </>
         ) : focus.running ? (
           <>
             <span className="pulse-dot" /> {tr('جلسة تركيز')} {focus.session > 1 ? <span className="num">#{focus.session}</span> : ''}
@@ -217,15 +226,44 @@ export function FocusMode() {
       </div>
       <div>
         <h2 style={{ fontSize: 'clamp(1.4rem,4vw,2.1rem)', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-          {task && <Glyph name={task.icon} size={26} />} {task?.title || tr('جلسة تركيز')}
+          {onBreak ? (
+            <>
+              <Coffee size={26} /> {tr('استراحة')}
+            </>
+          ) : (
+            <>
+              {task && <Glyph name={task.icon} size={26} />} {task?.title || tr('جلسة تركيز')}
+            </>
+          )}
         </h2>
-        <div className="muted small mt-s">{finished ? trf('سجلنا {n} دقيقة تركيز', { n: minutes }) : trf('جلسة {n} دقيقة', { n: minutes })}</div>
+        <div className="muted small mt-s">
+          {finished
+            ? trf('سجلنا {n} دقيقة تركيز', { n: focusTotal })
+            : onBreak
+              ? nextSeg
+                ? trf('قم وتحرك واشرب ماء — بعدها {n} دقيقة تركيز', { n: nextSeg.min })
+                : tr('قم وتحرك واشرب ماء — آخر الجلسة')
+              : segs.length > 1
+                ? nextSeg
+                  ? trf('تركيز {n} دقيقة — بعدها راحة {r} دقائق', { n: minutes, r: nextSeg.min })
+                  : trf('تركيز {n} دقيقة — آخر جزء', { n: minutes })
+                : trf('جلسة {n} دقيقة', { n: minutes })}
+        </div>
       </div>
       <div className="timer" aria-live="off">{formatClock(remaining)}</div>
       <div style={{ width: 'min(420px, 80vw)' }}>
-        <div className="bar thick green">
+        <div className={`bar thick ${onBreak ? 'blue' : 'green'}`}>
           <i style={{ width: `${pct}%`, transition: 'width .3s linear' }} />
         </div>
+        {segs.length > 1 && (
+          <div className="seg-track" aria-label={tr('أجزاء الجلسة')}>
+            {segs.map((x, i) => (
+              <span key={i} className={`seg ${x.type} ${i < segIdx || finished ? 'done' : i === segIdx ? 'now' : ''}`} style={{ flexGrow: x.min }} title={`${x.type === 'break' ? tr('راحة') : tr('تركيز')} ${x.min}`}>
+                {x.type === 'break' ? <Coffee size={11} /> : <span className="num">{x.min}</span>}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       {task?.subtasks?.length > 0 && !finished && (
         <div className="col" style={{ minWidth: 'min(360px, 85vw)', textAlign: 'start' }}>
@@ -256,6 +294,11 @@ export function FocusMode() {
           </>
         ) : (
           <>
+            {onBreak && (
+              <button className="btn btn-lg btn-glass" onClick={() => useStore.getState().skipBreak()}>
+                <SkipForward /> {nextSeg ? tr('تخطي الراحة') : tr('إنهاء الراحة')}
+              </button>
+            )}
             <button className="btn btn-lg btn-glass" onClick={() => (focus.running ? pauseFocus() : resumeFocus())}>
               {focus.running ? (
                 <>

@@ -1,7 +1,7 @@
 // النوافذ التفاعلية: الصوت، الصورة، التركيز، إعادة التخطيط، أنقذ يومي، عندي ساعة، وش أسوي الآن، التجربة التفاعلية
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Square, Check, X, ImagePlus, Camera, Loader2, Sparkles, Play, CalendarPlus, Trash2, ArrowLeft, Undo2, Keyboard, Calendar, Clock, Timer, Repeat, MicOff, RotateCcw, Pencil, Zap, Sun, CalendarArrowUp, CalendarDays, BatteryLow, BatteryMedium, BatteryFull, Siren, Hourglass } from 'lucide-react';
-import { useStore } from '../store.js';
+import { Mic, Square, Check, X, ImagePlus, Camera, Loader2, Sparkles, Play, CalendarPlus, Trash2, ArrowLeft, Undo2, Keyboard, Calendar, Clock, Timer, Repeat, MicOff, RotateCcw, Pencil, Zap, Sun, CalendarArrowUp, CalendarDays, BatteryLow, BatteryMedium, BatteryFull, Siren, Hourglass, Coffee } from 'lucide-react';
+import { useStore, focusBreaks, splitFocus } from '../store.js';
 import { useAssistantState } from '../hooks.js';
 import { Modal, CheckBox, Switch } from './ui.jsx';
 import { Glyph } from './Glyph.jsx';
@@ -310,6 +310,11 @@ export function FocusStartModal({ taskId }) {
   const media = useCustomMedia();
   const presets = [15, 25, 45];
   const go = (m) => startFocus(pick || null, m);
+  // الراحة (اختيارية): تقسيم الجلسة إلى تركيز + راحة بالتناوب
+  const settings = useStore((s) => s.settings);
+  const br = focusBreaks(settings);
+  const setBr = (p) => useStore.getState().setSetting('focusBreaks', { ...br, ...p });
+  const previewSegs = br.on ? splitFocus(Math.max(1, +custom || 25), br.work, br.rest) : null;
   return (
     <Modal title={tr('ابدأ جلسة تركيز')} sub={task ? task.title : tr('تركيز حر — بدون ربط بمهمة')} onClose={close} size="wide">
       <label className="field">
@@ -347,6 +352,49 @@ export function FocusStartModal({ taskId }) {
           </button>
         </div>
       </label>
+      <div className="break-box mt">
+        <div className="set-row" style={{ padding: 0, borderBottom: 0 }}>
+          <div className="grow">
+            <div className="t row" style={{ gap: 6 }}>
+              <Coffee size={16} /> {tr('استراحة بين التركيز')}
+            </div>
+            <div className="d">{tr('تقسم الجلسة: تركيز ثم راحة بالتناوب (اختياري)')}</div>
+          </div>
+          <Switch on={br.on} onChange={(v) => setBr({ on: v })} label={tr('استراحة بين التركيز')} />
+        </div>
+        {br.on && (
+          <div className="col mt-s" style={{ gap: 10 }}>
+            <div className="chips">
+              {[[25, 5], [50, 10], [90, 15]].map(([w, r]) => (
+                <button key={w} className={`chip ${br.work === w && br.rest === r ? 'on' : ''}`} onClick={() => setBr({ work: w, rest: r })}>
+                  <span className="num">{w}</span> {tr('تركيز')} / <span className="num">{r}</span> {tr('راحة')}
+                </button>
+              ))}
+            </div>
+            <div className="row" style={{ gap: 10 }}>
+              <label className="field grow">
+                <span>{tr('التركيز (دقيقة)')}</span>
+                <input className="input num" type="number" min="5" max="180" value={br.work} onChange={(e) => setBr({ work: Math.max(1, +e.target.value || 0) })} />
+              </label>
+              <label className="field grow">
+                <span>{tr('الراحة (دقيقة)')}</span>
+                <input className="input num" type="number" min="1" max="60" value={br.rest} onChange={(e) => setBr({ rest: Math.max(1, +e.target.value || 0) })} />
+              </label>
+            </div>
+            {previewSegs && (
+              <div className="tiny muted">
+                {trf('{n} دقيقة =', { n: Math.max(1, +custom || 25) })}{' '}
+                {previewSegs.map((x, i) => (
+                  <span key={i} className={x.type === 'break' ? 'blue' : 'green'}>
+                    {i > 0 && ' · '}
+                    {x.type === 'break' ? trf('{n} راحة', { n: x.min }) : trf('{n} تركيز', { n: x.min })}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       {task?.duration && !presets.includes(task.duration) && (
         <button className="btn btn-ghost btn-sm mt" onClick={() => go(task.duration)}>
           <Timer /> {trf('مدة المهمة كاملة ({d})', { d: formatDuration(task.duration) })}

@@ -1200,3 +1200,13 @@ div.scene-media.vertical iframe { width: 100vw; height: 177.78vw; min-width: 56.
 @media (max-width: 560px) {
   .focus-mode .timer { font-size: clamp(3.6rem, 19vw, 5rem); }
 }
+
+/* الراحة في التركيز */
+.break-box { padding: 12px 14px; border-radius: 16px; border: 1px solid var(--border-2); }
+.seg-track { display: flex; gap: 4px; margin-top: 10px; }
+.seg-track .seg { display: grid; place-items: center; height: 20px; border-radius: 6px; font-size: 0.68rem; color: rgba(255, 255, 255, 0.75); background: rgba(255, 255, 255, 0.12); min-width: 22px; }
+.seg-track .seg.break { background: rgba(47, 124, 246, 0.22); }
+.seg-track .seg.done { background: rgba(48, 164, 108, 0.55); color: #fff; }
+.seg-track .seg.break.done { background: rgba(47, 124, 246, 0.55); }
+.seg-track .seg.now { outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: 1px; color: #fff; }
+.focus-mode.on-break .timer { color: #cfe3ff; }

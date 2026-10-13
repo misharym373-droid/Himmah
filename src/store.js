@@ -383,26 +383,49 @@ export const useStore = create((set, get) => ({
   },
 
   // ————— التركيز —————
+  // الجلسة تتقسم (اختياريًا) إلى تركيز + راحة: 120 د بنظام 50/10 = 50 تركيز · 10 راحة · 50 تركيز · 10 راحة
   startFocus(taskId, minutes) {
     unlockAudio(); // لازم داخل ضغطة المستخدم حتى يشتغل الصوت في الجوال
     const t = get().tasks.find((x) => x.id === taskId);
-    const total = Math.round((minutes || t?.duration || 25) * 60);
+    const planMin = Math.max(1, Math.round(minutes || t?.duration || 25));
+    const br = focusBreaks(get().settings);
+    const segs = br.on ? splitFocus(planMin, br.work, br.rest) : [{ type: 'focus', min: planMin }];
+    const total = segs[0].min * 60;
     const session = get().focus?.taskId === taskId ? (get().focus.session || 1) + 1 : 1;
-    set({ modal: null, focus: { taskId, totalSec: total, remainingSec: total, endAt: Date.now() + total * 1000, running: true, minimized: false, startedAt: Date.now(), session, finished: false, logged: false } });
+    set({ modal: null, focus: { taskId, planMin, segs, seg: 0, totalSec: total, remainingSec: total, endAt: Date.now() + total * 1000, running: true, minimized: false, startedAt: Date.now(), session, finished: false, logged: false } });
   },
   // اختيار مدة الجلسة قبل البدء (15 / 25 / 45 / تخصيص)
   pickFocus: (taskId) => set({ modal: { name: 'focusStart', payload: { taskId } } }),
   // انتهاء المؤقت: تسجيل الوقت + إشعار + عرض خيارات (إكمال المهمة / جلسة أخرى)
+  // انتهاء جزء: ننتقل للجزء التالي (راحة/تركيز) أو تنتهي الجلسة
   finishFocus() {
     const f = get().focus;
     if (!f || f.finished) return;
+    const segs = f.segs || [{ type: 'focus', min: Math.round(f.totalSec / 60) }];
+    const idx = f.seg || 0;
+    const cur = segs[idx];
     const minutes = Math.round(f.totalSec / 60);
-    const t = get().tasks.find((x) => x.id === f.taskId);
-    set((s) => ({ focus: { ...f, running: false, remainingSec: 0, finished: true, logged: true, minimized: false }, focusLog: [...s.focusLog, { id: uid(), date: todayKey(), minutes, taskId: f.taskId }] }));
+    const log = cur?.type === 'break' || f.logged ? [] : [{ id: uid(), date: todayKey(), minutes, taskId: f.taskId }];
     if (get().settings.sounds) playSound('timer');
     if (get().settings.vibration) vibrate([60, 60, 60]);
-    get().notify('focus', 'timer', tr('انتهت جلسة التركيز'), t ? trf('{n} دقيقة تركيز على "{title}"', { n: minutes, title: t.title }) : trf('{n} دقيقة تركيز', { n: minutes }), { force: true });
+    const next = segs[idx + 1];
+    if (next) {
+      const sec = next.min * 60;
+      set((s) => ({ focus: { ...f, seg: idx + 1, totalSec: sec, remainingSec: sec, endAt: Date.now() + sec * 1000, running: true, logged: false }, focusLog: [...s.focusLog, ...log] }));
+      if (next.type === 'break') get().notify('focus', 'timer', tr('وقت الراحة'), trf('استرح {n} دقائق — قم وتحرك واشرب ماء', { n: next.min }), { force: true });
+      else get().notify('focus', 'timer', tr('رجعنا للتركيز'), trf('{n} دقيقة تركيز', { n: next.min }), { force: true });
+      return;
+    }
+    const t = get().tasks.find((x) => x.id === f.taskId);
+    const focusMin = segs.filter((x) => x.type === 'focus').reduce((a, x) => a + x.min, 0);
+    set((s) => ({ focus: { ...f, running: false, remainingSec: 0, finished: true, logged: true, minimized: false }, focusLog: [...s.focusLog, ...log] }));
+    get().notify('focus', 'timer', tr('انتهت جلسة التركيز'), t ? trf('{n} دقيقة تركيز على "{title}"', { n: focusMin, title: t.title }) : trf('{n} دقيقة تركيز', { n: focusMin }), { force: true });
     get().checkAchievements();
+  },
+  // تخطي الراحة والرجوع للتركيز مباشرة
+  skipBreak() {
+    const f = get().focus;
+    if (f?.segs?.[f.seg || 0]?.type === 'break' && !f.finished) get().finishFocus();
   },
   pauseFocus() {
     const f = get().focus;
@@ -420,7 +443,8 @@ export const useStore = create((set, get) => ({
     const f = get().focus;
     if (!f) return;
     const remaining = f.running ? Math.max(0, (f.endAt - Date.now()) / 1000) : f.remainingSec;
-    const minutes = Math.round((f.totalSec - remaining) / 60);
+    // وقت الراحة ما يُحسب تركيز
+    const minutes = f.segs?.[f.seg || 0]?.type === 'break' ? 0 : Math.round((f.totalSec - remaining) / 60);
     releaseAudio();
     set((s) => ({ focus: null, focusLog: minutes > 0 && !f.logged ? [...s.focusLog, { id: uid(), date: todayKey(), minutes, taskId: f.taskId }] : s.focusLog }));
     if (complete && f.taskId) get().completeTask(f.taskId);
@@ -742,6 +766,27 @@ function weekendOffset() {
   return toThu === 0 ? 7 : Math.max(2, toThu);
 }
 const ADHKAR_XP = 3;
+
+// إعدادات الراحة في التركيز (اختيارية)
+export const focusBreaks = (settings) => ({ on: false, work: 50, rest: 10, ...(settings?.focusBreaks || {}) });
+// تقسيم المدة: تركيز ثم راحة بالتناوب حتى تنتهي المدة
+export function splitFocus(total, work, rest) {
+  work = Math.max(5, Math.round(work) || 50);
+  rest = Math.max(1, Math.round(rest) || 10);
+  if (total <= work) return [{ type: 'focus', min: total }];
+  const out = [];
+  let left = total;
+  while (left > 0) {
+    const f = Math.min(work, left);
+    out.push({ type: 'focus', min: f });
+    left -= f;
+    if (left <= 0) break;
+    const r = Math.min(rest, left);
+    out.push({ type: 'break', min: r });
+    left -= r;
+  }
+  return out;
+}
 
 export function repeatMatches(tpl, date) {
   const r = tpl.repeat || {};

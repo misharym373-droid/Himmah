@@ -346,7 +346,10 @@ function YouTubeBg({ id, vertical, wantSound, volume, onNeed }) {
       let w = cw;
       let h = w / ratio;
       if (h < ch) (h = ch), (w = h * ratio);
-      setSize({ w: Math.ceil(w) + 2, h: Math.ceil(h) + 2 });
+      w = Math.ceil(w) + 2;
+      h = Math.ceil(h) + 2;
+      // موضع صريح بالبكسل (بدون transform) — أثبت في متصفحات الجوال
+      setSize({ w, h, x: Math.round((cw - w) / 2), y: Math.round((ch - h) / 2) });
     };
     fit();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
@@ -400,7 +403,7 @@ function YouTubeBg({ id, vertical, wantSound, volume, onNeed }) {
         ref={ref}
         title="background"
         onLoad={onLoad}
-        style={size ? { width: size.w, height: size.h, minWidth: 0, minHeight: 0 } : undefined}
+        style={size ? { width: size.w, height: size.h, minWidth: 0, minHeight: 0, left: size.x, top: size.y, right: 'auto', transform: 'none' } : undefined}
         src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=${origin}`}
         allow="autoplay; encrypted-media; fullscreen"
       />
