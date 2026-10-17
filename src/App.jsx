@@ -30,7 +30,8 @@ const Shared = lazy(() => import('./pages/Shared.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Prayer = lazy(() => import('./pages/Prayer.jsx'));
-const PAGES = { tasks: Tasks, schedule: Schedule, goals: Goals, habits: Habits, stats: Stats, achievements: Achievements, rewards: Rewards, shared: Shared, profile: Profile, settings: Settings, prayer: Prayer };
+const Books = lazy(() => import('./pages/Books.jsx'));
+const PAGES = { tasks: Tasks, schedule: Schedule, goals: Goals, habits: Habits, stats: Stats, achievements: Achievements, rewards: Rewards, shared: Shared, profile: Profile, settings: Settings, prayer: Prayer, books: Books };
 
 const DEMO_USER = { id: 'demo', name: 'مشاري', email: 'demo@himmah.app', demo: true };
 const toUser = (u) => ({ id: u.id, email: u.email, name: u.user_metadata?.name || '', phone: u.user_metadata?.phone || '' });

@@ -193,6 +193,39 @@ create table if not exists public.prayer_log (
   unique (user_id, date)
 );
 
+-- ————— مكتبتي: الكتب + الفوائد والاقتباسات —————
+create table if not exists public.books (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title        text not null check (char_length(title) between 1 and 200),
+  author       text not null default '' check (char_length(author) <= 120),
+  pages        integer not null default 200 check (pages between 1 and 20000),
+  current_page integer not null default 0 check (current_page >= 0),
+  status       text not null default 'want' check (status in ('want', 'reading', 'done')),
+  cover        text check (cover is null or char_length(cover) <= 200000),
+  color        text not null default '',
+  daily_pages  integer check (daily_pages is null or daily_pages between 1 and 2000),
+  target_date  date,
+  started_at   date,
+  finished_at  date,
+  rating       smallint check (rating is null or rating between 1 and 5),
+  review       text not null default '' check (char_length(review) <= 4000),
+  log          jsonb not null default '[]',
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create table if not exists public.book_notes (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  book_id    uuid not null references public.books (id) on delete cascade,
+  kind       text not null default 'note' check (kind in ('note', 'quote')),
+  text       text not null default '' check (char_length(text) <= 4000),
+  page       integer check (page is null or page >= 0),
+  image      text check (image is null or char_length(image) <= 400000),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- ————— الفهارس —————
 create index if not exists tasks_user_date_idx on public.tasks (user_id, date);
 create index if not exists tasks_user_template_idx on public.tasks (user_id) where is_template;
@@ -204,13 +237,16 @@ create index if not exists challenges_user_idx on public.challenges (user_id);
 create index if not exists rewards_user_idx on public.rewards (user_id);
 create index if not exists projects_user_idx on public.projects (user_id);
 create index if not exists focus_user_date_idx on public.focus_sessions (user_id, date);
+create index if not exists books_user_idx on public.books (user_id);
+create index if not exists book_notes_user_idx on public.book_notes (user_id);
+create index if not exists book_notes_book_idx on public.book_notes (book_id);
 create index if not exists focus_task_idx on public.focus_sessions (task_id) where task_id is not null;
 
 -- ————— updated_at triggers —————
 do $$
 declare t text;
 begin
-  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'prayer_log']
+  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'prayer_log', 'books', 'book_notes']
   loop
     execute format('drop trigger if exists set_updated_at on public.%I', t);
     execute format('create trigger set_updated_at before update on public.%I for each row execute function public.set_updated_at()', t);
@@ -221,7 +257,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions', 'prayer_log']
+  foreach t in array array['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions', 'prayer_log', 'books', 'book_notes']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "own_select" on public.%I', t);

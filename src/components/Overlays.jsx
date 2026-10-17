@@ -1,6 +1,6 @@
 // الطبقات العائمة: التنبيهات المنبثقة، الاحتفالات، وضع التركيز، قائمة الأوامر، الإشعارات، المساعد
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Palette, Volume2, Maximize, Minimize, Coffee, SkipForward, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
+import { Check, Trash2, Clock, Sparkles, Pause, Play, Square, Minimize2, Maximize2, CircleCheck, Search, Bell, Send, Bot, CheckCheck, X, Plus, Mic, ImagePlus, Siren, Hourglass, Keyboard, Undo2, RotateCw, Timer, TriangleAlert, Palette, Volume2, Maximize, Minimize, Coffee, SkipForward, BookOpen, Flame, Target, Trophy, Sunset, Info } from 'lucide-react';
 import { Glyph, IconTile } from './Glyph.jsx';
 import { useStore } from '../store.js';
 import { navigate } from '../router.js';
@@ -12,6 +12,7 @@ import { formatClock, timeAgo, relativeDay, clock12 } from '../lib/date.js';
 import { chat, say } from '../lib/assistant.js';
 import { PERSONAS } from '../config.js';
 import { tr, trf, isEn } from '../i18n/index.js';
+import { BookLogModal, FinishBookModal } from './BookModals.jsx';
 import { SceneBackground, ScenePicker, useSceneSettings, useAmbient, useCustomMedia, ytUnmute } from './FocusScene.jsx';
 
 const TOAST_ICONS = { check: Check, trash: Trash2, clock: Clock, sparkles: Sparkles };
@@ -90,6 +91,7 @@ export function FxLayer() {
 export function FocusMode() {
   const focus = useStore((s) => s.focus);
   const task = useStore((s) => (s.focus ? s.tasks.find((t) => t.id === s.focus.taskId) : null));
+  const book = useStore((s) => (s.focus?.bookId ? s.books.find((b) => b.id === s.focus.bookId) : null));
   const { pauseFocus, resumeFocus, endFocus, minimizeFocus, openModal, finishFocus, startFocus } = useStore.getState();
   const [, force] = useState(0);
   const cfg = useSceneSettings();
@@ -154,7 +156,15 @@ export function FocusMode() {
   const nextSeg = segs[segIdx + 1];
   const focusTotal = segs.filter((x) => x.type === 'focus').reduce((a, x) => a + x.min, 0);
   const completeTask = () => endFocus(true);
-  const another = () => startFocus(focus.taskId, focus.planMin || minutes);
+  const another = () => startFocus(focus.taskId, focus.planMin || minutes, { bookId: focus.bookId });
+  // جلسة قراءة: بعد الإنهاء نسأل "وصلت صفحة كم؟"
+  const endAndLogPage = () => {
+    // دقائق القراءة = أجزاء التركيز المكتملة + الجزء الحالي (الراحة ما تنحسب)
+    const before = segs.slice(0, segIdx).filter((x) => x.type === 'focus').reduce((a, x) => a + x.min, 0);
+    const total = finished ? focusTotal : before + (onBreak ? 0 : Math.round((focus.totalSec - remaining) / 60));
+    endFocus(false);
+    openModal('bookLog', { bookId: book.id, minutes: total });
+  };
 
   if (focus.minimized && !finished)
     return (
@@ -232,7 +242,7 @@ export function FocusMode() {
             </>
           ) : (
             <>
-              {task && <Glyph name={task.icon} size={26} />} {task?.title || tr('جلسة تركيز')}
+              {book ? <BookOpen size={26} /> : task && <Glyph name={task.icon} size={26} />} {book ? book.title : task?.title || tr('جلسة تركيز')}
             </>
           )}
         </h2>
@@ -280,6 +290,11 @@ export function FocusMode() {
       <div className="row wrap" style={{ justifyContent: 'center', position: 'relative', zIndex: 1 }}>
         {finished ? (
           <>
+            {book && (
+              <button className="btn btn-lg btn-green" onClick={endAndLogPage}>
+                <BookOpen /> {tr('سجّل الصفحة اللي وصلتها')}
+              </button>
+            )}
             {task && !task.done && (
               <button className="btn btn-lg btn-green" onClick={completeTask}>
                 <CircleCheck /> {tr('إكمال المهمة')}
@@ -318,6 +333,7 @@ export function FocusMode() {
             <button
               className="btn btn-lg btn-glass"
               onClick={() => {
+                if (book) return endAndLogPage();
                 const m = endFocus(false);
                 useStore.getState().toast(m ? trf('سجلنا {n} دقيقة تركيز', { n: m }) : tr('أُنهيت الجلسة'), { icon: 'clock' });
               }}
@@ -656,7 +672,9 @@ export function ModalRoot() {
       {modal?.name === 'whatNow' && <WhatNowModal />}
       {modal?.name === 'interactive' && <InteractiveModal />}
       {modal?.name === 'shortcuts' && <ShortcutsModal />}
-      {modal?.name === 'focusStart' && <FocusStartModal taskId={modal.payload.taskId} />}
+      {modal?.name === 'focusStart' && <FocusStartModal taskId={modal.payload.taskId} bookId={modal.payload.bookId} />}
+      {modal?.name === 'bookLog' && <BookLogModal bookId={modal.payload.bookId} minutes={modal.payload.minutes} />}
+      {modal?.name === 'bookFinish' && <FinishBookModal bookId={modal.payload.bookId} />}
       {modal?.name === 'confirm' && <ConfirmModal {...modal.payload} />}
       {modal?.name === 'custom' && modal.payload.render()}
     </>

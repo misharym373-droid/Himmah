@@ -14,7 +14,7 @@ import { tr, trf, isEn } from './i18n/index.js';
 
 const PERSIST_KEYS = [
   'version', 'onboarded', 'user', 'profile', 'settings', 'dashboard', 'tasks', 'goals', 'habits', 'challenges', 'rewards',
-  'rewardHistory', 'achievements', 'notifications', 'projects', 'focusLog', 'prayers', 'energy', 'streak', 'flags', 'dismissedInsights',
+  'rewardHistory', 'achievements', 'notifications', 'projects', 'focusLog', 'prayers', 'books', 'bookNotes', 'energy', 'streak', 'flags', 'dismissedInsights',
 ];
 
 // وضع الحفظ: 'remote' = حساب Supabase (المصدر الأساسي قاعدة البيانات)، 'local' = التجربة بدون حساب
@@ -36,6 +36,8 @@ function normalize(data) {
   data.dashboard = { hidden: dash.hidden || [], order: [...dash.order.filter((i) => ids.includes(i)), ...ids.filter((i) => !dash.order.includes(i))] };
   data.focusLog = (data.focusLog || []).map((f) => (f.id ? f : { ...f, id: uid() }));
   data.prayers = Array.isArray(data.prayers) ? data.prayers : [];
+  data.books = Array.isArray(data.books) ? data.books : [];
+  data.bookNotes = Array.isArray(data.bookNotes) ? data.bookNotes : [];
   data.settings.prayer = { ...DEFAULT_SETTINGS.prayer, ...(data.settings.prayer || {}) };
   return data;
 }
@@ -384,7 +386,7 @@ export const useStore = create((set, get) => ({
 
   // ————— التركيز —————
   // الجلسة تتقسم (اختياريًا) إلى تركيز + راحة: 120 د بنظام 50/10 = 50 تركيز · 10 راحة · 50 تركيز · 10 راحة
-  startFocus(taskId, minutes) {
+  startFocus(taskId, minutes, opts = {}) {
     unlockAudio(); // لازم داخل ضغطة المستخدم حتى يشتغل الصوت في الجوال
     const t = get().tasks.find((x) => x.id === taskId);
     const planMin = Math.max(1, Math.round(minutes || t?.duration || 25));
@@ -392,7 +394,8 @@ export const useStore = create((set, get) => ({
     const segs = br.on ? splitFocus(planMin, br.work, br.rest) : [{ type: 'focus', min: planMin }];
     const total = segs[0].min * 60;
     const session = get().focus?.taskId === taskId ? (get().focus.session || 1) + 1 : 1;
-    set({ modal: null, focus: { taskId, planMin, segs, seg: 0, totalSec: total, remainingSec: total, endAt: Date.now() + total * 1000, running: true, minimized: false, startedAt: Date.now(), session, finished: false, logged: false } });
+    const bookId = opts.bookId || null;
+    set({ modal: null, focus: { taskId, bookId, planMin, segs, seg: 0, totalSec: total, remainingSec: total, endAt: Date.now() + total * 1000, running: true, minimized: false, startedAt: Date.now(), session, finished: false, logged: false } });
   },
   // اختيار مدة الجلسة قبل البدء (15 / 25 / 45 / تخصيص)
   pickFocus: (taskId) => set({ modal: { name: 'focusStart', payload: { taskId } } }),
@@ -631,6 +634,55 @@ export const useStore = create((set, get) => ({
       if (s.settings.vibration) vibrate(15);
     }
   },
+
+  // ————— مكتبتي —————
+  addBook(b) {
+    const T = todayKey();
+    const book = { id: uid(), title: '', author: '', pages: 200, currentPage: 0, status: 'want', cover: null, color: '', daily: 20, targetDate: null, startedAt: null, finishedAt: null, rating: null, review: '', log: [], createdAt: Date.now(), ...b };
+    if (book.status === 'reading' && !book.startedAt) book.startedAt = T;
+    set((s) => ({ books: [...s.books, book] }));
+    return book;
+  },
+  updateBook: (id, patch) => set((s) => ({ books: s.books.map((b) => (b.id === id ? { ...b, ...patch } : b)) })),
+  deleteBook(id) {
+    const b = get().books.find((x) => x.id === id);
+    const notes = get().bookNotes.filter((n) => n.bookId === id);
+    set((s) => ({ books: s.books.filter((x) => x.id !== id), bookNotes: s.bookNotes.filter((n) => n.bookId !== id) }));
+    if (b) get().toast(trf('تم حذف "{title}"', { title: b.title }), { action: { label: tr('تراجع'), run: () => set((s) => ({ books: [...s.books, b], bookNotes: [...s.bookNotes, ...notes] })) } });
+  },
+  // تسجيل قراءة: "وصلت صفحة X" (+ دقائق اختيارية). يرجع true إذا وصل آخر الكتاب
+  logReading(id, toPage, minutes = 0) {
+    const b = get().books.find((x) => x.id === id);
+    if (!b) return false;
+    const T = todayKey();
+    const to = Math.max(0, Math.min(b.pages, Math.round(+toPage || 0)));
+    const from = b.currentPage || 0;
+    const pages = Math.max(0, to - from);
+    const entry = pages > 0 || minutes > 0 ? [{ date: T, from: Math.min(from, to), to: Math.max(from, to), min: Math.max(0, Math.round(minutes || 0)) }] : [];
+    const xp = Math.min(60, Math.round(pages / 2));
+    set((s) => ({
+      books: s.books.map((x) => (x.id === id ? { ...x, currentPage: to, status: x.status === 'want' ? 'reading' : x.status, startedAt: x.startedAt || T, log: [...(x.log || []), ...entry] } : x)),
+      user: xp ? { totalXp: s.user.totalXp + xp, xp: s.user.xp + xp } : s.user,
+    }));
+    if (xp) get().pushFx({ type: 'xp', amount: xp });
+    return to >= b.pages && b.status !== 'done';
+  },
+  finishBook(id, { rating = null, review = '' } = {}) {
+    const b = get().books.find((x) => x.id === id);
+    if (!b) return;
+    const first = b.status !== 'done';
+    set((s) => ({
+      books: s.books.map((x) => (x.id === id ? { ...x, status: 'done', currentPage: x.pages, finishedAt: x.finishedAt || todayKey(), rating, review } : x)),
+      user: first ? { totalXp: s.user.totalXp + 100, xp: s.user.xp + 100 } : s.user,
+    }));
+    if (first) {
+      get().pushFx({ type: 'xp', amount: 100 });
+      if (get().settings.sounds) playSound('done');
+      get().notify('achievements', 'trophy', tr('خلّصت كتاب!'), trf('مبروك على إنهاء "{title}"', { title: b.title }), { force: true });
+    }
+  },
+  addBookNote: (n) => set((s) => ({ bookNotes: [...s.bookNotes, { id: uid(), kind: 'note', text: '', page: null, image: null, createdAt: Date.now(), ...n }] })),
+  deleteBookNote: (id) => set((s) => ({ bookNotes: s.bookNotes.filter((n) => n.id !== id) })),
 
   // ————— العادات —————
   addHabit: (h) => set((s) => ({ habits: [...s.habits, { id: uid(), log: {}, target: 1, unit: tr('مرة'), color: '#2E6B57', createdAt: Date.now(), ...h }] })),

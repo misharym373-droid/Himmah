@@ -140,6 +140,41 @@ export const prayerToRow = (p, user_id) => ({
 });
 export const rowToPrayer = (r) => ({ id: r.id, date: r.date, fajr: r.fajr, dhuhr: r.dhuhr, asr: r.asr, maghrib: r.maghrib, isha: r.isha, adhkar: r.adhkar || [] });
 
+// ————— مكتبتي —————
+const BSTATUS = ['want', 'reading', 'done'];
+const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
+const isImg = (v, max) => typeof v === 'string' && v.startsWith('data:image/') && v.length <= max;
+export const bookToRow = (b, user_id) => {
+  const pages = clamp(b.pages, 1, 20000, 200);
+  return {
+    id: b.id, user_id,
+    title: String(b.title || '').trim().slice(0, 200) || 'كتاب',
+    author: String(b.author || '').trim().slice(0, 120),
+    pages,
+    current_page: clamp(b.currentPage, 0, pages, 0),
+    status: BSTATUS.includes(b.status) ? b.status : 'want',
+    cover: isImg(b.cover, 200000) ? b.cover : null,
+    color: String(b.color || '').slice(0, 20),
+    daily_pages: numOrNull(b.daily, 1, 2000),
+    target_date: isDate(b.targetDate) ? b.targetDate : null,
+    started_at: isDate(b.startedAt) ? b.startedAt : null,
+    finished_at: isDate(b.finishedAt) ? b.finishedAt : null,
+    rating: numOrNull(b.rating, 1, 5),
+    review: String(b.review || '').slice(0, 4000),
+    log: (b.log || []).filter((l) => isDate(l.date)).slice(-400).map((l) => ({ date: l.date, from: clamp(l.from, 0, 20000, 0), to: clamp(l.to, 0, 20000, 0), min: clamp(l.min, 0, 1440, 0) })),
+    created_at: iso(b.createdAt) || undefined,
+  };
+};
+export const rowToBook = (r) => ({
+  id: r.id, title: r.title, author: r.author || '', pages: r.pages, currentPage: r.current_page || 0, status: r.status, cover: r.cover || null, color: r.color || '',
+  daily: r.daily_pages, targetDate: r.target_date, startedAt: r.started_at, finishedAt: r.finished_at, rating: r.rating, review: r.review || '', log: r.log || [], createdAt: ms(r.created_at),
+});
+export const bookNoteToRow = (n, user_id) => ({
+  id: n.id, user_id, book_id: n.bookId, kind: n.kind === 'quote' ? 'quote' : 'note', text: String(n.text || '').slice(0, 4000),
+  page: numOrNull(n.page, 0, 20000), image: isImg(n.image, 400000) ? n.image : null, created_at: iso(n.createdAt) || undefined,
+});
+export const rowToBookNote = (r) => ({ id: r.id, bookId: r.book_id, kind: r.kind, text: r.text || '', page: r.page, image: r.image || null, createdAt: ms(r.created_at) });
+
 // ————— المستندات الفردية (صف واحد لكل مستخدم) —————
 export const profileToRow = (p, user_id) => ({
   user_id,
@@ -204,6 +239,8 @@ export const COLLECTIONS = [
   { key: 'projects', table: 'projects', toRow: projectToRow, fromRow: rowToProject },
   { key: 'focusLog', table: 'focus_sessions', toRow: focusToRow, fromRow: rowToFocus },
   { key: 'prayers', table: 'prayer_log', toRow: prayerToRow, fromRow: rowToPrayer },
+  { key: 'books', table: 'books', toRow: bookToRow, fromRow: rowToBook },
+  { key: 'bookNotes', table: 'book_notes', toRow: bookNoteToRow, fromRow: rowToBookNote },
 ];
 // المستندات الفردية: أي تغيير في أحد مفاتيحها يرفع الصف كاملًا
 export const DOCS = [
@@ -211,4 +248,4 @@ export const DOCS = [
   { table: 'user_settings', keys: ['settings', 'dashboard', 'onboarded', 'energy', 'flags', 'notifications', 'dismissedInsights'], toRow: settingsToRow, fromRow: rowToSettings },
   { table: 'user_progress', keys: ['user', 'streak', 'achievements', 'rewardHistory'], toRow: progressToRow, fromRow: rowToProgress },
 ];
-export const TABLE_ORDER = ['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions', 'prayer_log'];
+export const TABLE_ORDER = ['profiles', 'user_settings', 'user_progress', 'goals', 'tasks', 'habits', 'challenges', 'rewards', 'projects', 'focus_sessions', 'prayer_log', 'books', 'book_notes'];

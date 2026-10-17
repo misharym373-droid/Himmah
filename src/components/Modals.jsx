@@ -280,13 +280,16 @@ export function CreatedModal({ ids }) {
 }
 
 // ————— بدء جلسة تركيز —————
-export function FocusStartModal({ taskId }) {
+export function FocusStartModal({ taskId, bookId }) {
   const close = useStore((s) => s.closeModal);
   const tasks = useStore((s) => s.tasks);
+  const books = useStore((s) => s.books);
   const startFocus = useStore((s) => s.startFocus);
-  // المهمة اختيارية: «تركيز حر» بدون ربط بمهمة
-  const [pick, setPick] = useState(taskId || '');
+  // المهمة اختيارية: «تركيز حر» بدون ربط بمهمة — أو قراءة كتاب من مكتبتي (book:ID)
+  const [pick, setPick] = useState(bookId ? 'book:' + bookId : taskId || '');
   const task = tasks.find((t) => t.id === pick);
+  const book = pick.startsWith('book:') ? books.find((b) => 'book:' + b.id === pick) : null;
+  const reading = books.filter((b) => b.status !== 'done' && (b.status === 'reading' || 'book:' + b.id === pick));
   // المهام المفتوحة: المتأخرة + اليوم + الأسبوع القادم (مثلاً تذاكر لاختبار بعد يومين)
   const groups = useMemo(() => {
     const T = todayKey();
@@ -309,18 +312,27 @@ export function FocusStartModal({ taskId }) {
   const cfg = useSceneSettings();
   const media = useCustomMedia();
   const presets = [15, 25, 45];
-  const go = (m) => startFocus(pick || null, m);
+  const go = (m) => (book ? startFocus(null, m, { bookId: book.id }) : startFocus(pick || null, m));
   // الراحة (اختيارية): تقسيم الجلسة إلى تركيز + راحة بالتناوب
   const settings = useStore((s) => s.settings);
   const br = focusBreaks(settings);
   const setBr = (p) => useStore.getState().setSetting('focusBreaks', { ...br, ...p });
   const previewSegs = br.on ? splitFocus(Math.max(1, +custom || 25), br.work, br.rest) : null;
   return (
-    <Modal title={tr('ابدأ جلسة تركيز')} sub={task ? task.title : tr('تركيز حر — بدون ربط بمهمة')} onClose={close} size="wide">
+    <Modal title={tr('ابدأ جلسة تركيز')} sub={book ? trf('قراءة «{title}»', { title: book.title }) : task ? task.title : tr('تركيز حر — بدون ربط بمهمة')} onClose={close} size="wide">
       <label className="field">
         <span>{tr('على ماذا ستركّز؟')}</span>
         <select className="select" value={pick} onChange={(e) => setPick(e.target.value)}>
           <option value="">{tr('تركيز حر (بدون مهمة)')}</option>
+          {reading.length > 0 && (
+            <optgroup label={tr('كتبي')}>
+              {reading.map((b) => (
+                <option key={b.id} value={'book:' + b.id}>
+                  {trf('قراءة «{title}» — صفحة {p}', { title: b.title, p: b.currentPage || 0 })}
+                </option>
+              ))}
+            </optgroup>
+          )}
           {task && !open.includes(task) && <option value={task.id}>{task.title}</option>}
           {groups.map((g) => (
             <optgroup key={g.key} label={g.label}>

@@ -89,6 +89,8 @@ export function emptyData(user) {
     projects: [],
     focusLog: [],
     prayers: [],
+    books: [],
+    bookNotes: [],
     energy: {},
     streak: { count: 0, best: 0, lastDate: null, days: {} },
     flags: {},

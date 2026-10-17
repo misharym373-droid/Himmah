@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
-import { Loader2, CloudOff, Moon, House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, X, Calendar, Clock, Timer, ImagePlus } from 'lucide-react';
+import { Loader2, CloudOff, Moon, House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, X, Calendar, Clock, Timer, ImagePlus, Library } from 'lucide-react';
 import { useStore } from '../store.js';
 import { navigate, useRoute } from '../router.js';
 import { Logo, Avatar } from './ui.jsx';
@@ -18,6 +18,7 @@ export const NAV = [
   { id: 'goals', label: 'الأهداف', icon: Target, primary: true },
   { id: 'profile', label: 'ملفي', icon: User, primary: true },
   { id: 'prayer', label: 'صلاتي', icon: Moon, desc: 'الصلوات الخمس وأوقاتها' },
+  { id: 'books', label: 'مكتبتي', icon: Library, desc: 'كتبك وتقدم القراءة' },
   { id: 'habits', label: 'العادات', icon: Repeat, desc: 'تابع عاداتك اليومية' },
   { id: 'stats', label: 'الإحصائيات', icon: ChartColumn, desc: 'إنتاجيتك بالأرقام' },
   { id: 'achievements', label: 'الإنجازات', icon: Trophy, desc: 'الإنجازات والتحديات' },

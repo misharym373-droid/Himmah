@@ -4,6 +4,7 @@ import { useStore } from '../store.js';
 import { useRoute } from '../router.js';
 import TaskItem from '../components/TaskItem.jsx';
 import HabitTasks from '../components/HabitTasks.jsx';
+import BookTasks from '../components/BookTasks.jsx';
 import { Empty, useConfirm } from '../components/ui.jsx';
 import { AREAS, PRIORITIES } from '../config.js';
 import { todayKey, addDays, toMin, relativeDay, timeAgo, dayShort, clock12, formatShort } from '../lib/date.js';
@@ -242,6 +243,7 @@ export default function Tasks() {
         </div>
       )}
 
+      {tab === 'today' && !q && !area && !prio && !selecting && <BookTasks className="mt" />}
       {tab === 'today' && !q && !area && !prio && !selecting && <HabitTasks className="mt" />}
     </>
   );
