@@ -737,7 +737,7 @@ html[data-theme='dark'] .toast { background: rgba(58, 63, 61, 0.92); }
 .pop-menu button svg { color: var(--muted); }
 .pop-menu button:hover svg, .pop-menu button:focus-visible svg { color: #fff; }
 @keyframes popIn { from { opacity: 0; transform: scale(0.95); } }
-.rail-pop { position: absolute; z-index: 60; inset-inline-start: calc(100% + 18px); bottom: -8px; width: 270px; padding: 6px; border-radius: 16px; background: var(--elev); border: 1px solid var(--border); box-shadow: var(--shadow-lg); animation: popIn 0.18s var(--ease) backwards; transform-origin: bottom right; }
+.rail-pop { position: absolute; z-index: 60; inset-inline-start: calc(100% + 18px); bottom: -8px; width: 270px; padding: 6px; border-radius: 16px; background: var(--elev); border: 1px solid var(--border); box-shadow: var(--shadow-lg); animation: popIn 0.18s var(--ease) backwards; transform-origin: top right; }
 html[data-theme='dark'] .pop-menu { background: rgba(36, 40, 38, 0.9); }
 .rail-pop button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 10px; color: var(--text); font-size: 0.9rem; text-align: start; }
 .rail-pop button svg { color: var(--primary-soft); flex-shrink: 0; }

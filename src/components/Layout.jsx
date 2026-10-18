@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Loader2, CloudOff, Moon, House, ListChecks, CalendarDays, Target, Repeat, ChartColumn, Trophy, Gift, Users, User, Settings, Mic, Bell, Search, Sparkles, Plus, Ellipsis, ArrowLeft, Wallet, ExternalLink, X, Calendar, Clock, Timer, ImagePlus, Library } from 'lucide-react';
 import { useStore } from '../store.js';
 import { navigate, useRoute } from '../router.js';
@@ -54,6 +54,25 @@ export function Rail() {
   const ref = useRef(null);
   useDismiss(more, setMore, ref);
   const inMore = SECONDARY.some((n) => n.id === name);
+  // القائمة تنفتح بجانب الزر وتتحرك لين تدخل كاملة في الشاشة (وتصير قابلة للتمرير إذا الشاشة قصيرة)
+  const popRef = useRef(null);
+  const [popStyle, setPopStyle] = useState(null);
+  useLayoutEffect(() => {
+    if (!more) return setPopStyle(null);
+    const place = () => {
+      const box = ref.current?.getBoundingClientRect();
+      const pop = popRef.current;
+      if (!box || !pop) return;
+      const vh = window.innerHeight;
+      const maxH = vh - 24;
+      const h = Math.min(pop.scrollHeight, maxH);
+      const top = Math.max(12, Math.min(box.top, vh - h - 12));
+      setPopStyle({ top: top - box.top, bottom: 'auto', maxHeight: maxH, overflowY: 'auto' });
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [more]);
   return (
     <aside className="rail" aria-label={tr('القائمة الرئيسية')}>
       <button onClick={() => navigate('home')} aria-label={tr('مسار — الرئيسية')} className="rail-logo-btn">
@@ -73,7 +92,7 @@ export function Rail() {
             <span>{inMore ? tr(SECONDARY.find((n) => n.id === name).label) : tr('المزيد')}</span>
           </button>
           {more && (
-            <div className="rail-pop" role="menu" aria-label={tr('المزيد من الصفحات')}>
+            <div className="rail-pop" role="menu" aria-label={tr('المزيد من الصفحات')} ref={popRef} style={popStyle || { visibility: 'hidden' }}>
               {SECONDARY.map(({ id, label, desc, icon: Icon }) => (
                 <button key={id} role="menuitem" className={name === id ? 'on' : ''} onClick={() => (navigate(id), setMore(false))}>
                   <Icon size={18} />
